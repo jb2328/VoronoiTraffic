@@ -1,0 +1,23 @@
+
+
+.ledgend-label {
+    font-size: 1.3em;
+    font-weight: bold;
+}
+
+.ledgend-colours, .ledgend-common {
+    margin-top: 0.5em;
+}
+
+.ledgend-button {
+    margin-right: 1em;
+}
+
+
+.clock {
+    font-size: 1.3em;
+}
+
+.leaflet-container {
+    background-color:rgba(255,0,0,0.0);
+}
