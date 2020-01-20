@@ -489,17 +489,24 @@ function find_object(list, id) {
 var voronoi, adjustedSites, vertices, DATA;
 var travelTimes;
 var travelSpeed;
+var historicSpeed;
+var speedDeviation;
+var selected=[];
 
 function voronoiMap() {
 
     travelTimes=[];
     travelSpeed=[];
-    InitialiseNodes();
-
+    historicSpeed=[];
+    speedDeviation=[];
+    InitialiseNodes("speed deviation");
     for (let i = 0; i < SITE_DB.length; i++) {
         travelTimes.push(SITE_DB[i].travelTime);
         travelSpeed.push(SITE_DB[i].travelSpeed);
+        historicSpeed.push(SITE_DB[i].travelSpeed);
+        speedDeviation.push(SITE_DB[i].speedDeviation);
     }
+    selected =speedDeviation;
 
     var pointTypes = d3.map(),
         points = [],
@@ -629,9 +636,9 @@ function voronoiMap() {
             return true;
         });
 
-        console.log("min_max ",Math.min(...travelSpeed), Math.max(...travelSpeed));
+        console.log("min_max ",Math.min(...selected), Math.max(...selected));
 
-        var newColor = d3.scaleSequential().domain([Math.min(...travelSpeed), Math.max(...travelSpeed)])
+        var newColor = d3.scaleSequential().domain([Math.min(...selected), Math.max(...selected)])
             .interpolator(d3.interpolateRdYlGn);
 
         var c10 = d3.schemePaired;
@@ -684,7 +691,7 @@ function voronoiMap() {
             .attr('stroke-width', 1)
             .attr('stroke', "black")
             .attr('fill', function (d, i) { //console.log("\ni",i);
-                let color=SITE_DB[i].travelSpeed;
+                let color=SITE_DB[i].node_data;
                 if(color==null){
                     return "rgb(50,50,50);"
                 }
@@ -707,7 +714,7 @@ function voronoiMap() {
                 return "translate(" + vertices[i][0] + "," + vertices[i][1] + ")";
             })
             .attr('id', function (d, i) {
-                return adjustedSites[i].name + " time: " + SITE_DB[i].travelTime + " speed: " + SITE_DB[i].travelSpeed
+                return adjustedSites[i].name + " time: " + SITE_DB[i].travelTime + " speed: " + SITE_DB[i].travelSpeed+ " speed: " + SITE_DB[i].speedDeviation
             })
             .style('fill', function (d) {
                 return 'black'
@@ -769,8 +776,9 @@ function InitialiseNodes() {
         SITE_DB[i].findNeighbors();
         SITE_DB[i].computeTravelTime();
         SITE_DB[i].computeTravelSpeed();
+        SITE_DB[i].setVisualisation("speed deviation");//speed deviation//travel speed
+        
     }
-
 }
 
 class Node {
@@ -779,17 +787,35 @@ class Node {
         this.neighbors = [];
         this.travelTime = null;
         this.travelSpeed = null;
-        this.visualise = null;
+        this.historicSpeed = null;
+        this.speedDeviation = null;
+        this.node_data = null;
         //change later as this will waster resources
-        this.sites = all_sites;
-        this.links = all_links;
-        this.traffic = traffic_data;
+       // this.sites = all_sites;
+        //this.links = all_links;
+        //this.traffic = traffic_data;
     }
     setVisualisation(vis){
-        this.visualise=vis;
+        switch(vis)
+        {
+            case "travel time":
+                this.node_data=this.travelTime;
+                break;
+            case "travel speed":
+                this.node_data=this.travelSpeed;
+                break;
+            case "speed deviation":
+                this.node_data=this.speedDeviation;
+                break;
+            default:
+                this.node_data=null;//this.travelSpeed;
+                break;
+
+        }
+        //this.visualise=vis;
     }
     getLocation() {
-        let data = this.sites;
+        let data = all_sites;//"this.sites;
         for (let i = 0; i < data.length; i++) {
             if (this.id == data[i].id) {
                 return {
@@ -801,7 +827,7 @@ class Node {
     }
     findNeighbors() //data is all_links
     {
-        let data = this.links;
+        let data = all_links;//this.links;
         this.neighbors = [];
         for (let i = 0; i < data.length; i++) {
             if (this.id == data[i].sites[1]) {
@@ -820,9 +846,9 @@ class Node {
         for (let i = 0; i < this.neighbors.length; i++) {
             let link = this.neighbors[i].link;
 
-            for (let u = 0; u < this.traffic.length; u++) {
-                if (link == this.traffic[u].id) {
-                    avg.push(this.traffic[u].travelTime);
+            for (let u = 0; u < traffic_data.length; u++) {
+                if (link == traffic_data[u].id) {
+                    avg.push(traffic_data[u].travelTime);
                 }
             }
         }
@@ -834,40 +860,36 @@ class Node {
     }
 
     computeTravelSpeed() {
-        let avg = [];
-        let sum = 0;
-        //console.log("START");
+        let currentAverage = [];
+        let historicAverage = [];
 
         for (let i = 0; i < this.neighbors.length; i++) {
             let link = this.neighbors[i].link;
             let dist= this.neighbors[i].dist; 
-            //console.log("dist",dist)
 
-            for (let u = 0; u < this.traffic.length; u++) {
-                if (link == this.traffic[u].id) {
-                    let travelTime=this.traffic[u].travelTime;
-                    let speed = (dist / travelTime) * TO_MPH;
-                    //console.log("travelTime",travelTime)
-                    //console.log("speed",speed)
-                    if(speed==Infinity){
+            for (let u = 0; u < traffic_data.length; u++) {
+                if (link == traffic_data[u].id) {
+                    let travelTime=traffic_data[u].travelTime;
+                    let historicTime=traffic_data[u].normalTravelTime;
+
+                    let currentSpeed = (dist / travelTime) * TO_MPH;
+                    let historicSpeed = (dist / historicTime) * TO_MPH;
+            
+                    if(currentSpeed==Infinity || historicSpeed==Infinity){
                         break;}
-
-                    avg.push(speed);
+                    
+                    historicAverage.push(historicSpeed);
+                    currentAverage.push(currentSpeed);
                 }
             }
         }
+        let historicSum = historicAverage.reduce((previous, current) => current += previous);
+        this.historicSpeed= historicSum / historicAverage.length;
 
-        for (let i = 0; i < avg.length; i++) {
-            // if(avg[i]===Infinity){
-            //     avg.splice(i, 1 );
-            //     break;
-            // }
-            sum += avg[i];
-        }
-        //console.log(avg)
-        ///console.log("FINISH");
-        if(sum==0 || sum == null || avg.length==0){this.travelSpeed=null;}
-        else{this.travelSpeed = sum / avg.length;}
-        
+        let currentSum = currentAverage.reduce((previous, current) => current += previous);
+        this.travelSpeed = currentSum / currentAverage.length;
+
+        this.speedDeviation =  this.travelSpeed-this.historicSpeed;
+
     }
 }
