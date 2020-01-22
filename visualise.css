@@ -1,4 +1,52 @@
+#map {
+    width: 100%;
+    height: 700px;
+    margin-bottom: 10px;
+    position: relative;
+}
 
+ .cell {
+    /* stroke: white;
+    opacity: 0.6; */
+    pointer-events: visible !important;
+} 
+
+/* .cell:hover {
+    stroke: black;
+    stroke-width: 5px;
+} */
+
+.point {
+    fill: red;
+}
+
+/* #map {
+    cursor: -webkit-grab;
+    cursor: -moz-grab;
+} */
+
+.sensor-arc {
+    fill: none;
+  }
+  
+  .cell:hover .sensor-arc {
+    stroke: #f00;
+  }
+
+.info {
+    padding: 6px 8px;
+    font: 14px/16px Arial, Helvetica, sans-serif;
+    background: white;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    min-width: 200px;
+}
+
+.info h4 {
+    margin: 0 0 5px;
+    color: #777;
+}
 
 .ledgend-label {
     font-size: 1.3em;
@@ -19,5 +67,9 @@
 }
 
 .leaflet-container {
-    background-color:rgba(255,0,0,0.0);
+    /* background-color:rgba(255,0,0,0.0); */
 }
+
+/* .point-cell:hover {
+    stroke-width: 1.5;
+} */
