@@ -186,7 +186,7 @@ function get_clock() {
 }
 
 
-function initMap(){
+function initMap() {
 
     var stamenToner = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}.png', {
         attribution: 'Map tiles by Stamen Design, CC BY 3.0 - Map data © OpenStreetMap',
@@ -196,39 +196,44 @@ function initMap(){
         ext: 'png'
     });
     var cambridge = new L.LatLng(52.20038, 0.1197);
-     map = new L.Map("map", {
+    map = new L.Map("map", {
         center: cambridge,
         zoom: 13,
         layers: [stamenToner],
     });
-    
+
     var info = L.control();
-    
+
     info.onAdd = function (map) {
         this._div = L.DomUtil.create('div', 'info');
         this.update();
+
         return this._div;
     };
-    
+
     info.update = function (e) {
         if (e === undefined) {
-            this._div.innerHTML = '<h4>Information</h4>';
+            this._div.innerHTML = '<h4>Information</h4>'
             return;
         }
-        // this._div.innerHTML = '<h4>Informations</h4>'
-        // 	+  '<span style="font-weight:bold;">' + e.airport
-        // 	+  '</span><br/>Code OACI : <span style="font-weight:bold;">' + e.oaci_code
-        // 	+  '</span><br/>Longueur de piste : <span style="font-weight:bold;">' + e.length + ' m'
-        // 	+  '</span><br/>Largeur de piste : <span style="font-weight:bold;">' + e.width + ' m'
-        // 	+  '</span><br/>Altitude : <span style="font-weight:bold;">' + e.high + ' m' + '</span>'
-        ;
+        this._div.innerHTML = '<h4>Information</h4>'
+            //+  '<span style="font-weight:bold;">' + e.airport
+            +
+            '</span><br/>Number of sites : <span style="font-weight:bold;">' + all_sites.length +
+            '</span><br/>Number of links : <span style="font-weight:bold;">' + all_links.length + ' m'
+            //	+  '</span><br/>Largeur de piste : <span style="font-weight:bold;">' + e.width + ' m'
+            //+  '</span><br/>Altitude : <span style="font-weight:bold;">' + e.high + ' m' 
+            +
+            '</span>';
+
+        d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text("Hello World");
     };
-    
+
     info.addTo(map);
-    
+
 
     map.on("viewreset moveend", drawVoronoi);
-    
+
 }
 
 
@@ -242,20 +247,31 @@ var travelSpeed;
 var historicSpeed;
 var speedDeviation;
 
+// var lineFunction = d3.svg.line()
+//     .x(function (d) {
+//         return d.x;
+//     })
+//     .y(function (d) {
+//         return d.y;
+//     })
+//     .interpolate("linear");
+
 function drawVoronoi() {
 
     travelTimes = [];
     travelSpeed = [];
     historicSpeed = [];
     speedDeviation = [];
-    
+    d3.select(".hover_val").remove();
+
 
     // voronoi = d3.voronoi().extent([
     //     [0, 0],
     //     [2000, 2000]
     // ]); 
-    
- 
+
+
+    SITE_DB = [];
 
     InitialiseNodes("speed deviation");
 
@@ -266,12 +282,13 @@ function drawVoronoi() {
         speedDeviation.push(SITE_DB[i].speedDeviation);
     }
 
+
     var bounds = map.getBounds(),
         topLeft = map.latLngToLayerPoint(bounds.getNorthWest()),
         bottomRight = map.latLngToLayerPoint(bounds.getSouthEast()),
         drawLimit = bounds.pad(0.4);
 
-    filteredPoints = all_sites.filter(function (d,i) {
+    filteredPoints = all_sites.filter(function (d, i) {
         var latlng = new L.latLng(+d.location.lat, +d.location.lng);
         if (!drawLimit.contains(latlng)) {
             return false
@@ -296,7 +313,7 @@ function drawVoronoi() {
 
     console.log("new min_max ", min, max);
 
-    var newColor = d3.scaleSequential().domain([min, max])//min, max
+    var newColor = d3.scaleSequential().domain([min, max]) //min, max
         .interpolator(d3.interpolateRdYlGn);
 
     // var maxLength = d3.max(filteredPoints, function (e) {
@@ -327,6 +344,8 @@ function drawVoronoi() {
     }
 
     d3.select("svg").remove();
+    d3.selectAll(".tooltip").remove(); //style("visibility", "hidden")
+
     var svg = d3.select(map.getPanes().overlayPane).append("svg")
         .attr("id", "overlay")
         .attr("class", "leaflet-zoom-hide")
@@ -337,19 +356,41 @@ function drawVoronoi() {
 
     var pathGroup = svg.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
-    var cirlceGroup = svg.append("g")
+    var circleGroup = svg.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+    var lineGroup = svg.append("g")
+        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+
+    // create a tooltip
+    var tooltip = d3.select(map.getPanes().tooltipPane)
+        .append("div")
+        .attr("class", "tooltip")
+        .style("position", "absolute")
+
+        .style("stroke", "black")
+        .style("background", "white")
+        .on("mouseover", function (d, i) {
+            d3.select(this).style("visibility", "visible")
+        })
+        .style("visibility", "hidden");
+
+    //lineGroup
 
     pathGroup.selectAll("cell")
         .data(readyVoronoiPolygons)
         .enter()
         .append("path")
         .attr("class", "cell")
+        .attr("z-index", -1)
         .attr("d", function (d) {
             return "M" + d.join("L") + "Z"
         })
-        .attr('fill', function (d, i) { 
-            console.log("\ni",i, SITE_DB[i]);
+        .style("stroke", "rgb(0,0,0)")
+        .style("stroke-weight", "1px")
+        .style("fill-opacity", 0.3)
+        .style("stroke-opacity", 1)
+        .attr('fill', function (d, i) {
+            // console.log("\ni", i, SITE_DB[i]);
 
             let color = SITE_DB[i].selected;
             if (color == null) {
@@ -358,11 +399,85 @@ function drawVoronoi() {
                 return newColor(color) //c10[i % 10]
             }
         })
-        .on("mouseover", function (d) {
-            info.update(d.data);
+        .on('mouseover', function (d, i) {
+            //info.update(d.data);
+            console.log(SITE_DB[i].name); //WRONG APPROACH, CAUSES RANODM OBJECT DRIFTS
+            console.log(d.data.name); //SHOULD FIX THE PROBLEM WITH BS MARKING ON THE MAP AND RANDOM RELOCATIONS
+            d3.select(this).transition()
+                .duration('400')
+                .attr('stroke', 'rgb(255,255,255)')
+                .attr('stroke-width', '3px')
+                .style("fill-opacity", 0.6);
+
+            tooltip.style("visibility", "visible")
+                .text(SITE_DB[i].name);
+
+            d3.select(".hover_val").remove();
+
+            d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text(SITE_DB[i].selected);
+
+
+        })
+        .on("mousemove", function (d, i) {
+            tooltip.style("top", (SITE_DB[i].y) + "px") //(event.clientY)+"px"
+                .style("left", (SITE_DB[i].x) + "px"); //(event.clientY)+"px"
+            //  console.log(event.clientX,event.clientY);
+
+        })
+
+        .on("click", function (d) {
+            let id = d.data.id;
+            console.log(d, "clickaroo")
+
+            console.log();
+            let neighbors = SITE_DB.find(x => x.id === id).neighbors;
+            let links = [];
+            for (let i = 0; i < neighbors.length; i++) {
+                console.log(i);
+                let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
+                let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
+
+                links.push({
+                    "x: ": d.data.x,
+                    "y: ": d.data.y,
+                    "X: ": x_coord,
+                    "Y: ": y_coord
+                });
+
+                lineGroup.append("line") // attach a line
+                .style("stroke-width", "5px") // colour the line
+                .style("stroke", "black") // colour the line
+                .attr("x1", d.data.x) // x position of the first end of the line
+                .attr("y1", d.data.y) // y position of the first end of the line
+                .attr("x2", x_coord) // x position of the second end of the line
+                .attr("y2", y_coord); // y position of the second end of the line
+            }
+            console.log(links);
+
+     
+
+        })
+        //.on("click",  d3.selectAll(".tooltip").style("visibility", "hidden"))
+        .on('mouseout', function (d, i) {
+            d3.select(this).transition()
+                .duration('400')
+                .attr('stroke', 'rgb(0,0,0)')
+                .attr('stroke-width', '1px')
+                .style("fill-opacity", 0.3);
+            tooltip.text(SITE_DB[i].name)
+                .style("visibility", "hidden");
         });
 
-    cirlceGroup.selectAll("circle")
+    // pathGroup.selectAll("cell").append("path")
+    //     .attr("class", "sensor-arc")
+    //     .attr("d", function (d) {
+    //         console.log(d);
+    //         return path(d.data.x);
+    //     });
+
+    //pathGroup.selectAll("cell").append("title").text(function(d){return d.data.name;});
+
+    circleGroup.selectAll("circle")
         .data(filteredPoints)
         .enter()
         .append("circle")
@@ -371,9 +486,10 @@ function drawVoronoi() {
             return "translate(" + d.x + "," + d.y + ")";
         })
         .attr("r", 2);
-        console.log("next");
-}
+    console.log("next");
+    //d3.select(map.getPanes().tooltipPane).append("title").text(function(d) { return d.data.name + "\n" + d.data.selected ; })
 
+}
 
 
 
@@ -395,6 +511,7 @@ class Node {
     constructor(id) {
 
         this.id = id;
+        this.name = null;
 
         this.lat = null;
         this.lng = null;
@@ -410,6 +527,19 @@ class Node {
 
         this.selected = null;
         this.selectedName = null;
+
+        this.getName();
+    }
+
+    getName() {
+        for (let i = 0; i < all_sites.length; i++) {
+
+            if (this.id == all_sites[i].id) {
+                this.name = all_sites[i].name;
+                break;
+            }
+        }
+
     }
     setVisualisation(vis) {
         this.selectedName = vis;
