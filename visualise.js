@@ -270,6 +270,15 @@ function drawVoronoi() {
     //     [2000, 2000]
     // ]); 
 
+    // draw the flow line
+    let flowLine = d3.line()
+        .x((d) => {
+            return d.x;
+        })
+        .y((d) => {
+            return d.y;
+        })
+        .curve(d3.curveBundle.beta(0.5));
 
     SITE_DB = [];
 
@@ -386,9 +395,9 @@ function drawVoronoi() {
             return "M" + d.join("L") + "Z"
         })
         .style("stroke", "rgb(0,0,0)")
-        .style("stroke-weight", "1px")
+        .style("stroke-weight", "0.5px")
         .style("fill-opacity", 0.3)
-        .style("stroke-opacity", 1)
+        .style("stroke-opacity", 0.3)
         .attr('fill', function (d, i) {
             // console.log("\ni", i, SITE_DB[i]);
 
@@ -407,6 +416,7 @@ function drawVoronoi() {
                 .duration('400')
                 .attr('stroke', 'rgb(255,255,255)')
                 .attr('stroke-width', '3px')
+                .style("stroke-opacity", 1)
                 .style("fill-opacity", 0.6);
 
             tooltip.style("visibility", "visible")
@@ -445,16 +455,40 @@ function drawVoronoi() {
                 });
 
                 lineGroup.append("line") // attach a line
-                .style("stroke-width", "5px") // colour the line
-                .style("stroke", "black") // colour the line
-                .attr("x1", d.data.x) // x position of the first end of the line
-                .attr("y1", d.data.y) // y position of the first end of the line
-                .attr("x2", x_coord) // x position of the second end of the line
-                .attr("y2", y_coord); // y position of the second end of the line
+                    .style("stroke-width", "2px") // colour the line
+                    .style("stroke", "green") // colour the line
+                    .attr("x1", d.data.x) // x position of the first end of the line
+                    .attr("y1", d.data.y) // y position of the first end of the line
+                    .attr("x2", x_coord) // x position of the second end of the line
+                    .attr("y2", y_coord); // y position of the second end of the line
+
+                // Add the links
+                lineGroup
+                    .append('path')
+                    .attr('d', function () {
+                        let start_X = d.data.x;//x(idToNode[d.source].name) // X position of start node on the X axis
+                        let start_Y = d.data.y;
+                        let end_X = x_coord;
+                        let end_Y = y_coord;
+                        let offset=2;
+                        //end = x(idToNode[d.target].name) // X position of end node
+                        return ['M', start_X, start_Y, // the arc starts at the coordinate x=start, y=height-30 (where the starting node is)
+                                'A', // This means we're gonna build an elliptical arc
+                                0.1,',',  0.1,//(start_X+end_X)/2+offset,",", (start_Y+end_Y)/2-offset,
+                                1, 0, ',',
+                                0, // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
+                                end_X, ',', end_Y
+                            ] // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
+                            .join(' ');
+                    })
+                    .style("fill", "none")
+                    .attr("stroke", "red")
+                    .style("stroke-width", 2)
+
             }
             console.log(links);
 
-     
+
 
         })
         //.on("click",  d3.selectAll(".tooltip").style("visibility", "hidden"))
@@ -462,7 +496,8 @@ function drawVoronoi() {
             d3.select(this).transition()
                 .duration('400')
                 .attr('stroke', 'rgb(0,0,0)')
-                .attr('stroke-width', '1px')
+                .attr('stroke-width', '0.5px')
+                .style("stroke-opacity", 0.3)
                 .style("fill-opacity", 0.3);
             tooltip.text(SITE_DB[i].name)
                 .style("visibility", "hidden");
@@ -485,7 +520,7 @@ function drawVoronoi() {
         .attr("transform", function (d) {
             return "translate(" + d.x + "," + d.y + ")";
         })
-        .attr("r", 2);
+        .attr("r", 2.5);
     console.log("next");
     //d3.select(map.getPanes().tooltipPane).append("title").text(function(d) { return d.data.name + "\n" + d.data.selected ; })
 
