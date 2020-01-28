@@ -80,12 +80,12 @@ function map_values( value,start1, stop1,start2,stop2) {
 
 return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
 }
-boundarySites=getCircle();
+//boundarySites=getCircle();
 function getCircle(){
 let a=0;
 let r=700;
 let arr=[];
-    for(let t=0; t<6.28;t+=0.1){
+    for(let t=0; t<6.28;t+=0.05){
         let x=a+r*Math.cos(t);
         let y=a+r*Math.sin(t);
         
@@ -262,7 +262,14 @@ function initMap() {
 
     info.update = function (e) {
         if (e === undefined) {
-            this._div.innerHTML = '<h4>Information</h4>'
+            this._div.innerHTML = '<h4>Information</h4>'+"<br><div>"+
+            "<form id='routes'>"+
+            "<input type='radio' name='mode' value='test1'> Test1<br>"+
+            "<input type='radio' name='mode' value='test2'> Test2</form><br></div>"
+            +"<br><div>"+"<form id='modes'>"+
+            "<input type='radio' name='mode' value='mode1'> Average Speed<br>"+
+            "<input type='radio' name='mode' value='mode2'> Historic Speed<br>"+
+            "</form>"+"</div>"
             return;
         }
         this._div.innerHTML = '<h4>Information</h4>'
@@ -286,6 +293,7 @@ function initMap() {
 }
 
 
+
 var points = [];
 points = all_sites;
 
@@ -306,6 +314,9 @@ var speedDeviation;
 //     .interpolate("linear");
 
 function drawVoronoi() {
+    d3.selectAll("input").on("change", function(){
+        console.log(this.value)
+    });
 
     travelTimes = [];
     travelSpeed = [];
@@ -313,6 +324,7 @@ function drawVoronoi() {
     speedDeviation = [];
     d3.select(".hover_val").remove();
 
+    
 
     // voronoi = d3.voronoi().extent([
     //     [0, 0],
@@ -331,6 +343,7 @@ function drawVoronoi() {
 
     SITE_DB = [];
     BOUNDARY_DB=[];
+    filteredPoints=[];
 
     InitialiseNodes("speed deviation");
 
@@ -346,6 +359,8 @@ function drawVoronoi() {
         topLeft = map.latLngToLayerPoint(bounds.getNorthWest()),
         bottomRight = map.latLngToLayerPoint(bounds.getSouthEast()),
         drawLimit = bounds.pad(0.4);
+
+        filteredPoints=[];
 
 
     filteredPoints = all_sites.filter(function (d, i) {
@@ -418,7 +433,6 @@ function drawVoronoi() {
     let c=getCircle();
     for(let i =0; i< b.length;i++){
         a.push(b[i]);
-
     }
     var voronoiPolygons = voronoi.polygons(a);//filteredpoints
      var readyVoronoiPolygons = [];
@@ -509,6 +523,9 @@ function drawVoronoi() {
         //.style("stroke-opacity", 0.3)
        
         .on('mouseover', function (d, i) {
+            lineGroup.remove();
+            lineGroup = svg.append("g")
+        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
             //info.update(d.data);
             console.log(SITE_DB[i].name); //WRONG APPROACH, CAUSES RANODM OBJECT DRIFTS
             console.log(d.data.name); //SHOULD FIX THE PROBLEM WITH BS MARKING ON THE MAP AND RANDOM RELOCATIONS
@@ -518,6 +535,38 @@ function drawVoronoi() {
                 .attr('stroke-width', '3px')
                 .style("stroke-opacity", 1)
                 .style("fill-opacity", 0.6);
+
+                let id = d.data.id;
+
+                let neighbors = SITE_DB.find(x => x.id === id).neighbors;
+                let links = [];
+
+                for (let i = 0; i < neighbors.length; i++) {
+                    //console.log(i);
+                    let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
+                    let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
+    
+                    links.push({
+                        "x: ": d.data.x,
+                        "y: ": d.data.y,
+                        "X: ": x_coord,
+                        "Y: ": y_coord
+                    });
+
+                    lineGroup.append("line") // attach a line
+                    .attr("x1", d.data.x) // x position of the first end of the line
+                    .attr("y1", d.data.y) // y position of the first end of the line
+                    .attr("x2", x_coord) // x position of the second end of the line
+                    .attr("y2", y_coord) // y position of the second end of the line
+                    .transition().duration(400)
+                    .style("stroke-width", "2px") // colour the line
+                    .style("stroke", "green") // colour the line
+                    
+
+                }
+                 
+                
+                
 
             // tooltip.style("visibility", "visible")
             //     .text(SITE_DB[i].name);
@@ -539,7 +588,6 @@ function drawVoronoi() {
             let id = d.data.id;
             console.log(d, "clickaroo")
 
-            console.log();
             let neighbors = SITE_DB.find(x => x.id === id).neighbors;
             let links = [];
             for (let i = 0; i < neighbors.length; i++) {
@@ -554,15 +602,7 @@ function drawVoronoi() {
                     "Y: ": y_coord
                 });
 
-                // lineGroup.append("line") // attach a line
-                //     .style("stroke-width", "2px") // colour the line
-                //     .style("stroke", "green") // colour the line
-                //     .attr("x1", d.data.x) // x position of the first end of the line
-                //     .attr("y1", d.data.y) // y position of the first end of the line
-                //     .attr("x2", x_coord) // x position of the second end of the line
-                //     .attr("y2", y_coord); // y position of the second end of the line
-
-                
+             
 
                 // Add the links
                 lineGroup
@@ -573,14 +613,10 @@ function drawVoronoi() {
                         let end_X = x_coord;
                         let end_Y = y_coord;
                         let midX=(start_X+end_X)/2;
-         //let midY=(start_Y+end_Y)/2;
                         let a = Math.abs(start_X - end_X);
                         let b = Math.abs(start_Y - end_Y);
-                        //let off= Math.log(Math.sqrt( a*a + b*b ));//10*Math.sin(Math.abs(start_X-end_X));
                         let off=a>b?b/10:15;
-                        
-                        console.log(off);
-                        let mid_X1=midX-off;
+                                                let mid_X1=midX-off;
                         let mid_Y1=slope(mid_X1,start_X, start_Y,end_X,end_Y);
                         //end = x(idToNode[d.target].name) // X position of end node
                         return ['M', start_X, start_Y, // the arc starts at the coordinate x=start, y=height-30 (where the starting node is)
@@ -608,7 +644,6 @@ function drawVoronoi() {
                         let b = Math.abs(start_Y - end_Y);
                         //let off= Math.log(Math.sqrt( a*a + b*b ));//10*Math.sin(Math.abs(start_X-end_X));
                         let off=a>b?b/10:(15);
-                        console.log(off);
                         let mid_X1=midX+off;
                         let mid_Y1=slope(mid_X1,start_X, start_Y,end_X,end_Y);
                        // let mid_Y2=slope(mid_X2,start_X, start_Y,end_X,end_Y) ;
@@ -634,6 +669,8 @@ function drawVoronoi() {
         })
         //.on("click",  d3.selectAll(".tooltip").style("visibility", "hidden"))
         .on('mouseout', function (d, i) {
+            lineGroup.remove();
+
             d3.select(this).transition()
                 .duration('400')
                 .attr('stroke', 'rgb(0,0,0)')
@@ -653,30 +690,26 @@ function drawVoronoi() {
 
     pathGroup.selectAll(".cell").append("title").text(function(d){return d.data.name;});
 
-    circleGroup.selectAll("circle")
+    circleGroup.selectAll(".point")
         .data(filteredPoints)
         .enter()
         .append("circle")
-        .attr("class", "point")
+         .attr("class", function(d,i){
+            //console.log(d.data.description);
+            if(d.id!==undefined){
+                return "point"
+            }
+            else{return "invisiblePoint"}
+        })
         .attr("transform", function (d) {
             return "translate(" + d.x + "," + d.y + ")";
         })
         .attr("r", 2.5);
 
-        circleGroupB.selectAll("circle")
-        .data(boundaryPoints)
-        .enter()
-        .append("circle")
-        .attr("class", "point2")
-        .attr("transform", function (d) {
-            return "translate(" + d.x + "," + d.y + ")";
-        })
-        .attr("r", 4);
-
-
+    
     console.log("next");
     //d3.select(map.getPanes().tooltipPane).append("title").text(function(d) { return d.data.name + "\n" + d.data.selected ; })
-
+        filteredPoints=[];
 }
 
 function slope(x,x1, y1,x2,y2) {
@@ -851,4 +884,30 @@ function findLatLng(){
         var lng = coord[1].split(')');
         console.log("You clicked the map at latitude: " + lat[1] + " and longitude:" + lng[0]);
     });
+}
+
+function drawRoutes(){
+    let DB=[];
+
+    for(let d=0; d<SITE_DB.length;d++){
+
+    let id = SITE_DB[d].id;
+
+    let neighbors = SITE_DB.find(x => x.id === id).neighbors;
+    let links = [];
+    for (let i = 0; i < neighbors.length; i++) {
+        //console.log(i);
+        let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
+        let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
+
+        links.push({
+            "x1: ": SITE_DB[d].x,
+            "y1: ": SITE_DB[d].y,
+            "x2: ": x_coord,
+            "y2: ": y_coord
+        });
+    }
+    DB.push(links);
+}
+return DB;
 }

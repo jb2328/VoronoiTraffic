@@ -31,8 +31,8 @@
     fill: red;
 }
 
-.point2 {
-    fill: black;
+.invisiblePoint {
+    fill: none;
 }
 
 
