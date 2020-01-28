@@ -543,7 +543,7 @@ function drawVoronoi() {
             let neighbors = SITE_DB.find(x => x.id === id).neighbors;
             let links = [];
             for (let i = 0; i < neighbors.length; i++) {
-                console.log(i);
+                //console.log(i);
                 let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
                 let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
 
@@ -554,13 +554,13 @@ function drawVoronoi() {
                     "Y: ": y_coord
                 });
 
-                lineGroup.append("line") // attach a line
-                    .style("stroke-width", "2px") // colour the line
-                    .style("stroke", "green") // colour the line
-                    .attr("x1", d.data.x) // x position of the first end of the line
-                    .attr("y1", d.data.y) // y position of the first end of the line
-                    .attr("x2", x_coord) // x position of the second end of the line
-                    .attr("y2", y_coord); // y position of the second end of the line
+                // lineGroup.append("line") // attach a line
+                //     .style("stroke-width", "2px") // colour the line
+                //     .style("stroke", "green") // colour the line
+                //     .attr("x1", d.data.x) // x position of the first end of the line
+                //     .attr("y1", d.data.y) // y position of the first end of the line
+                //     .attr("x2", x_coord) // x position of the second end of the line
+                //     .attr("y2", y_coord); // y position of the second end of the line
 
                 
 
@@ -572,13 +572,52 @@ function drawVoronoi() {
                         let start_Y = d.data.y;
                         let end_X = x_coord;
                         let end_Y = y_coord;
-                        let offset=2;
+                        let midX=(start_X+end_X)/2;
+         //let midY=(start_Y+end_Y)/2;
+                        let a = Math.abs(start_X - end_X);
+                        let b = Math.abs(start_Y - end_Y);
+                        //let off= Math.log(Math.sqrt( a*a + b*b ));//10*Math.sin(Math.abs(start_X-end_X));
+                        let off=a>b?b/10:15;
+                        
+                        console.log(off);
+                        let mid_X1=midX-off;
+                        let mid_Y1=slope(mid_X1,start_X, start_Y,end_X,end_Y);
                         //end = x(idToNode[d.target].name) // X position of end node
                         return ['M', start_X, start_Y, // the arc starts at the coordinate x=start, y=height-30 (where the starting node is)
-                                'A', // This means we're gonna build an elliptical arc
-                                0.1,',',  0.1,//(start_X+end_X)/2+offset,",", (start_Y+end_Y)/2-offset,
-                                1, 0, ',',
-                                0, // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
+                                'C', // This means we're gonna build an elliptical arc
+                               start_X,",",start_Y,",",
+                               mid_X1,mid_Y1,
+                                // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
+                                end_X, ',', end_Y
+                            ] // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
+                            .join(' ');
+                    })
+                    .style("fill", "none")
+                    .attr("stroke", "blue")
+                    .style("stroke-width", 2);
+
+                    lineGroup
+                    .append('path')
+                    .attr('d', function () {
+                        let start_X = d.data.x;//x(idToNode[d.source].name) // X position of start node on the X axis
+                        let start_Y = d.data.y;
+                        let end_X = x_coord;
+                        let end_Y = y_coord;
+                        let midX=(start_X+end_X)/2;
+                        let a = Math.abs(start_X - end_X);
+                        let b = Math.abs(start_Y - end_Y);
+                        //let off= Math.log(Math.sqrt( a*a + b*b ));//10*Math.sin(Math.abs(start_X-end_X));
+                        let off=a>b?b/10:(15);
+                        console.log(off);
+                        let mid_X1=midX+off;
+                        let mid_Y1=slope(mid_X1,start_X, start_Y,end_X,end_Y);
+                       // let mid_Y2=slope(mid_X2,start_X, start_Y,end_X,end_Y) ;
+                        //end = x(idToNode[d.target].name) // X position of end node
+                        return ['M', start_X, start_Y, // the arc starts at the coordinate x=start, y=height-30 (where the starting node is)
+                                'C', // This means we're gonna build an elliptical arc
+                               start_X,",",start_Y,",",
+                               mid_X1,mid_Y1,
+                                // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
                                 end_X, ',', end_Y
                             ] // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
                             .join(' ');
@@ -587,10 +626,8 @@ function drawVoronoi() {
                     .attr("stroke", "red")
                     .style("stroke-width", 2);
 
-                  
-
             }
-            console.log(links);
+            //console.log(links);
 
 
 
@@ -642,6 +679,12 @@ function drawVoronoi() {
 
 }
 
+function slope(x,x1, y1,x2,y2) {
+    let midX=(x1+x2)/2;
+    let midY=(y1+y2)/2;
+    let slope=(y2-y1)/(x2-x1);
+    return (-1/slope)*(x-midX)+midY;
+  }
 
 
 function InitialiseNodes() {
