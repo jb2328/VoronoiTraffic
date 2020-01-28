@@ -6,10 +6,21 @@
 }
 
  .cell {
+    stroke:black;
+    stroke-width: 2px;
+    fill-opacity: 0.3;
+    stroke-opacity: 0.3;
     /* stroke: white;
     opacity: 0.6; */
     pointer-events: visible !important;
 } 
+.invisibleCell{
+    fill: none;
+    /* stroke-width: 0.5px;
+    fill-opacity: 0.3;
+    stroke-opacity: 0.3; */
+}
+
 
 /* .cell:hover {
     stroke: black;
@@ -19,6 +30,11 @@
 .point {
     fill: red;
 }
+
+.point2 {
+    fill: black;
+}
+
 
 /* #map {
     cursor: -webkit-grab;

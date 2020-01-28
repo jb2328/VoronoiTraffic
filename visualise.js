@@ -50,11 +50,60 @@ var all_sites, traffic_data = [],
 
 var minmax, myColors;
 var SITE_DB = [];
+var boundarySites=[{"lat":52.24861, "lng":0.11536, "x":null, "y":null},//A,
+                            {"lat":52.2503, "lng":0.14763, "x":null,"y":null},
+                {"lat":52.24735, "lng":0.17681, "x":null, "y":null},//A,
+                            {"lat":52.2339, "lng":0.20153, "x":null,"y":null},
 
+                {"lat":52.21139, "lng":0.21286, "x":null, "y":null},//A,
+                            {"lat":52.18993, "lng":0.2029, "x":null,"y":null},
+
+                {"lat":52.16425, "lng":0.1902, "x":null, "y":null},//A,
+                            {"lat":52.15034, "lng":0.16342, "x":null,"y":null},
+
+                {"lat":52.1398, "lng":0.12051, "x":null, "y":null},//A,
+                            {"lat":52.15456, "lng":0.08205, "x":null,"y":null},
+
+                {"lat":52.16572, "lng":0.06111, "x":null, "y":null},//A,
+                            {"lat":52.1813, "lng":0.03571, "x":null,"y":null},
+
+                {"lat":52.20634, "lng":0.01648, "x":null, "y":null},//A,
+                            {"lat":52.22464, "lng":0.02884, "x":null,"y":null},
+
+                {"lat":52.23726, "lng":0.05527, "x":null, "y":null},
+                            {"lat":52.24441, "lng":0.08446, "x":null,"y":null}//A
+];
+
+var newPts=[];
+
+function map_values( value,start1, stop1,start2,stop2) {
+
+return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+}
+boundarySites=getCircle();
+function getCircle(){
+let a=0;
+let r=700;
+let arr=[];
+    for(let t=0; t<6.28;t+=0.1){
+        let x=a+r*Math.cos(t);
+        let y=a+r*Math.sin(t);
+        
+        let lng=map_values(x, -500,500,0.03,0.2 );
+        let lat=map_values(y,  -500,500,52.15,52.246)
+        
+        newPts.push({"x":x, "y":y, "lng":lng,"lat":lat});
+    }
+   // console.log(newPts);
+    return newPts;
+}
+var BOUNDARY_DB=[];
+var boundaryPoints=[];
+
+var combined=[];
 $(document).ready(function () {
     initMap();
     load_data();
-
 });
 
 // Clock
@@ -281,6 +330,7 @@ function drawVoronoi() {
         .curve(d3.curveBundle.beta(0.5));
 
     SITE_DB = [];
+    BOUNDARY_DB=[];
 
     InitialiseNodes("speed deviation");
 
@@ -297,13 +347,14 @@ function drawVoronoi() {
         bottomRight = map.latLngToLayerPoint(bounds.getSouthEast()),
         drawLimit = bounds.pad(0.4);
 
+
     filteredPoints = all_sites.filter(function (d, i) {
-        var latlng = new L.latLng(+d.location.lat, +d.location.lng);
+        let latlng = new L.latLng(d.location.lat, d.location.lng);
         if (!drawLimit.contains(latlng)) {
             return false
         };
 
-        var point = map.latLngToLayerPoint(latlng);
+        let point = map.latLngToLayerPoint(latlng);
         d.x = point.x;
         d.y = point.y;
 
@@ -312,6 +363,20 @@ function drawVoronoi() {
         SITE_DB[i].lat = d.location.lat;
         SITE_DB[i].lng = d.location.lng;
 
+        return true;
+    });
+
+     boundaryPoints=boundarySites.filter(function(d,i){
+        let latlng = new L.latLng(d.lat, d.lng);
+        if (!drawLimit.contains(latlng)) {
+            return false
+        };
+
+        let point = map.latLngToLayerPoint(latlng);
+        d.x = point.x;
+        d.y = point.y;
+
+        BOUNDARY_DB.push({"lat":d.lat, "lng":d.lng, "x":d.x, "y":d.y});
         return true;
     });
 
@@ -332,6 +397,8 @@ function drawVoronoi() {
     //     .domain([0, maxLength])
     //     .range(['rgb(255,245,235)', 'rgb(127,39,4)']);
 
+    findLatLng();
+
     var voronoi = d3.voronoi()
         .x(function (d) {
             return d.x;
@@ -344,16 +411,34 @@ function drawVoronoi() {
             [bottomRight.x, bottomRight.y]
         ]); // To get all points included, change from previous version
 
-    var voronoiPolygons = voronoi.polygons(filteredPoints);
-    var readyVoronoiPolygons = [];
+
+        //tempfix
+    let a=filteredPoints;
+    let b =boundaryPoints;
+    let c=getCircle();
+    for(let i =0; i< b.length;i++){
+        a.push(b[i]);
+
+    }
+    var voronoiPolygons = voronoi.polygons(a);//filteredpoints
+     var readyVoronoiPolygons = [];
+
     for (let i = 0; i < voronoiPolygons.length; ++i) {
+       // console.log(i)
         if (voronoiPolygons[i] !== undefined) {
             readyVoronoiPolygons.push(voronoiPolygons[i]);
         }
     }
 
+    // var voronoiBoundaryPolygons = voronoi.polygons(boundaryPoints);
+    // for (let i = 0; i < voronoiBoundaryPolygons.length; ++i) {
+    //     if (voronoiBoundaryPolygons[i] !== undefined) {
+    //         readyVoronoiPolygons.push(voronoiBoundaryPolygons[i]);
+    //     }
+    // }
+
     d3.select("svg").remove();
-    d3.selectAll(".tooltip").remove(); //style("visibility", "hidden")
+    //d3.selectAll(".tooltip").remove(); //style("visibility", "hidden")
 
     var svg = d3.select(map.getPanes().overlayPane).append("svg")
         .attr("id", "overlay")
@@ -367,6 +452,10 @@ function drawVoronoi() {
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
     var circleGroup = svg.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+
+        var circleGroupB = svg.append("g")
+        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+        
     var lineGroup = svg.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
@@ -385,29 +474,40 @@ function drawVoronoi() {
 
     //lineGroup
 
-    pathGroup.selectAll("cell")
+    pathGroup.selectAll("g")
         .data(readyVoronoiPolygons)
         .enter()
         .append("path")
-        .attr("class", "cell")
+        //.attr("class","cell")//"cell"
+        .attr("class", function(d,i){
+            //console.log(d.data.description);
+            if(d.data.description!==undefined){
+                return "cell"
+            }
+            else{return "invisibleCell"}
+        })
         .attr("z-index", -1)
         .attr("d", function (d) {
             return "M" + d.join("L") + "Z"
         })
-        .style("stroke", "rgb(0,0,0)")
-        .style("stroke-weight", "0.5px")
-        .style("fill-opacity", 0.3)
-        .style("stroke-opacity", 0.3)
+        ;
+
+        pathGroup.selectAll(".cell")
         .attr('fill', function (d, i) {
             // console.log("\ni", i, SITE_DB[i]);
 
             let color = SITE_DB[i].selected;
-            if (color == null) {
+            if (color == null || color == undefined) {
                 return "rgb(50,50,50);"
             } else {
                 return newColor(color) //c10[i % 10]
             }
         })
+        //.style("stroke", "rgb(0,0,0)")
+        //.style("stroke-weight", "0.5px")
+        //.style("fill-opacity", 0.3)
+        //.style("stroke-opacity", 0.3)
+       
         .on('mouseover', function (d, i) {
             //info.update(d.data);
             console.log(SITE_DB[i].name); //WRONG APPROACH, CAUSES RANODM OBJECT DRIFTS
@@ -419,18 +519,18 @@ function drawVoronoi() {
                 .style("stroke-opacity", 1)
                 .style("fill-opacity", 0.6);
 
-            tooltip.style("visibility", "visible")
-                .text(SITE_DB[i].name);
+            // tooltip.style("visibility", "visible")
+            //     .text(SITE_DB[i].name);
 
-            d3.select(".hover_val").remove();
+            //d3.select(".hover_val").remove();
 
-            d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text(SITE_DB[i].selected);
+           // d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text(SITE_DB[i].selected);
 
 
         })
         .on("mousemove", function (d, i) {
-            tooltip.style("top", (SITE_DB[i].y) + "px") //(event.clientY)+"px"
-                .style("left", (SITE_DB[i].x) + "px"); //(event.clientY)+"px"
+          //  tooltip.style("top", (SITE_DB[i].y) + "px") //(event.clientY)+"px"
+            //    .style("left", (SITE_DB[i].x) + "px"); //(event.clientY)+"px"
             //  console.log(event.clientX,event.clientY);
 
         })
@@ -462,6 +562,8 @@ function drawVoronoi() {
                     .attr("x2", x_coord) // x position of the second end of the line
                     .attr("y2", y_coord); // y position of the second end of the line
 
+                
+
                 // Add the links
                 lineGroup
                     .append('path')
@@ -483,7 +585,9 @@ function drawVoronoi() {
                     })
                     .style("fill", "none")
                     .attr("stroke", "red")
-                    .style("stroke-width", 2)
+                    .style("stroke-width", 2);
+
+                  
 
             }
             console.log(links);
@@ -499,8 +603,8 @@ function drawVoronoi() {
                 .attr('stroke-width', '0.5px')
                 .style("stroke-opacity", 0.3)
                 .style("fill-opacity", 0.3);
-            tooltip.text(SITE_DB[i].name)
-                .style("visibility", "hidden");
+        //    tooltip.text(SITE_DB[i].name)
+        //        .style("visibility", "hidden");
         });
 
     // pathGroup.selectAll("cell").append("path")
@@ -510,7 +614,7 @@ function drawVoronoi() {
     //         return path(d.data.x);
     //     });
 
-    //pathGroup.selectAll("cell").append("title").text(function(d){return d.data.name;});
+    pathGroup.selectAll(".cell").append("title").text(function(d){return d.data.name;});
 
     circleGroup.selectAll("circle")
         .data(filteredPoints)
@@ -521,6 +625,18 @@ function drawVoronoi() {
             return "translate(" + d.x + "," + d.y + ")";
         })
         .attr("r", 2.5);
+
+        circleGroupB.selectAll("circle")
+        .data(boundaryPoints)
+        .enter()
+        .append("circle")
+        .attr("class", "point2")
+        .attr("transform", function (d) {
+            return "translate(" + d.x + "," + d.y + ")";
+        })
+        .attr("r", 4);
+
+
     console.log("next");
     //d3.select(map.getPanes().tooltipPane).append("title").text(function(d) { return d.data.name + "\n" + d.data.selected ; })
 
@@ -682,4 +798,14 @@ class Node {
         this.speedDeviation = this.travelSpeed - this.historicSpeed;
 
     }
+}
+
+function findLatLng(){
+    map.on('click', 
+    function(e){
+        var coord = e.latlng.toString().split(',');
+        var lat = coord[0].split('(');
+        var lng = coord[1].split(')');
+        console.log("You clicked the map at latitude: " + lat[1] + " and longitude:" + lng[0]);
+    });
 }
