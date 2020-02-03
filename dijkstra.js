@@ -1,11 +1,11 @@
 //original source https://gist.github.com/stella-yc/49a7b96679ab3bf06e26421fc81b5636
 const problem = {
-  start: {A: 5, B: 2},
+  S: {A: 5, B: 2},
   A: {C: 4, D: 2},
   B: {A: 8, D: 7},
-  C: {D: 6, finish: 3},
-  D: {finish: 1},
-  finish: {}
+  C: {D: 6, F: 3},
+  D: {F: 1},
+  F: {}
 };
 
 const lowestCostNode = (costs, processed) => {
@@ -20,14 +20,15 @@ const lowestCostNode = (costs, processed) => {
 };
 
 // function that returns the minimum cost and path to reach Finish
-const dijkstra = (graph) => {
+const dijkstra = (graph,S,F) => {
 
   // track lowest cost to reach each node
-  const costs = Object.assign({finish: Infinity}, graph.start);
+  const costs = Object.assign({finish: Infinity}, graph.S);
 
   // track paths
   const parents = {finish: null};
-  for (let child in graph.start) {
+  for (let child in graph.S) {
+    console.log(parents[child]);
     parents[child] = 'start';
   }
 
@@ -55,7 +56,7 @@ const dijkstra = (graph) => {
   }
 
   let optimalPath = ['finish'];
-  let parent = parents.finish;
+  let parent = parents.F;
   while (parent) {
     optimalPath.push(parent);
     parent = parents[parent];
@@ -63,10 +64,12 @@ const dijkstra = (graph) => {
   optimalPath.reverse();
 
   const results = {
-    distance: costs.finish,
+    distance: costs.F,
     path: optimalPath
   };
-
+  console.log("From ",S," to ",F)
+  results.path[0]=S;
+  results.path[results.path.length-1]=F;
   return results;
 };
 

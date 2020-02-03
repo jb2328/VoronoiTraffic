@@ -4,6 +4,8 @@
 /*global $, L, LOCATIONS_URL, JOURNEYS_URL, MB_ACCESS_TOKEN, TF_API_KEY */
 
 // m/sec to mph
+
+
 var TO_MPH = 2.23694;
 
 // Style options for markers and lines
@@ -126,16 +128,16 @@ function load_data() {
 
 }
 
-
-
-
 // Load journey times, annotate links and compound routes, and schedule to re-run
 function load_journey_times() {
 
     console.log('(Re-)loading journey times');
+	console.log(JOURNEYS_URL);
 
-    $.get(JOURNEYS_URL)
-        .done(function (journeys) {
+    $.getJSON(JOURNEYS_URL)//, function(data){console.log(data)}
+       .done(function (journeys) {
+		console.log("b");
+        console.log(journeys);
             traffic_data = [];
             for (var i = 0; i < journeys.length; ++i) {
                 var journey = journeys[i];
@@ -145,8 +147,7 @@ function load_journey_times() {
                     "normalTravelTime": journey.normalTravelTime
                 });
 
-            }
-
+           }
 
             // Reset the clock
             //clock.update();
@@ -267,8 +268,9 @@ function initMap() {
             "<input type='radio' name='mode' value='test1'> Test1<br>"+
             "<input type='radio' name='mode' value='test2'> Test2</form><br></div>"
             +"<br><div>"+"<form id='modes'>"+
-            "<input type='radio' name='mode' value='mode1'> Average Speed<br>"+
-            "<input type='radio' name='mode' value='mode2'> Historic Speed<br>"+
+            "<input type='radio' name='mode' value='current'> Current Speed<br>"+
+            "<input type='radio' name='mode' value='historic'> Historic Speed<br>"+
+            "<input type='radio' name='mode' value='deviation'> Deviation<br>"+
             "</form>"+"</div>"
             return;
         }
@@ -303,7 +305,11 @@ var travelTimes;
 var travelSpeed;
 var historicSpeed;
 var speedDeviation;
+            
+var pathGroup;
+var setColor;
 
+var selectedSites=[];
 // var lineFunction = d3.svg.line()
 //     .x(function (d) {
 //         return d.x;
@@ -314,14 +320,14 @@ var speedDeviation;
 //     .interpolate("linear");
 
 function drawVoronoi() {
-    d3.selectAll("input").on("change", function(){
-        console.log(this.value)
-    });
+  
 
     travelTimes = [];
     travelSpeed = [];
     historicSpeed = [];
     speedDeviation = [];
+
+
     d3.select(".hover_val").remove();
 
     
@@ -345,7 +351,9 @@ function drawVoronoi() {
     BOUNDARY_DB=[];
     filteredPoints=[];
 
-    InitialiseNodes("speed deviation");
+    InitialiseNodes();
+
+ 
 
     for (let i = 0; i < SITE_DB.length; i++) {
         travelTimes.push(SITE_DB[i].travelTime);
@@ -395,15 +403,7 @@ function drawVoronoi() {
         return true;
     });
 
-    let findMax = (ma, v) => Math.max(ma, v.selected)
-    let findMin = (mi, v) => Math.min(mi, v.selected)
-    let max = SITE_DB.reduce(findMax, -Infinity)
-    let min = SITE_DB.reduce(findMin, Infinity)
-
-    console.log("new min_max ", min, max);
-
-    var newColor = d3.scaleSequential().domain([min, max]) //min, max
-        .interpolator(d3.interpolateRdYlGn);
+    setColor = setColorRange();
 
     // var maxLength = d3.max(filteredPoints, function (e) {
     //     return +e.length;
@@ -412,7 +412,7 @@ function drawVoronoi() {
     //     .domain([0, maxLength])
     //     .range(['rgb(255,245,235)', 'rgb(127,39,4)']);
 
-    findLatLng();
+    //findLatLng();
 
     var voronoi = d3.voronoi()
         .x(function (d) {
@@ -462,7 +462,7 @@ function drawVoronoi() {
         .style("margin-left", topLeft.x + "px")
         .style("margin-top", topLeft.y + "px");
 
-    var pathGroup = svg.append("g")
+    pathGroup = svg.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
     var circleGroup = svg.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
@@ -486,8 +486,7 @@ function drawVoronoi() {
         })
         .style("visibility", "hidden");
 
-    //lineGroup
-
+    
     pathGroup.selectAll("g")
         .data(readyVoronoiPolygons)
         .enter()
@@ -507,6 +506,9 @@ function drawVoronoi() {
         ;
 
         pathGroup.selectAll(".cell")
+        .attr("id", function(d){//let id="test"+d;
+        //console.log(d.data.name);
+                                    return d.data.name})
         .attr('fill', function (d, i) {
             // console.log("\ni", i, SITE_DB[i]);
 
@@ -514,11 +516,10 @@ function drawVoronoi() {
             if (color == null || color == undefined) {
                 return "rgb(50,50,50);"
             } else {
-                return newColor(color) //c10[i % 10]
+                return setColor(color) //c10[i % 10]
             }
         })
         //.style("stroke", "rgb(0,0,0)")
-        //.style("stroke-weight", "0.5px")
         //.style("fill-opacity", 0.3)
         //.style("stroke-opacity", 0.3)
        
@@ -527,12 +528,12 @@ function drawVoronoi() {
             lineGroup = svg.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
             //info.update(d.data);
-            console.log(SITE_DB[i].name); //WRONG APPROACH, CAUSES RANODM OBJECT DRIFTS
-            console.log(d.data.name); //SHOULD FIX THE PROBLEM WITH BS MARKING ON THE MAP AND RANDOM RELOCATIONS
+            //console.log(SITE_DB[i].name); //WRONG APPROACH, CAUSES RANODM OBJECT DRIFTS
+            // /console.log(d.data.name); //SHOULD FIX THE PROBLEM WITH BS MARKING ON THE MAP AND RANDOM RELOCATIONS
             d3.select(this).transition()
                 .duration('400')
-                .attr('stroke', 'rgb(255,255,255)')
-                .attr('stroke-width', '3px')
+                .attr('stroke', 'black')
+                .attr('stroke-width', '2px')
                 .style("stroke-opacity", 1)
                 .style("fill-opacity", 0.6);
 
@@ -554,13 +555,15 @@ function drawVoronoi() {
                     });
 
                     lineGroup.append("line") // attach a line
+                    .attr("class", "lineRoute")
                     .attr("x1", d.data.x) // x position of the first end of the line
                     .attr("y1", d.data.y) // y position of the first end of the line
                     .attr("x2", x_coord) // x position of the second end of the line
                     .attr("y2", y_coord) // y position of the second end of the line
                     .transition().duration(400)
                     .style("stroke-width", "2px") // colour the line
-                    .style("stroke", "green") // colour the line
+                    .style("stroke-opacity", 0.8)
+                    .style("stroke", "gray"); // colour the line
                     
 
                 }
@@ -577,6 +580,9 @@ function drawVoronoi() {
 
 
         })
+
+  
+
         .on("mousemove", function (d, i) {
           //  tooltip.style("top", (SITE_DB[i].y) + "px") //(event.clientY)+"px"
             //    .style("left", (SITE_DB[i].x) + "px"); //(event.clientY)+"px"
@@ -586,7 +592,39 @@ function drawVoronoi() {
 
         .on("click", function (d) {
             let id = d.data.id;
-            console.log(d, "clickaroo")
+            console.log(id, "clickaroo")
+            
+         
+            selectedSites.push(d.data);
+            if(selectedSites.length>2){
+                selectedSites=[];
+                console.log("selected sites cleaned");
+            }    
+            if(selectedSites.length===2){
+                console.log("from ",selectedSites[0].name," to ",selectedSites[1].name);
+            
+                let problem=generateGraph(selectedSites[0].name,selectedSites[1].name);
+                let result=dijkstra(problem,selectedSites[0].name,selectedSites[1].name );
+                console.log(result);
+                
+                for(let i =0; i<result.path.length;i++){
+                    console.log(result.path[i]);
+
+                    d3.select(document.getElementById(result.path[i]))
+                    .transition()
+                    .duration(1000)
+                    //.attr('stroke', 'black')
+                    //.attr('stroke-width', '3px')
+                    .attr("fill-opacity", 0.5)
+                    .attr("fill", "black");
+                    //.attr("stroke-width", 20)
+                    //.attr("stroke", "red");
+
+                }
+                //d3.select(document.getElementById('Trumpington Road/ Brooklands Avenue'));
+
+            }
+            //console.log(sele)
 
             let neighbors = SITE_DB.find(x => x.id === id).neighbors;
             let links = [];
@@ -602,7 +640,8 @@ function drawVoronoi() {
                     "Y: ": y_coord
                 });
 
-             
+                d3.selectAll(".lineRoute").style("visibility", "hidden")
+
 
                 // Add the links
                 lineGroup
@@ -642,7 +681,6 @@ function drawVoronoi() {
                         let midX=(start_X+end_X)/2;
                         let a = Math.abs(start_X - end_X);
                         let b = Math.abs(start_Y - end_Y);
-                        //let off= Math.log(Math.sqrt( a*a + b*b ));//10*Math.sin(Math.abs(start_X-end_X));
                         let off=a>b?b/10:(15);
                         let mid_X1=midX+off;
                         let mid_Y1=slope(mid_X1,start_X, start_Y,end_X,end_Y);
@@ -662,6 +700,8 @@ function drawVoronoi() {
                     .style("stroke-width", 2);
 
             }
+
+
             //console.log(links);
 
 
@@ -710,8 +750,60 @@ function drawVoronoi() {
     console.log("next");
     //d3.select(map.getPanes().tooltipPane).append("title").text(function(d) { return d.data.name + "\n" + d.data.selected ; })
         filteredPoints=[];
+
+        changePolygonColors();
+       
+
+}
+function colorTransition(value){
+    SITE_DB.forEach((element) => {
+        element.setVisualisation(value);
+    });
+    setColor=setColorRange();
+    
+    pathGroup.selectAll(".cell")
+    .transition()
+    .duration('750')
+.attr('fill', function (d, i) {
+
+    let color = SITE_DB[i].selected;
+    if (color == null || color == undefined) {
+        return "rgb(50,50,50);"
+    } else {
+        return setColor(color) //c10[i % 10]
+    }
+})
+
 }
 
+function changePolygonColors(){
+    d3.selectAll("input").on("change", function(){
+        console.log(this.value);
+        if(this.value==="current"){
+        colorTransition("travel speed");
+        }
+        if(this.value==="deviation"){
+           
+            colorTransition("speed deviation");
+        }
+        if(this.value==="historic"){
+           
+            colorTransition("historic speed");
+        }
+});
+}
+function setColorRange(){
+
+    let findMax = (ma, v) => Math.max(ma, v.selected)
+    let findMin = (mi, v) => Math.min(mi, v.selected)
+    let max = SITE_DB.reduce(findMax, -Infinity)
+    let min = SITE_DB.reduce(findMin, Infinity)
+
+    console.log("new min_max ", min, max);
+
+    return d3.scaleSequential().domain([min, max]) //min, max
+        .interpolator(d3.interpolateRdYlGn);
+}
 function slope(x,x1, y1,x2,y2) {
     let midX=(x1+x2)/2;
     let midY=(y1+y2)/2;
@@ -729,7 +821,7 @@ function InitialiseNodes() {
         SITE_DB[i].findNeighbors();
         SITE_DB[i].computeTravelTime();
         SITE_DB[i].computeTravelSpeed();
-        SITE_DB[i].setVisualisation("speed deviation"); //speed deviation//travel speed
+        SITE_DB[i].setVisualisation(null); //speed deviation//travel speed
 
     }
 }
@@ -768,11 +860,22 @@ class Node {
         }
 
     }
+    fetchName(id) {
+        for (let i = 0; i < all_sites.length; i++) {
+
+            if (id == all_sites[i].id) {
+                //this.name = all_sites[i].name;
+                return all_sites[i].name;
+                break;
+            }
+        }
+
+    }
     setVisualisation(vis) {
         this.selectedName = vis;
         switch (vis) {
-            case "travel time":
-                this.selected = this.travelTime;
+            case "historic speed":
+                this.selected = this.historicSpeed;
                 break;
             case "travel speed":
                 this.selected = this.travelSpeed;
@@ -781,7 +884,7 @@ class Node {
                 this.selected = this.speedDeviation;
                 break;
             default:
-                this.selected = null; //this.travelSpeed;
+                this.selected = this.speedDeviation; //this.travelSpeed;
                 break;
 
         }
@@ -804,9 +907,15 @@ class Node {
         this.neighbors = [];
         for (let i = 0; i < data.length; i++) {
             if (this.id == data[i].sites[0]) { //from this id
+                let tt=traffic_data.find(x => x.id === data[i].id).travelTime;
+                let travelTime=tt==undefined||null?traffic_data.find(x => x.id === data[i].id).normalTravelTime:tt;
+                console.log(tt, travelTime);
                 this.neighbors.push({
                     "link": data[i].id,
+                    "name":data[i].name,
                     "id": data[i].sites[1], //to this id
+                    "site":this.fetchName(data[i].sites[1]),
+                    "travelTime":travelTime,
                     "dist": data[i].length
                 });
             }
@@ -911,3 +1020,86 @@ function drawRoutes(){
 }
 return DB;
 }
+
+
+function generateGraph(s,f){
+
+var graph={};
+start=s;//.name;
+finish=f;//.name;
+
+console.log(start,"---",finish);
+const problem = {
+    S: {A: 5, B: 2},
+    A: {C: 4, D: 2},
+    B: {A: 8, D: 7},
+    C: {D: 6, F: 3},
+    D: {F: 1},
+    F: {}
+  };
+
+    SITE_DB.forEach((element) => {
+  
+    let neighbors=element.neighbors;
+
+    if(element.name==start){
+        element.name="S";    
+        console.log("Site START detected",element.name);
+       }
+    
+    if(element.name==finish){
+        element.name="F";
+        console.log("Site FINISH detected",element.name);    
+      }
+
+   //let obj =getNeighborObject(SITE_DB.indexOf(element));
+   let obj={};
+
+   neighbors.forEach((neighbor)=>{
+
+    //console.log({"current":neighbor.site, "S": start, "F":finish});
+   if(neighbor.site==start){
+    console.log("MATCH");
+    neighbor.site="S";    
+    //console.log("Neigh START detected", neighbor.site);
+   }
+
+ if(neighbor.site==finish){
+     neighbor.site="F";
+     console.log("Site FINISH detected",neighbor.site);    
+   }
+
+
+  obj[neighbor.site]=neighbor.travelTime;//dist;
+   
+});
+
+
+  
+   graph[element.name]=obj;
+   
+                                });
+
+console.log(graph);
+return graph;
+}
+
+function getNeighborObject(i){
+   
+let obj={};
+
+neighbors.forEach((neighbor)=>{
+obj[neighbor.name]=neighbor.dist;
+
+});
+
+return obj;
+}
+
+// element=SITE_DB[i];
+// var name =element.name;
+// var speed =element.travelSpeed;
+// var neighbors=element.neighbors;
+// if(speed==undefined||speed==null){
+//     speed= element.historicSpeed;
+// }
