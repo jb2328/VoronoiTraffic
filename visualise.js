@@ -534,7 +534,7 @@ function drawVoronoi() {
             //console.log(SITE_DB[i].name); //WRONG APPROACH, CAUSES RANODM OBJECT DRIFTS
             // /console.log(d.data.name); //SHOULD FIX THE PROBLEM WITH BS MARKING ON THE MAP AND RANDOM RELOCATIONS
             d3.select(this).transition()
-                .duration('400')
+                .duration('300')
                 .attr('stroke', 'black')
                 .attr('stroke-width', '2px')
                 .style("stroke-opacity", 1)
@@ -556,21 +556,82 @@ function drawVoronoi() {
                         "X: ": x_coord,
                         "Y: ": y_coord
                     });
+                   // d3.selectAll(".lineRoute").style("visibility", "hidden")
+    
+                   lineGroup
+                   .append('path')
+                   .transition()
+                    .duration(1000)
+                    .attr('d', curvedLine(d.data.x,d.data.y,x_coord,y_coord,1))
+                    .style("fill", function (d, i) {
 
-                    lineGroup.append("line") // attach a line
-                    .attr("class", "lineRoute")
-                    .attr("x1", d.data.x) // x position of the first end of the line
-                    .attr("y1", d.data.y) // y position of the first end of the line
-                    .attr("x2", x_coord) // x position of the second end of the line
-                    .attr("y2", y_coord) // y position of the second end of the line
-                    .transition().duration(400)
-                    .style("stroke-width", "2px") // colour the line
-                    .style("stroke-opacity", 0.8)
-                    .style("stroke", "gray"); // colour the line
+                        let color = SITE_DB.find(x => x.id === neighbors[i].id).speedDeviation;
+                        if (color == null || color == undefined) {
+                            return "rgb(50,50,50);"
+                        } else {
+                            return setColor(color) //c10[i % 10]
+                        }
+                    })
+                    .attr("stroke","black")
+                    .attr("stroke-opacity",1)
+                    .style("stroke-width", 10)
+
+
+                    // Add the links
+                    lineGroup
+                    .append('path')
+                    .transition()
+                     .duration(1000)
+                     .attr('d', curvedLine(d.data.x,d.data.y,x_coord,y_coord,1))
+                    .style("fill", "none")
+                    .attr("stroke", function (d, i) {
+
+                        let color = SITE_DB.find(x => x.id === neighbors[i].id).speedDeviation;
+                        if (color == null || color == undefined) {
+                            return "rgb(50,50,50);"
+                        } else {
+                            return setColor(color) //c10[i % 10]
+                        }
+                    })
+                    .attr("stroke-opacity",1)
+                    .style("stroke-width", 5);
+
+                    lineGroup
+                    .append('path')
+                    .transition()
+                     .duration(1000)
+                    .attr('d', curvedLine(d.data.x,d.data.y,x_coord,y_coord,-1))
+                     
+                    .style("fill", "none")
+                    .attr("stroke", function (d, i) {
+
+                        let color = SITE_DB.find(x => x.id === neighbors[i].id).speedDeviation;
+                        console.log(color);
+                        if (color == null || color == undefined) {
+                            return "rgb(50,50,50);"
+                        } else {
+                            return setColor(color) //c10[i % 10]
+                        }
+                    })
+                    .attr("stroke-opacity",1)
+                    .style("stroke-width", 5);
+                    //.attr('fill')
+                    
+                    // lineGroup.append("line") // attach a line
+                    // .attr("class", "lineRoute")
+                    // .attr("x1", d.data.x) // x position of the first end of the line
+                    // .attr("y1", d.data.y) // y position of the first end of the line
+                    // .attr("x2", x_coord) // x position of the second end of the line
+                    // .attr("y2", y_coord) // y position of the second end of the line
+                    // .transition()
+                    //     .duration(400)
+                    //     .style("stroke-width", "2px") // colour the line
+                    //     .style("stroke-opacity", 0.8)
+                    //     .style("stroke", "gray"); // colour the line
                     
 
                 }
-                 
+               
                 
                 
 
@@ -665,32 +726,7 @@ function drawVoronoi() {
                             selectedSites=[];
             }
 
-            let neighbors = SITE_DB.find(x => x.id === id).neighbors;
-
-            for (let i = 0; i < neighbors.length; i++) {
-
-                let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
-                let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
-
-                 d3.selectAll(".lineRoute").style("visibility", "hidden")
-
-
-                // Add the links
-                lineGroup
-                    .append('path')
-                    .attr('d', curvedLine(d.data.x,d.data.y,x_coord,y_coord,1))
-                    .style("fill", "none")
-                    .attr("stroke", "blue")
-                    .style("stroke-width", 2);
-
-                    lineGroup
-                    .append('path')
-                    .attr('d', curvedLine(d.data.x,d.data.y,x_coord,y_coord,-1))
-                    .style("fill", "none")
-                    .attr("stroke", "red")
-                    .style("stroke-width", 2);
-
-            }
+            
                 d3.select(this).attr("class", "selected");
         })
         //.on("click",  d3.selectAll(".tooltip").style("visibility", "hidden"))
@@ -698,8 +734,9 @@ function drawVoronoi() {
             lineGroup.remove();
 
             d3.select(this).transition()
-                .duration('400')
-                .attr('stroke', 'rgb(0,0,0)')
+                .duration('500')
+                //JUST CHANGE TO CLASS
+                .attr('stroke', 'black')
                 .attr('stroke-width', '0.5px')
                 .style("stroke-opacity", 0.3)
                 .style("fill-opacity", 0.3);
@@ -773,7 +810,7 @@ function colorTransition(value){
     
     pathGroup.selectAll(".cell")
     .transition()
-    .duration('750')
+    .duration('1000')
 .attr('fill', function (d, i) {
 
     let color = SITE_DB[i].selected;
@@ -876,7 +913,6 @@ class Node {
             if (id == all_sites[i].id) {
                 //this.name = all_sites[i].name;
                 return all_sites[i].name;
-                break;
             }
         }
 
@@ -919,6 +955,7 @@ class Node {
             if (this.id == data[i].sites[0]) { //from this id
                 let tt=traffic_data.find(x => x.id === data[i].id).travelTime;
                 let travelTime=tt==undefined||null?traffic_data.find(x => x.id === data[i].id).normalTravelTime:tt;
+                let normalTravelTime=traffic_data.find(x => x.id === data[i].id).normalTravelTime;
                 //console.log(tt, travelTime);
                 this.neighbors.push({
                     "link": data[i].id,
@@ -926,6 +963,7 @@ class Node {
                     "id": data[i].sites[1], //to this id
                     "site":this.fetchName(data[i].sites[1]),
                     "travelTime":travelTime,
+                    "normalTravelTime":normalTravelTime,
                     "dist": data[i].length
                 });
             }
