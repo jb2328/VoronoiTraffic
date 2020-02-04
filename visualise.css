@@ -40,7 +40,15 @@
 .invisiblePoint {
     fill: none;
 }
-
+.selected{
+    stroke: black;
+    stroke-dasharray: 10;
+    opacity: 1;
+    /* border-style: dashed; */
+    stroke-opacity: 1;
+    stroke-width: 5;
+    
+}
 
 /* #map {
     cursor: -webkit-grab;

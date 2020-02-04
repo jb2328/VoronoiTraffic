@@ -136,8 +136,8 @@ function load_journey_times() {
 
     $.getJSON(JOURNEYS_URL)//, function(data){console.log(data)}
        .done(function (journeys) {
-		console.log("b");
-        console.log(journeys);
+		//console.log("b");
+        //console.log(journeys);
             traffic_data = [];
             for (var i = 0; i < journeys.length; ++i) {
                 var journey = journeys[i];
@@ -269,7 +269,7 @@ function initMap() {
             "<input type='radio' name='mode' value='test2'> Test2</form><br></div>"
             +"<br><div>"+"<form id='modes'>"+
             "<input type='radio' name='mode' value='current'> Current Speed<br>"+
-            "<input type='radio' name='mode' value='historic'> Historic Speed<br>"+
+            "<input type='radio' name='mode' value='historic'> Normal Speed<br>"+
             "<input type='radio' name='mode' value='deviation'> Deviation<br>"+
             "</form>"+"</div>"
             return;
@@ -473,6 +473,9 @@ function drawVoronoi() {
     var lineGroup = svg.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
+    var dijkstraGroup = svg.append("g")
+        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+
     // create a tooltip
     var tooltip = d3.select(map.getPanes().tooltipPane)
         .append("div")
@@ -526,7 +529,7 @@ function drawVoronoi() {
         .on('mouseover', function (d, i) {
             lineGroup.remove();
             lineGroup = svg.append("g")
-        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+            .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
             //info.update(d.data);
             //console.log(SITE_DB[i].name); //WRONG APPROACH, CAUSES RANODM OBJECT DRIFTS
             // /console.log(d.data.name); //SHOULD FIX THE PROBLEM WITH BS MARKING ON THE MAP AND RANDOM RELOCATIONS
@@ -574,9 +577,8 @@ function drawVoronoi() {
             // tooltip.style("visibility", "visible")
             //     .text(SITE_DB[i].name);
 
-            //d3.select(".hover_val").remove();
-
-           // d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text(SITE_DB[i].selected);
+           //d3.select(".hover_val").remove();
+           //d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text(SITE_DB[i].name);//selected
 
 
         })
@@ -592,8 +594,7 @@ function drawVoronoi() {
 
         .on("click", function (d) {
             let id = d.data.id;
-            console.log(id, "clickaroo")
-            
+            console.log(id, " was clicked");
          
             selectedSites.push(d.data);
             if(selectedSites.length>2){
@@ -607,105 +608,90 @@ function drawVoronoi() {
                 let result=dijkstra(problem,selectedSites[0].name,selectedSites[1].name );
                 console.log(result);
                 
+                // var lineData = [
+                //   { "x": 1,   "y": 5},  { "x": 20,  "y": 20},
+                //   { "x": 40,  "y": 10}, { "x": 60,  "y": 40},
+                //   { "x": 80,  "y": 5},  { "x": 100, "y": 60}
+                //];
+                let path=[];
+                //console.log(SITE_DB);
                 for(let i =0; i<result.path.length;i++){
+
                     console.log(result.path[i]);
+                    //   d3.select(document.getElementById(result.path[i]))
+                    // .transition()
+                    // .duration(1000)
+                    // .attr("class","selected");
+                    //.attr("fill-opacity", 0.5)
+                    //.attr("fill", "black");
 
-                    d3.select(document.getElementById(result.path[i]))
-                    .transition()
-                    .duration(1000)
-                    //.attr('stroke', 'black')
-                    //.attr('stroke-width', '3px')
-                    .attr("fill-opacity", 0.5)
-                    .attr("fill", "black");
-                    //.attr("stroke-width", 20)
-                    //.attr("stroke", "red");
+                    var  found = SITE_DB.find(x => x.name == result.path[i]);
 
+                    //console.log(found);
+                    //console.log(xc[id]);
+                    if(found.x!=null||found.x!=undefined){
+                        path.push({"x":found.x, "y":found.y});;
+                    }
+                   
+                    
+                  
                 }
-                //d3.select(document.getElementById('Trumpington Road/ Brooklands Avenue'));
+                console.log("P ",path);
+                // 7. d3's line generator
+                var line = d3.line()
+                .x(function(d, ) { return d.x; }) // set the x values for the line generator
+                .y(function(d) { return d.y; }) // set the y values for the line generator 
+                // apply smoothing to the line
+                .curve(d3.curveCatmullRom.alpha(1));//d3.curveCardinal.tension(0.1)//d3.curveNatural
+                
+                
 
+                         var lineGraph = dijkstraGroup.append("path")
+                                .attr("d", line(path))
+                                .attr("stroke", "green")
+                                .attr("stroke-width", 5)
+                                .attr("fill", "none");
+                        
+                         var totalLength = lineGraph.node().getTotalLength();
+
+                         lineGraph
+                         .attr("stroke-dasharray", totalLength + " " + totalLength)
+                         .attr("stroke-dashoffset", totalLength)
+                         .transition()   
+                            .duration(500)
+                            .ease(d3.easeLinear)
+                            .attr("stroke-dashoffset", 0);
+                            
+                            selectedSites=[];
             }
-            //console.log(sele)
 
             let neighbors = SITE_DB.find(x => x.id === id).neighbors;
-            let links = [];
+
             for (let i = 0; i < neighbors.length; i++) {
-                //console.log(i);
+
                 let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
                 let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
 
-                links.push({
-                    "x: ": d.data.x,
-                    "y: ": d.data.y,
-                    "X: ": x_coord,
-                    "Y: ": y_coord
-                });
-
-                d3.selectAll(".lineRoute").style("visibility", "hidden")
+                 d3.selectAll(".lineRoute").style("visibility", "hidden")
 
 
                 // Add the links
                 lineGroup
                     .append('path')
-                    .attr('d', function () {
-                        let start_X = d.data.x;//x(idToNode[d.source].name) // X position of start node on the X axis
-                        let start_Y = d.data.y;
-                        let end_X = x_coord;
-                        let end_Y = y_coord;
-                        let midX=(start_X+end_X)/2;
-                        let a = Math.abs(start_X - end_X);
-                        let b = Math.abs(start_Y - end_Y);
-                        let off=a>b?b/10:15;
-                                                let mid_X1=midX-off;
-                        let mid_Y1=slope(mid_X1,start_X, start_Y,end_X,end_Y);
-                        //end = x(idToNode[d.target].name) // X position of end node
-                        return ['M', start_X, start_Y, // the arc starts at the coordinate x=start, y=height-30 (where the starting node is)
-                                'C', // This means we're gonna build an elliptical arc
-                               start_X,",",start_Y,",",
-                               mid_X1,mid_Y1,
-                                // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
-                                end_X, ',', end_Y
-                            ] // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
-                            .join(' ');
-                    })
+                    .attr('d', curvedLine(d.data.x,d.data.y,x_coord,y_coord,1))
                     .style("fill", "none")
                     .attr("stroke", "blue")
                     .style("stroke-width", 2);
 
                     lineGroup
                     .append('path')
-                    .attr('d', function () {
-                        let start_X = d.data.x;//x(idToNode[d.source].name) // X position of start node on the X axis
-                        let start_Y = d.data.y;
-                        let end_X = x_coord;
-                        let end_Y = y_coord;
-                        let midX=(start_X+end_X)/2;
-                        let a = Math.abs(start_X - end_X);
-                        let b = Math.abs(start_Y - end_Y);
-                        let off=a>b?b/10:(15);
-                        let mid_X1=midX+off;
-                        let mid_Y1=slope(mid_X1,start_X, start_Y,end_X,end_Y);
-                       // let mid_Y2=slope(mid_X2,start_X, start_Y,end_X,end_Y) ;
-                        //end = x(idToNode[d.target].name) // X position of end node
-                        return ['M', start_X, start_Y, // the arc starts at the coordinate x=start, y=height-30 (where the starting node is)
-                                'C', // This means we're gonna build an elliptical arc
-                               start_X,",",start_Y,",",
-                               mid_X1,mid_Y1,
-                                // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
-                                end_X, ',', end_Y
-                            ] // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
-                            .join(' ');
-                    })
+                    .attr('d', curvedLine(d.data.x,d.data.y,x_coord,y_coord,-1))
                     .style("fill", "none")
                     .attr("stroke", "red")
                     .style("stroke-width", 2);
 
             }
-
-
-            //console.log(links);
-
-
-
+                d3.select(this).attr("class", "selected");
         })
         //.on("click",  d3.selectAll(".tooltip").style("visibility", "hidden"))
         .on('mouseout', function (d, i) {
@@ -721,6 +707,30 @@ function drawVoronoi() {
         //        .style("visibility", "hidden");
         });
 
+        
+        function curvedLine(x,y,X,Y, dir){
+            
+            let start_X = x;
+            let start_Y = y;
+            let end_X = X;
+            let end_Y = Y;
+            let midX=(start_X+end_X)/2;
+            let a = Math.abs(start_X - end_X);
+            let b = Math.abs(start_Y - end_Y);
+            let off=a>b?b/10:15;
+
+            let mid_X1=midX-off*dir;
+
+            let mid_Y1=slope(mid_X1,start_X, start_Y,end_X,end_Y);
+            return ['M', start_X, start_Y, // the arc starts at the coordinate x=start, y=height-30 (where the starting node is)
+                    'C', // This means we're gonna build an elliptical arc
+                   start_X,",",start_Y,",",
+                   mid_X1,mid_Y1,
+                    // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
+                    end_X, ',', end_Y
+                ] // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
+                .join(' ');
+        }
     // pathGroup.selectAll("cell").append("path")
     //     .attr("class", "sensor-arc")
     //     .attr("d", function (d) {
@@ -778,7 +788,7 @@ function colorTransition(value){
 
 function changePolygonColors(){
     d3.selectAll("input").on("change", function(){
-        console.log(this.value);
+        //console.log(this.value);
         if(this.value==="current"){
         colorTransition("travel speed");
         }
@@ -909,7 +919,7 @@ class Node {
             if (this.id == data[i].sites[0]) { //from this id
                 let tt=traffic_data.find(x => x.id === data[i].id).travelTime;
                 let travelTime=tt==undefined||null?traffic_data.find(x => x.id === data[i].id).normalTravelTime:tt;
-                console.log(tt, travelTime);
+                //console.log(tt, travelTime);
                 this.neighbors.push({
                     "link": data[i].id,
                     "name":data[i].name,
@@ -1003,20 +1013,13 @@ function drawRoutes(){
     let id = SITE_DB[d].id;
 
     let neighbors = SITE_DB.find(x => x.id === id).neighbors;
-    let links = [];
+
     for (let i = 0; i < neighbors.length; i++) {
-        //console.log(i);
+
         let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
         let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
-
-        links.push({
-            "x1: ": SITE_DB[d].x,
-            "y1: ": SITE_DB[d].y,
-            "x2: ": x_coord,
-            "y2: ": y_coord
-        });
-    }
-    DB.push(links);
+     }
+   
 }
 return DB;
 }
@@ -1028,7 +1031,7 @@ var graph={};
 start=s;//.name;
 finish=f;//.name;
 
-console.log(start,"---",finish);
+//console.log(start,"---",finish);
 const problem = {
     S: {A: 5, B: 2},
     A: {C: 4, D: 2},
@@ -1042,45 +1045,41 @@ const problem = {
   
     let neighbors=element.neighbors;
 
-    if(element.name==start){
-        element.name="S";    
-        console.log("Site START detected",element.name);
-       }
     
-    if(element.name==finish){
-        element.name="F";
-        console.log("Site FINISH detected",element.name);    
-      }
 
-   //let obj =getNeighborObject(SITE_DB.indexOf(element));
    let obj={};
 
    neighbors.forEach((neighbor)=>{
 
     //console.log({"current":neighbor.site, "S": start, "F":finish});
    if(neighbor.site==start){
-    console.log("MATCH");
-    neighbor.site="S";    
-    //console.log("Neigh START detected", neighbor.site);
+    obj["S"]=neighbor.travelTime;//dist;
+    //neighbor.site="S";    
    }
 
  if(neighbor.site==finish){
-     neighbor.site="F";
-     console.log("Site FINISH detected",neighbor.site);    
+    obj["F"]=neighbor.travelTime;//dist;
+     //neighbor.site="F";
    }
-
-
-  obj[neighbor.site]=neighbor.travelTime;//dist;
-   
-});
-
+else{obj[neighbor.site]=neighbor.travelTime;}//dist;}
 
   
-   graph[element.name]=obj;
    
-                                });
+});
+if(element.name==start){
+    graph["S"]=obj;
+    //element.name="S";    
+   }
 
-console.log(graph);
+if(element.name==finish){
+    graph["F"]=obj;
+    //element.name="F";
+  }
+  else{graph[element.name]=obj;}
+   
+    });
+
+//console.log(graph);
 return graph;
 }
 
@@ -1095,6 +1094,7 @@ obj[neighbor.name]=neighbor.dist;
 
 return obj;
 }
+
 
 // element=SITE_DB[i];
 // var name =element.name;
