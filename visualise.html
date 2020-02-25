@@ -17,8 +17,13 @@
     integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
     crossorigin=""></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
-    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script> -->
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 
 
 
@@ -34,12 +39,8 @@
   <!-- Our scripts -->
   <script type="text/javascript" src="setup_env.js"></script>
   <script type="text/javascript" src="dijkstra.js"></script>
-
-
-  <style>
-    
-</style>
-
+  <script type="text/javascript" src="boundarySites.js"></script>
+  
 
   <title>Voronoi test</title>
 
@@ -52,5 +53,40 @@
 </body>
 
 <script type="text/javascript" src="visualise.js"></script>
+
+<script type="text/javascript">
+  $(function() {
+  
+    // $('input[name="datefilter"]').daterangepicker({
+    //     autoUpdateInput: false,
+    //     locale: {
+    //         cancelLabel: 'Clear'
+    //     }
+    // });
+
+  $('input[name="datefilter"]').daterangepicker({
+    "showDropdowns": true,
+    "timePicker": true,
+    "timePickerIncrement": 15,
+    "startDate": "02/18/2020",
+    "endDate": "02/24/2020",
+    "opens": "center"
+}, function(start, end, label) {
+  console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') + ' (predefined range: ' + label + ')');
+});
+
+  
+    $('input[name="datefilter"]').on('apply.daterangepicker', function(ev, picker) {
+        $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+    });
+  
+    $('input[name="datefilter"]').on('cancel.daterangepicker', function(ev, picker) {
+        $(this).val('');
+    });
+  
+  });
+
+  </script>
+
 
 </html>

@@ -52,110 +52,6 @@ var all_sites, traffic_data = [],
 
 var minmax, myColors;
 var SITE_DB = [];
-var boundarySites = [{
-        "lat": 52.24861,
-        "lng": 0.11536,
-        "x": null,
-        "y": null
-    }, //A,
-    {
-        "lat": 52.2503,
-        "lng": 0.14763,
-        "x": null,
-        "y": null
-    },
-    {
-        "lat": 52.24735,
-        "lng": 0.17681,
-        "x": null,
-        "y": null
-    }, //A,
-    {
-        "lat": 52.2339,
-        "lng": 0.20153,
-        "x": null,
-        "y": null
-    },
-
-    {
-        "lat": 52.21139,
-        "lng": 0.21286,
-        "x": null,
-        "y": null
-    }, //A,
-    {
-        "lat": 52.18993,
-        "lng": 0.2029,
-        "x": null,
-        "y": null
-    },
-
-    {
-        "lat": 52.16425,
-        "lng": 0.1902,
-        "x": null,
-        "y": null
-    }, //A,
-    {
-        "lat": 52.15034,
-        "lng": 0.16342,
-        "x": null,
-        "y": null
-    },
-
-    {
-        "lat": 52.1398,
-        "lng": 0.12051,
-        "x": null,
-        "y": null
-    }, //A,
-    {
-        "lat": 52.15456,
-        "lng": 0.08205,
-        "x": null,
-        "y": null
-    },
-
-    {
-        "lat": 52.16572,
-        "lng": 0.06111,
-        "x": null,
-        "y": null
-    }, //A,
-    {
-        "lat": 52.1813,
-        "lng": 0.03571,
-        "x": null,
-        "y": null
-    },
-
-    {
-        "lat": 52.20634,
-        "lng": 0.01648,
-        "x": null,
-        "y": null
-    }, //A,
-    {
-        "lat": 52.22464,
-        "lng": 0.02884,
-        "x": null,
-        "y": null
-    },
-
-    {
-        "lat": 52.23726,
-        "lng": 0.05527,
-        "x": null,
-        "y": null
-    },
-    {
-        "lat": 52.24441,
-        "lng": 0.08446,
-        "x": null,
-        "y": null
-    } //A
-];
-
 var links_drawn=[];
 
 var newPts = [];
@@ -171,28 +67,8 @@ function map_values(value, start1, stop1, start2, stop2) {
     }
     return  result;
 }
-//boundarySites=getCircle();
-function getCircle() {
-    let a = 0;
-    let r = 700;
-    let arr = [];
-    for (let t = 0; t < 6.28; t += 0.05) {
-        let x = a + r * Math.cos(t);
-        let y = a + r * Math.sin(t);
 
-        let lng = map_values(x, -500, 500, 0.03, 0.2);
-        let lat = map_values(y, -500, 500, 52.15, 52.246)
 
-        newPts.push({
-            "x": x,
-            "y": y,
-            "lng": lng,
-            "lat": lat
-        });
-    }
-    // console.log(newPts);
-    return newPts;
-}
 var BOUNDARY_DB = [];
 var boundaryPoints = [];
 
@@ -202,8 +78,7 @@ $(document).ready(function () {
     load_data();
 });
 
-// Clock
-// clock = get_clock().addTo(map);
+;
 
 // Async load locations, annotate with auto-refreshing journey times
 function load_data() {
@@ -244,7 +119,7 @@ function load_journey_times() {
             }
 
             // Reset the clock
-            //clock.update();
+            clock.update();
 
             // Re-schedule for a minute in the future
             setTimeout(load_journey_times, 60000);
@@ -311,23 +186,33 @@ function update_actual_normal_speed(polyline) {
 
 
 function get_clock() {
-    var control = L.control({
-        position: 'bottomleft'
-    });
+    var control = L.control({position: 'topleft'});
     control.onAdd = function () {
         var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded clock');
-        div.innerHTML = '--:--:--';
+        div.innerHTML = 'Loading...';
         return div;
     };
-    control.update = function () {
-        var datetime = new Date();
-        var hh = ('0' + datetime.getHours()).slice(-2);
-        var mm = ('0' + datetime.getMinutes()).slice(-2);
-        var ss = ('0' + datetime.getSeconds()).slice(-2);
-        control.getContainer().innerHTML = hh + ':' + mm + ':' + ss;
+    control.update = function() {
+        //needs fixing as time end us being 1:1 instead of 01:01
+        var now  = new Date();
+        var hh = now.getHours();
+        var mm = now.getMinutes();
+        var ss = now.getSeconds();
+        // If datetime is today
+        control.getContainer().innerHTML = 'Updated '+hh+':'+mm;
+        // if (datetime.toDateString() === now.toDateString()) {
+        //     control.getContainer().innerHTML = 'Updated '+hh+':'+mm;
+        // }
+        // else {
+        //     var d = now.toISOString().slice(0, 10);
+        //     control.getContainer().innerHTML = 'Updated ' + hh + ':' + mm + ' on ' + d;
+        // }
+        console.log("updated")
+
     };
     return control;
 }
+
 
 
 function initMap() {
@@ -339,56 +224,108 @@ function initMap() {
         maxZoom: 20,
         ext: 'png'
     });
-    var cambridge = new L.LatLng(52.20038, 0.1197);
+    var cambridge = new L.LatLng(52.20038, 0.165);
     map = new L.Map("map", {
         center: cambridge,
         zoom: 13,
         layers: [stamenToner],
     });
 
-    var info = L.control();
+    // Clock
+    clock = get_clock().addTo(map)
 
-    info.onAdd = function (map) {
-        this._div = L.DomUtil.create('div', 'info');
+    var info_widget = L.control();
+    var datepicker_widget = L.control();
+
+    info_widget.onAdd = function (map) {
+        this.info_div = L.DomUtil.create('div', 'info');//has to be of class "info for the nice shade effect"
         this.update();
 
-        return this._div;
+        return this.info_div;
     };
 
-    info.update = function (e) {
+    datepicker_widget.onAdd = function (map) {
+        this.datepicker_div = L.DomUtil.create('div', 'info');//has to be of class "info for the nice shade effect"
+        //this.datepicker_div.id="datepicker";
+        this.update();
+
+        return this.datepicker_div;
+    };
+
+    let scr=  "<script>$('#datepicker').daterangepicker({'timePicker': true,'timePickerIncrement': 15,'startDate': '02/18/2020','endDate': '02/24/2020','opens': 'center'},"+
+     "function(start, end, label) {console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') +"+
+      "' (predefined range: ' + label + ')');})</script>";
+
+      info_widget.update = function (e) {
         if (e === undefined) {
-            this._div.innerHTML = '<h4>Information</h4>' + "<br><div>" +
-                "<form id='routes'>" +
-                "<input type='radio' name='mode' value='routes'> Routes<br>" +
-                "<input type='radio' name='mode' value='polygons'> Polygons</form><br></div>" +
-                "<br><div>" + "<form id='modes'>" +
-                "<input type='radio' name='mode' value='current'> Current Speed<br>" +
-                "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
-                "<input type='radio' name='mode' value='deviation'> Deviation<br>" +
-                "</form>" + "</div>"
+            this.info_div.innerHTML = 
+                '<h4>Information</h4>' + 
+                "<br>"+
+                "<div>" +
+                    "<form id='routes'>" +
+                        "<input type='radio' name='mode' value='routes'> Routes<br>" +
+                        "<input type='radio' name='mode' value='polygons'> Polygons"+
+                    "</form>"+
+                    "<br>"+
+                "</div>" +
+                "<br>"+
+                "<div>" + 
+                    "<form id='modes'>" +
+                        "<input type='radio' name='mode' value='current'> Current Speed<br>" +
+                        "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
+                        "<input type='radio' name='mode' value='deviation'> Deviation<br>" +
+                    "</form>" +
+                "</div>";
+          
             return;
         }
-        this._div.innerHTML = '<h4>Information</h4>'
-            //+  '<span style="font-weight:bold;">' + e.airport
-            +
-            '</span><br/>Number of sites : <span style="font-weight:bold;">' + all_sites.length +
-            '</span><br/>Number of links : <span style="font-weight:bold;">' + all_links.length + ' m'
-            //	+  '</span><br/>Largeur de piste : <span style="font-weight:bold;">' + e.width + ' m'
-            //+  '</span><br/>Altitude : <span style="font-weight:bold;">' + e.high + ' m' 
-            +
-            '</span>';
+          d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text("Hello World");
+    };
+    
+    datepicker_widget.update = function (e) {
+        if (e === undefined) {
+            this.datepicker_div.innerHTML = 
+            '<h4>Pick time and Date</h4>' + 
+            '<br>'+
+            '<input type="text" name="datefilter" id="datepicker" value="" />';
 
-        d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text("Hello World");
+            // "<script>$('#datepicker').daterangepicker({'timePicker': true,'timePickerIncrement': 15,'startDate': '02/18/2020','endDate': '02/24/2020','opens': 'center'},"+
+            // "function(start, end, label) {console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') +"+
+            // "'(predefined range: ' + label + ')');})"+
+            // "</script>";
+            
+          
+            return;
+        }
+         
     };
 
-    info.addTo(map);
+    info_widget.addTo(map);
+    datepicker_widget.addTo(map);
 
 
     map.on("viewreset moveend", drawVoronoi);
 
 }
 
+// $(function() {
 
+//     $('input[name="datefilter"]').daterangepicker({
+//         autoUpdateInput: false,
+//         locale: {
+//             cancelLabel: 'Clear'
+//         }
+//     });
+  
+//     $('input[name="datefilter"]').on('apply.daterangepicker', function(ev, picker) {
+//         $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+//     });
+  
+//     $('input[name="datefilter"]').on('cancel.daterangepicker', function(ev, picker) {
+//         $(this).val('');
+//     });
+  
+//   });
 
 var points = [];
 points = all_sites;
@@ -426,7 +363,8 @@ function drawVoronoi() {
 
     d3.select(".hover_val").remove();
 
-
+// Reset the clock
+clock.update();
 
     // voronoi = d3.voronoi().extent([
     //     [0, 0],
@@ -1009,7 +947,7 @@ function changeModes() {
 
                 let neighbors = SITE_DB.find(x => x.id === id).neighbors;
                 
-                //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;
+                //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;  
                 for (let i = 0; i < neighbors.length; i++) {
                     //console.log(i);
                     let inbound=neighbors[i].links.in.id;
