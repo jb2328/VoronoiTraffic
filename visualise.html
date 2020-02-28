@@ -57,13 +57,6 @@
 <script type="text/javascript">
   $(function() {
   
-    // $('input[name="datefilter"]').daterangepicker({
-    //     autoUpdateInput: false,
-    //     locale: {
-    //         cancelLabel: 'Clear'
-    //     }
-    // });
-
   $('input[name="datefilter"]').daterangepicker({
     "showDropdowns": true,
     "timePicker": true,
@@ -72,7 +65,9 @@
     "endDate": "02/24/2020",
     "opens": "center"
 }, function(start, end, label) {
+  //let URLhistoric_test_url='https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/history/'+link_id+'/?start_date='+start_date+'&end_date='+end_date
   console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') + ' (predefined range: ' + label + ')');
+  console.log(start,start._d.getTime(),end, end._d.getTime());//.getTime() / 1000
 });
 
   

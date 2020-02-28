@@ -5,6 +5,7 @@
 
 // m/sec to mph
 
+var API_TOKEN = 'a62fb5390f070c129591b6ff19c0a8cf06440efc';//'6909103b0bfbc5e949a31a840f31e17efd58754f';
 
 var TO_MPH = 2.23694;
 
@@ -47,8 +48,7 @@ var map, // The Leaflet map object itself
     line_map = {}; // Lookup link/route id to displayed polyline
 
 
-var all_sites, traffic_data = [],
-    all_links;
+var all_sites,all_links, journeys=[];
 
 var minmax, myColors;
 var SITE_DB = [];
@@ -78,58 +78,173 @@ $(document).ready(function () {
     load_data();
 });
 
-;
 
-// Async load locations, annotate with auto-refreshing journey times
+// Async load data, display it and reschedule
 function load_data() {
+    console.log("load initiated with "+API_TOKEN);
+    var headers = {
+        Authorization: 'Token ' + API_TOKEN
+    };
 
-    $.get(LOCATIONS_URL)
-        .done(function (locations) {
+    // $.get(LOCATIONS_URL)
+    //     .done(function (locations) {
+    //         console.log('Locations URL')
+    //         // Sites
+    //         all_sites = locations.sites;
+    //         all_links = locations.links
+    //         console.log('OG ',all_sites[0],all_links[0]);
+    //         // Load (and schedule for reload) journey times
+    //         load_journey_times();
 
+    //     });
+    
+    $.when(
+        $.get({
+            url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/site/',
+            headers: headers,
+            dataType: 'json',
+        }, function() {console.log("loaded")}
+        ),
+        $.get({
+            url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/link/',
+            headers: headers,
+            dataType: 'json',
+        }),
+        $.get({
+            url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/route/',
+            headers: headers,
+            dataType: 'json',
+        }),
+        $.get({
+            url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/latest/',
+            headers: headers,
+            dataType: 'json',
+        })
+    )
+        .done(function(site_response, link_response, route_response, journey_response) {
+            console.log("done starting");
+
+            all_sites = site_response[0].site_list;
+            all_links = link_response[0].link_list;//.concat(route_response[0].route_list);
+            console.log(link_response[0].link_list.length,route_response[0].route_list.length )
+            console.log('NEW ',all_sites[0],all_links[0]);
+            
             // Sites
-            all_sites = locations.sites;
-            all_links = locations.links
+           // all_sites = locations.sites;
+           // all_links = locations.links
 
-            // Load (and schedule for reload) journey times
-            load_journey_times();
+            journeys = journey_response[0].request_data;
+            console.log('journeysA',journeys)
+            //draw_sites(sites);
+            //process_journeys(journeys, links, sites);
 
-        });
+            // Display the data's timestamp on the clock
+            var timestamp = journey_response[0].ts * 1000;
+            clock.update(new Date(timestamp));
 
-}
-
-// Load journey times, annotate links and compound routes, and schedule to re-run
-function load_journey_times() {
-
-    console.log('(Re-)loading journey times');
-    console.log(JOURNEYS_URL);
-
-    $.getJSON(JOURNEYS_URL) //, function(data){console.log(data)}
-        .done(function (journeys) {
-            //console.log("b");
-            //console.log(journeys);
-            traffic_data = [];
-            for (var i = 0; i < journeys.length; ++i) {
-                var journey = journeys[i];
-                traffic_data.push({
-                    "id": journey.id,
-                    "travelTime": journey.travelTime,
-                    "normalTravelTime": journey.normalTravelTime
-                });
-
+          
+            // The underlying API updates journey times every 5 minutes.
+            // Schedule an update 5 and-a-bit minutes from the last
+            // timestamp if that looks believable, and in a minute
+            // otherwise.
+            var now = Date.now();
+            var delta = timestamp - now + (5.25*60000);
+            if (delta <= 0 || delta > 10*60000) {
+                delta = 60000;
             }
+            console.log('Timestamp was ' + new Date(timestamp));
+            console.log('Delta is ' + delta);
+            console.log('Now is ' + new Date(now));
+            console.log('Next at ' + new Date(now + delta));
+            setTimeout(load_data, delta);
+
+            // traffic_data = [];
+            // for (var i = 0; i < journeys.length; ++i) {
+            //     var journey = journeys[i];
+            //     traffic_data.push({
+            //         "id": journey.id,
+            //         "travelTime": journey.travelTime,
+            //         "normalTravelTime": journey.normalTravelTime
+            //     });
+            // }
+
+            // console.log('A', traffic_data[0], journeys[0]);
 
             // Reset the clock
             clock.update();
 
             // Re-schedule for a minute in the future
-            setTimeout(load_journey_times, 60000);
+           // setTimeout(load_journey_times, 60000);
 
             d3.select('svg').remove(); //#overlay
             drawVoronoi();
 
+        })
+
+        // If anything went wrong, try again in a minute
+        .fail(function(){
+            console.log('API call failed - default reschedule');
+            setTimeout(load_data, 60000);
         });
 
 }
+//--------------------------------------------//
+//-----------------OLD API--------------------//
+//--------------------------------------------//
+
+// Async load locations, annotate with auto-refreshing journey times
+// function load_data() {
+
+//     $.get(LOCATIONS_URL)
+//         .done(function (locations) {
+
+//             // Sites
+//             all_sites = locations.sites;
+//             all_links = locations.links
+
+//             // Load (and schedule for reload) journey times
+//             load_journey_times();
+
+//         });
+
+// }
+
+// Load journey times, annotate links and compound routes, and schedule to re-run
+// function load_journey_times() {
+
+//     console.log('(Re-)loading journey times');
+//     console.log(JOURNEYS_URL);
+
+//     $.getJSON(JOURNEYS_URL) //, function(data){console.log(data)}
+//         .done(function (journeys) {
+//             //console.log("b");
+//             //console.log(journeys);
+//             traffic_data = [];
+//             for (var i = 0; i < journeys.length; ++i) {
+//                 var journey = journeys[i];
+//                 traffic_data.push({
+//                     "id": journey.id,
+//                     "travelTime": journey.travelTime,
+//                     "normalTravelTime": journey.normalTravelTime
+//                 });
+
+//             }
+
+//             // Reset the clock
+//             clock.update();
+
+//             // Re-schedule for a minute in the future
+//             setTimeout(load_journey_times, 60000);
+
+//             d3.select('svg').remove(); //#overlay
+//             drawVoronoi();
+
+//         });
+
+// }
+//--------------------------------------------//
+//-----------------OLD API END----------------//
+//--------------------------------------------//
 
 // Set line colour based on travel time (aka speed) compared to normal
 function update_relative_speed(polyline) {
@@ -252,10 +367,6 @@ function initMap() {
         return this.datepicker_div;
     };
 
-    let scr=  "<script>$('#datepicker').daterangepicker({'timePicker': true,'timePickerIncrement': 15,'startDate': '02/18/2020','endDate': '02/24/2020','opens': 'center'},"+
-     "function(start, end, label) {console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') +"+
-      "' (predefined range: ' + label + ')');})</script>";
-
       info_widget.update = function (e) {
         if (e === undefined) {
             this.info_div.innerHTML = 
@@ -289,10 +400,6 @@ function initMap() {
             '<br>'+
             '<input type="text" name="datefilter" id="datepicker" value="" />';
 
-            // "<script>$('#datepicker').daterangepicker({'timePicker': true,'timePickerIncrement': 15,'startDate': '02/18/2020','endDate': '02/24/2020','opens': 'center'},"+
-            // "function(start, end, label) {console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') +"+
-            // "'(predefined range: ' + label + ')');})"+
-            // "</script>";
             
           
             return;
@@ -619,7 +726,7 @@ clock.update();
 
         })
 
-        .on("click", function (d) {
+        .on("dblclick", function (d) {
             let id = d.data.id;
             console.log(id, " was clicked");
 
@@ -635,11 +742,6 @@ clock.update();
                 let result = dijkstra(problem, selectedSites[0].name, selectedSites[1].name);
                 console.log(result);
 
-                // var lineData = [
-                //   { "x": 1,   "y": 5},  { "x": 20,  "y": 20},
-                //   { "x": 40,  "y": 10}, { "x": 60,  "y": 40},
-                //   { "x": 80,  "y": 5},  { "x": 100, "y": 60}
-                //];
                 let path = [];
                 //console.log(SITE_DB);
                 for (let i = 0; i < result.path.length; i++) {
@@ -748,10 +850,9 @@ clock.update();
 }
 function drawLink(link,dur){
   
-    let connected_sites=all_links.find(x=>x.id=== link).sites;
+    let connected_sites=all_links.find(x=>x.id===link).sites;
     let from=SITE_DB.find(x=>x.id===connected_sites[0]);
-    let to =SITE_DB.find(x=>x.id===connected_sites[1]);
-    
+    let to =SITE_DB.find(x=>x.id===connected_sites[1]);    
   
     links_drawn.push(link);
 
@@ -1083,23 +1184,32 @@ class Node {
     }
     findNeighbors() //data is all_links
     {
-        let data = all_links; //this.links;
         this.neighbors = [];
-        for (let i = 0; i < data.length; i++) {
-            if (this.id == data[i].sites[0]) { //from this id
-                let tt = traffic_data.find(x => x.id === data[i].id).travelTime;
-                let normalTravelTime = traffic_data.find(x => x.id === data[i].id).normalTravelTime;
-                let travelTime = tt == undefined || null ? normalTravelTime : tt;
+        let tt,ntt,travelTime;
+        for (let i = 0; i < all_links.length; i++) {
+            if (this.id == all_links[i].sites[0]) { //from this id
+                //console.log('journeysB',journeys[i].id, this.id,data[i])
+                //console.log(data.length, journeys.length,i);
+                try {
+                    tt = journeys.find(x => x.id === all_links[i].id).travelTime;
+                    ntt = journeys.find(x => x.id === all_links[i].id).normalTravelTime;
+                    travelTime = tt == undefined || null ? ntt : tt;
+                   }
+                   catch(err) {
+                     travelTime=undefined;
+                     ntt=undefined;
+                   }
+               
                 //console.log(tt, travelTime);
-                let link=findLinks(this.id, data[i].sites[1]);
+                let link=findLinks(this.id, all_links[i].sites[1]);
                 this.neighbors.push({
                     "links": {"out": link.out,"in":link.in},                 
-                    "name": data[i].name,
-                    "id": data[i].sites[1], //to this id
-                    "site": this.fetchName(data[i].sites[1]),
+                    "name": all_links[i].name,
+                    "id": all_links[i].sites[1], //to this id
+                    "site": this.fetchName(all_links[i].sites[1]),
                     "travelTime": travelTime,
-                    "normalTravelTime": normalTravelTime,
-                    "dist": data[i].length
+                    "normalTravelTime": ntt,
+                    "dist": all_links[i].length
                 });
             }
         }
@@ -1111,9 +1221,9 @@ class Node {
         for (let i = 0; i < this.neighbors.length; i++) {
             let link = this.neighbors[i].links.out.id;
 
-            for (let u = 0; u < traffic_data.length; u++) {
-                if (link == traffic_data[u].id) {
-                    avg.push(traffic_data[u].travelTime);
+            for (let u = 0; u < journeys.length; u++) {
+                if (link == journeys[u].id) {
+                    avg.push(journeys[u].travelTime);
                 }
             }
         }
@@ -1132,10 +1242,10 @@ class Node {
             let link = this.neighbors[i].links.out.id;
             let dist = this.neighbors[i].dist;
 
-            for (let u = 0; u < traffic_data.length; u++) {
-                if (link == traffic_data[u].id) {
-                    let travelTime = traffic_data[u].travelTime;
-                    let historicTime = traffic_data[u].normalTravelTime;
+            for (let u = 0; u < journeys.length; u++) {
+                if (link == journeys[u].id) {
+                    let travelTime = journeys[u].travelTime;
+                    let historicTime = journeys[u].normalTravelTime;
                     // console.log(historicTime);
 
                     let currentSpeed = (dist / travelTime) * TO_MPH;
@@ -1197,7 +1307,6 @@ function findLatLng() {
 }
 
 function drawRoutes() {
-    let DB = [];
 
     for (let d = 0; d < SITE_DB.length; d++) {
 
@@ -1210,9 +1319,7 @@ function drawRoutes() {
             let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
             let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
         }
-
     }
-    return DB;
 }
 
 
@@ -1290,10 +1397,39 @@ function generateGraph(s, f) {
     return graph;
 }
 
+// function find_old_link_from_sites(sites){
+//     var siteA=sites[0]
+//     var siteB=sites[1]
+//     old_links=old.json()["links"]
+//     for links in old_links:
+//         if links['sites'][0]==siteA and links['sites'][1]==siteB:
+//             return links
+//     return undefined
+// }
+
+function arraysEqual(a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+  
+    // If you don't care about the order of the elements inside
+    // the array, you should sort both arrays here.
+    // Please note that calling sort on an array will modify that array.
+    // you might want to clone your array first.
+  
+    for (var i = 0; i < a.length; ++i) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
 function calculateDeviation(link){
     let dist=all_links.find(x=>x.id===link).length;
-    let travelTime=traffic_data.find(x=>x.id===link).travelTime; 
-    let normalTravelTime=traffic_data.find(x=>x.id===link).normalTravelTime;
+    let travelTime,normalTravelTime;
+    try{travelTime=journeys.find(x=>x.id===link).travelTime; 
+        normalTravelTime=journeys.find(x=>x.id===link).normalTravelTime;
+        }
+    catch{return undefined}
     //TO FIX, MAKE IT NULL
     if(travelTime==null||travelTime==undefined){
         travelTime=normalTravelTime;
