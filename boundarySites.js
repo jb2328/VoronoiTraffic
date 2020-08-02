@@ -1,3 +1,6 @@
+/*The following list has ghost coordinates for voronoi cells that surround
+the real BlueTruth sensors. We create ghost voronoi cells so that the real 
+cells would not divide the entire map.*/
 var boundarySites = [{
     "lat": 52.24861,
     "lng": 0.11536,
@@ -103,7 +106,8 @@ var boundarySites = [{
 ];
 
 //boundarySites=getCircle();
-
+//transforms arbitrary circle coordinates to lat lng.
+//That is how the original locations were obtained.
 function getCircle() {
     let a = 0;
     let r = 700;

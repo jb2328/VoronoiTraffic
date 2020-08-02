@@ -1,4 +1,6 @@
 //original source https://gist.github.com/stella-yc/49a7b96679ab3bf06e26421fc81b5636
+
+//sample graph for testing bugfixing 
 const problem = {
   S: {A: 5, B: 2},
   A: {C: 4, D: 2},

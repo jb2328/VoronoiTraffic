@@ -5,7 +5,7 @@
 
 // m/sec to mph
 
-var API_TOKEN = 'a62fb5390f070c129591b6ff19c0a8cf06440efc';//'6909103b0bfbc5e949a31a840f31e17efd58754f';
+var API_TOKEN = 'a62fb5390f070c129591b6ff19c0a8cf06440efc'; //'6909103b0bfbc5e949a31a840f31e17efd58754f';
 
 var TO_MPH = 2.23694;
 
@@ -48,93 +48,168 @@ var map, // The Leaflet map object itself
     line_map = {}; // Lookup link/route id to displayed polyline
 
 
-var all_sites,all_links, journeys=[];
+var all_sites, all_links, journeys = [];
 
 var minmax, myColors;
 var SITE_DB = [];
-var links_drawn=[];
+var links_drawn = [];
 
 var newPts = [];
-
-function map_values(value, start1, stop1, start2, stop2) {
-    let result=start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
-    //console.log(result);
-    if (result>start2){
-        result=start2;
-    }
-    if(result<start1){
-        result=start1;
-    }
-    return  result;
-}
-
 
 var BOUNDARY_DB = [];
 var boundaryPoints = [];
 
 var combined = [];
+
+var points = [];
+points = all_sites;
+
+
+var voronoi, adjustedSites, vertices, DATA;
+var travelTimes;
+var travelSpeed;
+var historicSpeed;
+var speedDeviation;
+
+var pathGroup;
+var setColor;
+
+var selectedSites = [];
+
+var lineGroup, dijkstraGroup;
+
+
+class SpaceFloorplan {
+
+    // Called to create instance in page : space_floorplan = SpaceFloorplan()
+    constructor() {
+
+        // Instantiate a jb2328 utility class e.g. for getBoundingBox()
+        // this.viz_tools = new VizTools();
+
+        // Transform parameters to scale SVG to screen
+      
+    }
+
+    // init() called when page loaded
+    // init() {}
+
+}
+
+/*------------------------------------------------------*/
+/*----------------------MAIN LOOP-----------------------*/
+/*------------------------------------------------------*/
 $(document).ready(function () {
     initMap();
     load_data();
+    add_roads();
 });
 
 
+function get_svg_data(file_name){
+    console.log('getting','static/'+file_name)
+    $.get('static/'+file_name, function(data) {
+        let a =new XMLSerializer().serializeToString(data)
+        console.log(a.slice(0, 25));
+        console.log('done')
+        let y=0.008;
+    let x=0.018;
+    let road_a = [52.15245+y, 0.004669+x]
+    let road_b = [52.23011+y, 0.19+x]
+   
+    var svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
+    svgElement.setAttribute("viewBox", "0 0 973.7 808.7");
+    svgElement.innerHTML = a;
+    var svgElementBounds = [ road_a, road_b];
+    console.log('L.svgOverlay')
+    L.svgOverlay(svgElement, svgElementBounds, {interactive: true}).addTo(map);
+
+        // $bg.append(data);
+    });
+}
+function add_roads() {
+    // let wgb_a = [52.210499, 0.091332]
+    // let wgb_b = [52.211359, 0.092735]
+    // wgb_svg_data = '<path class="st0" id="wgb" d="M507.5,169.1l16.6-61L129.1,0.3L0.3,472.1l147.6,40.3l17.2-60.7L412,519l16.4-60l-27.3-6.4l31-126l28,5l18-70l-27-7l24-94L507.5,169.1z M333.4,429l-144.6-38.5L221.9,266l144.6,38.5L333.4,429z M384.4,236.4l-141.2-37.6l24.7-92.8l141.2,37.6L384.4,236.4z"/></svg>'
+    // wgb_bounds = [wgb_a, wgb_b];
+    // var wgb_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    // wgb_svg.setAttribute('xmlns', "http://www.w3.org/2000/svg");
+    // wgb_svg.setAttribute("viewBox", "0 0 524.4 519.3");
+    // wgb_svg.innerHTML = wgb_svg_data;
+    // var wgb_bounds = [wgb_a, wgb_b];
+    // L.svgOverlay(wgb_svg, wgb_bounds, {
+    //     interactive: true
+    // }).addTo(map);
+
+    console.log('adding roads')
+    let y=0.008;
+    let x=0.018;
+    let road_a = [52.15245+y, 0.004669+x]
+    let road_b = [52.23011+y, 0.19+x]
+    L.marker(road_a).addTo(map);
+    L.marker(road_b).addTo(map);
+
+    get_svg_data('roads.svg')
+
+    
+
+
+    // var road_loc = 'static/roads.svg',
+    //     road_bounds = [road_a, road_b];
+    // L.imageOverlay(road_loc, road_bounds, {
+    //     interactive: true
+    // }).addTo(map);
+    console.log('roads added', map)
+
+    //L.imageOverlay(wgb_loc, wgb_bounds).bringToFront();
+}
 // Async load data, display it and reschedule
 function load_data() {
-    console.log("load initiated with "+API_TOKEN);
+    console.log("load initiated with " + API_TOKEN);
     var headers = {
         Authorization: 'Token ' + API_TOKEN
     };
 
-    // $.get(LOCATIONS_URL)
-    //     .done(function (locations) {
-    //         console.log('Locations URL')
-    //         // Sites
-    //         all_sites = locations.sites;
-    //         all_links = locations.links
-    //         console.log('OG ',all_sites[0],all_links[0]);
-    //         // Load (and schedule for reload) journey times
-    //         load_journey_times();
 
-    //     });
-    
     $.when(
-        $.get({
-            url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/site/',
-            headers: headers,
-            dataType: 'json',
-        }, function() {console.log("loaded")}
-        ),
-        $.get({
-            url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/link/',
-            headers: headers,
-            dataType: 'json',
-        }),
-        $.get({
-            url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/route/',
-            headers: headers,
-            dataType: 'json',
-        }),
-        $.get({
-            url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/latest/',
-            headers: headers,
-            dataType: 'json',
-        })
-    )
-        .done(function(site_response, link_response, route_response, journey_response) {
+            $.get({
+                url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/site/',
+                headers: headers,
+                dataType: 'json',
+            }, function () {
+                console.log("loaded")
+            }),
+            $.get({
+                url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/link/',
+                headers: headers,
+                dataType: 'json',
+            }),
+            $.get({
+                url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/route/',
+                headers: headers,
+                dataType: 'json',
+            }),
+            $.get({
+                url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/latest/',
+                headers: headers,
+                dataType: 'json',
+            })
+        )
+        .done(function (site_response, link_response, route_response, journey_response) {
             console.log("done starting");
 
             all_sites = site_response[0].site_list;
-            all_links = link_response[0].link_list;//.concat(route_response[0].route_list);
-            console.log(link_response[0].link_list.length,route_response[0].route_list.length )
-            console.log('NEW ',all_sites[0],all_links[0]);
-            
+            all_links = link_response[0].link_list; //.concat(route_response[0].route_list);
+            console.log(link_response[0].link_list.length, route_response[0].route_list.length)
+            console.log('NEW ', all_sites[0], all_links[0]);
+
             // Sites
-           // all_sites = locations.sites;
-           // all_links = locations.links
+            // all_sites = locations.sites;
+            // all_links = locations.links
 
             journeys = journey_response[0].request_data;
-            console.log('journeysA',journeys)
+            console.log('journeysA', journeys)
             //draw_sites(sites);
             //process_journeys(journeys, links, sites);
 
@@ -142,14 +217,14 @@ function load_data() {
             var timestamp = journey_response[0].ts * 1000;
             clock.update(new Date(timestamp));
 
-          
+
             // The underlying API updates journey times every 5 minutes.
             // Schedule an update 5 and-a-bit minutes from the last
             // timestamp if that looks believable, and in a minute
             // otherwise.
             var now = Date.now();
-            var delta = timestamp - now + (5.25*60000);
-            if (delta <= 0 || delta > 10*60000) {
+            var delta = timestamp - now + (5.25 * 60000);
+            if (delta <= 0 || delta > 10 * 60000) {
                 delta = 60000;
             }
             console.log('Timestamp was ' + new Date(timestamp));
@@ -158,93 +233,26 @@ function load_data() {
             console.log('Next at ' + new Date(now + delta));
             setTimeout(load_data, delta);
 
-            // traffic_data = [];
-            // for (var i = 0; i < journeys.length; ++i) {
-            //     var journey = journeys[i];
-            //     traffic_data.push({
-            //         "id": journey.id,
-            //         "travelTime": journey.travelTime,
-            //         "normalTravelTime": journey.normalTravelTime
-            //     });
-            // }
-
-            // console.log('A', traffic_data[0], journeys[0]);
-
             // Reset the clock
             clock.update();
 
             // Re-schedule for a minute in the future
-           // setTimeout(load_journey_times, 60000);
+            // setTimeout(load_journey_times, 60000);
 
             d3.select('svg').remove(); //#overlay
             drawVoronoi();
+            // add_roads();
 
         })
 
         // If anything went wrong, try again in a minute
-        .fail(function(){
+        .fail(function () {
             console.log('API call failed - default reschedule');
             setTimeout(load_data, 60000);
         });
 
 }
-//--------------------------------------------//
-//-----------------OLD API--------------------//
-//--------------------------------------------//
 
-// Async load locations, annotate with auto-refreshing journey times
-// function load_data() {
-
-//     $.get(LOCATIONS_URL)
-//         .done(function (locations) {
-
-//             // Sites
-//             all_sites = locations.sites;
-//             all_links = locations.links
-
-//             // Load (and schedule for reload) journey times
-//             load_journey_times();
-
-//         });
-
-// }
-
-// Load journey times, annotate links and compound routes, and schedule to re-run
-// function load_journey_times() {
-
-//     console.log('(Re-)loading journey times');
-//     console.log(JOURNEYS_URL);
-
-//     $.getJSON(JOURNEYS_URL) //, function(data){console.log(data)}
-//         .done(function (journeys) {
-//             //console.log("b");
-//             //console.log(journeys);
-//             traffic_data = [];
-//             for (var i = 0; i < journeys.length; ++i) {
-//                 var journey = journeys[i];
-//                 traffic_data.push({
-//                     "id": journey.id,
-//                     "travelTime": journey.travelTime,
-//                     "normalTravelTime": journey.normalTravelTime
-//                 });
-
-//             }
-
-//             // Reset the clock
-//             clock.update();
-
-//             // Re-schedule for a minute in the future
-//             setTimeout(load_journey_times, 60000);
-
-//             d3.select('svg').remove(); //#overlay
-//             drawVoronoi();
-
-//         });
-
-// }
-//--------------------------------------------//
-//-----------------OLD API END----------------//
-//--------------------------------------------//
 
 // Set line colour based on travel time (aka speed) compared to normal
 function update_relative_speed(polyline) {
@@ -301,27 +309,23 @@ function update_actual_normal_speed(polyline) {
 
 
 function get_clock() {
-    var control = L.control({position: 'topleft'});
+    var control = L.control({
+        position: 'topleft'
+    });
     control.onAdd = function () {
         var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded clock');
         div.innerHTML = 'Loading...';
         return div;
     };
-    control.update = function() {
+    control.update = function () {
         //needs fixing as time end us being 1:1 instead of 01:01
-        var now  = new Date();
+        var now = new Date();
         var hh = now.getHours();
         var mm = now.getMinutes();
         var ss = now.getSeconds();
         // If datetime is today
-        control.getContainer().innerHTML = 'Updated '+hh+':'+mm;
-        // if (datetime.toDateString() === now.toDateString()) {
-        //     control.getContainer().innerHTML = 'Updated '+hh+':'+mm;
-        // }
-        // else {
-        //     var d = now.toISOString().slice(0, 10);
-        //     control.getContainer().innerHTML = 'Updated ' + hh + ':' + mm + ' on ' + d;
-        // }
+        control.getContainer().innerHTML = 'Updated ' + hh + ':' + mm;
+        
         console.log("updated")
 
     };
@@ -342,7 +346,9 @@ function initMap() {
     var cambridge = new L.LatLng(52.20038, 0.165);
     map = new L.Map("map", {
         center: cambridge,
-        zoom: 13,
+        zoom: 12,
+        zoomDelta: 0.5,
+        wheelPxPerZoomLevel: 95, 
         layers: [stamenToner],
     });
 
@@ -353,58 +359,58 @@ function initMap() {
     var datepicker_widget = L.control();
 
     info_widget.onAdd = function (map) {
-        this.info_div = L.DomUtil.create('div', 'info');//has to be of class "info for the nice shade effect"
+        this.info_div = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
         this.update();
 
         return this.info_div;
     };
 
     datepicker_widget.onAdd = function (map) {
-        this.datepicker_div = L.DomUtil.create('div', 'info');//has to be of class "info for the nice shade effect"
+        this.datepicker_div = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
         //this.datepicker_div.id="datepicker";
         this.update();
 
         return this.datepicker_div;
     };
 
-      info_widget.update = function (e) {
+    info_widget.update = function (e) {
         if (e === undefined) {
-            this.info_div.innerHTML = 
-                '<h4>Information</h4>' + 
-                "<br>"+
+            this.info_div.innerHTML =
+                '<h4>Information</h4>' +
+                "<br>" +
                 "<div>" +
-                    "<form id='routes'>" +
-                        "<input type='radio' name='mode' value='routes'> Routes<br>" +
-                        "<input type='radio' name='mode' value='polygons'> Polygons"+
-                    "</form>"+
-                    "<br>"+
+                "<form id='routes'>" +
+                "<input type='radio' name='mode' value='routes'> Routes<br>" +
+                "<input type='radio' name='mode' value='polygons'> Polygons" +
+                "</form>" +
+                "<br>" +
                 "</div>" +
-                "<br>"+
-                "<div>" + 
-                    "<form id='modes'>" +
-                        "<input type='radio' name='mode' value='current'> Current Speed<br>" +
-                        "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
-                        "<input type='radio' name='mode' value='deviation'> Deviation<br>" +
-                    "</form>" +
+                "<br>" +
+                "<div>" +
+                "<form id='modes'>" +
+                "<input type='radio' name='mode' value='current'> Current Speed<br>" +
+                "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
+                "<input type='radio' name='mode' value='deviation'> Deviation<br>" +
+                "</form>" +
                 "</div>";
-          
+
             return;
         }
-          d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text("Hello World");
+        d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text("Hello World");
     };
-    
+
     datepicker_widget.update = function (e) {
         if (e === undefined) {
-            this.datepicker_div.innerHTML = 
-            '<h4>Pick time and Date</h4>' + 
-            '<br>'+
-            '<input type="text" name="datefilter" id="datepicker" value="" />';
+            this.datepicker_div.innerHTML =
+                '<h4>Pick time and Date</h4>' +
+                '<br>' +
+                '<input type="text" name="datefilter" id="datepicker" value="" />';
 
-            
-          
+
+
             return;
         }
-         
+
     };
 
     info_widget.addTo(map);
@@ -414,50 +420,6 @@ function initMap() {
     map.on("viewreset moveend", drawVoronoi);
 
 }
-
-// $(function() {
-
-//     $('input[name="datefilter"]').daterangepicker({
-//         autoUpdateInput: false,
-//         locale: {
-//             cancelLabel: 'Clear'
-//         }
-//     });
-  
-//     $('input[name="datefilter"]').on('apply.daterangepicker', function(ev, picker) {
-//         $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
-//     });
-  
-//     $('input[name="datefilter"]').on('cancel.daterangepicker', function(ev, picker) {
-//         $(this).val('');
-//     });
-  
-//   });
-
-var points = [];
-points = all_sites;
-
-
-var voronoi, adjustedSites, vertices, DATA;
-var travelTimes;
-var travelSpeed;
-var historicSpeed;
-var speedDeviation;
-
-var pathGroup;
-var setColor;
-
-var selectedSites = [];
-
-var lineGroup,dijkstraGroup;
-// var lineFunction = d3.svg.line()
-//     .x(function (d) {
-//         return d.x;
-//     })
-//     .y(function (d) {
-//         return d.y;
-//     })
-//     .interpolate("linear");
 
 function drawVoronoi() {
 
@@ -470,8 +432,8 @@ function drawVoronoi() {
 
     d3.select(".hover_val").remove();
 
-// Reset the clock
-clock.update();
+    // Reset the clock
+    clock.update();
 
     // voronoi = d3.voronoi().extent([
     //     [0, 0],
@@ -558,7 +520,7 @@ clock.update();
     //     .domain([0, maxLength])
     //     .range(['rgb(255,245,235)', 'rgb(127,39,4)']);
 
-    //findLatLng();
+    findLatLng();
 
     var voronoi = d3.voronoi()
         .x(function (d) {
@@ -600,7 +562,7 @@ clock.update();
     d3.select("svg").remove();
     //d3.selectAll(".tooltip").remove(); //style("visibility", "hidden")
 
-    var svg = d3.select(map.getPanes().overlayPane).append("svg")
+    var voronoi_cells = d3.select(map.getPanes().overlayPane).append("svg")
         .attr("id", "overlay")
         .attr("class", "leaflet-zoom-hide")
         .style("width", map.getSize().x + "px")
@@ -608,18 +570,18 @@ clock.update();
         .style("margin-left", topLeft.x + "px")
         .style("margin-top", topLeft.y + "px");
 
-    pathGroup = svg.append("g")
+    pathGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
-    var circleGroup = svg.append("g")
-        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
-
-    var circleGroupB = svg.append("g")
+    var circleGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
-    lineGroup = svg.append("g")
+    var circleGroupB = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
-    dijkstraGroup = svg.append("g")
+    lineGroup = voronoi_cells.append("g")
+        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+
+    dijkstraGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
     // create a tooltip
@@ -675,7 +637,7 @@ clock.update();
 
         .on('mouseover', function (d, i) {
             lineGroup.remove();
-            lineGroup = svg.append("g")
+            lineGroup = voronoi_cells.append("g")
                 .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
             //info.update(d.data);
             //console.log(SITE_DB[i].name); //WRONG APPROACH, CAUSES RANODM OBJECT DRIFTS
@@ -690,21 +652,14 @@ clock.update();
             let id = d.data.id;
 
             let neighbors = SITE_DB.find(x => x.id === id).neighbors;
-    
-            // for (let i = 0; i < neighbors.length; i++) {
-            //     //console.log(i);
-            //     let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
-            //     let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
-            //     drawLinks(x_coord, y_coord, d.data.x, d.data.y, 350,"none");
-            // }
 
             for (let i = 0; i < neighbors.length; i++) {
                 //console.log(i);
-                let inbound=neighbors[i].links.in.id;
-                let outbound=neighbors[i].links.out.id;
-                    
-                drawLink(inbound,350);
-                drawLink(outbound,350);
+                let inbound = neighbors[i].links.in.id;
+                let outbound = neighbors[i].links.out.id;
+
+                drawLink(inbound, 350);
+                drawLink(outbound, 350);
 
             }
 
@@ -726,7 +681,7 @@ clock.update();
 
         })
 
-        .on("dblclick", function (d) {
+        .on("click", function (d) { //dblclick
             let id = d.data.id;
             console.log(id, " was clicked");
 
@@ -805,7 +760,7 @@ clock.update();
         //.on("click",  d3.selectAll(".tooltip").style("visibility", "hidden"))
         .on('mouseout', function (d, i) {
             lineGroup.remove();
-            links_drawn=[];
+            links_drawn = [];
             d3.select(this).transition()
                 .duration('500')
                 //JUST CHANGE TO CLASS
@@ -817,9 +772,9 @@ clock.update();
             //        .style("visibility", "hidden");
         });
 
-    
 
-   
+
+
     pathGroup.selectAll(".cell").append("title").text(function (d) {
         return d.data.name;
     });
@@ -848,62 +803,65 @@ clock.update();
 
     changeModes();
 }
-function drawLink(link,dur){
-  
-    let connected_sites=all_links.find(x=>x.id===link).sites;
-    let from=SITE_DB.find(x=>x.id===connected_sites[0]);
-    let to =SITE_DB.find(x=>x.id===connected_sites[1]);    
-  
+
+function drawLink(link, dur) {
+
+    let connected_sites = all_links.find(x => x.id === link).sites;
+    let from = SITE_DB.find(x => x.id === connected_sites[0]);
+    let to = SITE_DB.find(x => x.id === connected_sites[1]);
+
     links_drawn.push(link);
 
-    let color = links_drawn.includes(inverseLink(link))?"red":"blue";
-    
-    let values=getMinMax();
-    let deviation=calculateDeviation(link)
-   
+    let color = links_drawn.includes(inverseLink(link)) ? "red" : "blue";
+
+    let values = getMinMax();
+    let deviation = calculateDeviation(link)
+
     //console.log(deviation);
 
     var data = [100, 400, 300, 900, 850, 1000];
 
     var scale = d3.scaleLinear()
-            .domain([values.min, values.max])
-            .range([0.5, 10]);
+        .domain([values.min, values.max])
+        .range([0.5, 10]);
     //let strokeWeight=5;
-    let strokeWeight=scale(deviation);
+    let strokeWeight = scale(deviation);
     //console.log(deviation, strokeWeight);
 
-    let inbound =lineGroup_(from, to, color,5,setColor(strokeWeight));
-   // let outbound =lineGroup_(to, from, "blue");
+    let inbound = lineGroup_(from, to, color, 5, setColor(strokeWeight));
+    // let outbound =lineGroup_(to, from, "blue");
 
     let lineLength = inbound.node().getTotalLength();
 
-    animateMovement(inbound, lineLength,dur);
+    animateMovement(inbound, lineLength, dur);
     //animateMovement(outbound, lineLength,350);
-    
+
 }
 
-function inverseLink(link){
-    let connected_sites=all_links.find(x=>x.id=== link).sites;
-    let from=SITE_DB.find(x=>x.id===connected_sites[0]);
-    let to =SITE_DB.find(x=>x.id===connected_sites[1]);
+function inverseLink(link) {
+    let connected_sites = all_links.find(x => x.id === link).sites;
+    let from = SITE_DB.find(x => x.id === connected_sites[0]);
+    let to = SITE_DB.find(x => x.id === connected_sites[1]);
     //console.log(from,to);
 
-    let links=findLinks(from.id, to.id);
-    return link===links.in.id?links.out.id:links.in.id;
+    let links = findLinks(from.id, to.id);
+    return link === links.in.id ? links.out.id : links.in.id;
 
 }
-function lineGroup_(A, B, color,strokeWeight,col){
-    
-   return lineGroup
-    .append('path')
-    .attr('d', curvedLine(A.x, A.y, B.x, B.y, color==="red"?1:-1))
-    .style("fill", "none")
-    .style("fill-opacity", 0)
-    .attr("stroke", col)
-    .attr("stroke-opacity", 1)
-    .style("stroke-width",strokeWeight);
+
+function lineGroup_(A, B, color, strokeWeight, col) {
+
+    return lineGroup
+        .append('path')
+        .attr('d', curvedLine(A.x, A.y, B.x, B.y, color === "red" ? 1 : -1))
+        .style("fill", "none")
+        .style("fill-opacity", 0)
+        .attr("stroke", col)
+        .attr("stroke-opacity", 1)
+        .style("stroke-width", strokeWeight);
 }
-function animateMovement(blue,outboundLength,dur){
+
+function animateMovement(blue, outboundLength, dur) {
 
     return blue
         .attr("stroke-dasharray", outboundLength + " " + outboundLength)
@@ -912,20 +870,21 @@ function animateMovement(blue,outboundLength,dur){
         .duration(dur)
         .ease(d3.easeLinear)
         .attr("stroke-dashoffset", 0)
-        .on("end", 
-            function(d,i){
-                
+        .on("end",
+            function (d, i) {
+
             }
-       
+
         );
 
 }
+
 function drawLinks(x, y, X, Y, dur, fill) {
     // Add the links
     //x_coord,y_coord,d.data.x,d.data.y
-    
-    
-    
+
+
+
     var blue = lineGroup
         .append('path')
         .attr('d', curvedLine(x, y, X, Y, 1))
@@ -956,11 +915,11 @@ function drawLinks(x, y, X, Y, dur, fill) {
         .duration(dur)
         .ease(d3.easeLinear)
         .attr("stroke-dashoffset", 0)
-        .on("end", 
-            function(d,i){
-               
+        .on("end",
+            function (d, i) {
+
             }
-       
+
         );
 
     red
@@ -970,13 +929,13 @@ function drawLinks(x, y, X, Y, dur, fill) {
         .duration(dur)
         .ease(d3.easeLinear)
         .attr("stroke-dashoffset", 0)
-        .on("end", 
-        function(){
-            // red.transition()
-            // .duration(dur)
-            // .style("fill-opacity", 1);
-        }
-       
+        .on("end",
+            function () {
+                // red.transition()
+                // .duration(dur)
+                // .style("fill-opacity", 1);
+            }
+
 
         );
 }
@@ -1004,6 +963,7 @@ function curvedLine(x, y, X, Y, dir) {
         ] // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
         .join(' ');
 }
+
 function colorTransition(value) {
     SITE_DB.forEach((element) => {
         element.setVisualisation(value);
@@ -1047,16 +1007,16 @@ function changeModes() {
                 let id = SITE_DB[j].id;
 
                 let neighbors = SITE_DB.find(x => x.id === id).neighbors;
-                
+
                 //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;  
                 for (let i = 0; i < neighbors.length; i++) {
                     //console.log(i);
-                    let inbound=neighbors[i].links.in.id;
-                    let outbound=neighbors[i].links.out.id;
-                        
+                    let inbound = neighbors[i].links.in.id;
+                    let outbound = neighbors[i].links.out.id;
+
                     //drawLink(inbound,1000);
-                    drawLink(outbound,1000);
-    
+                    drawLink(outbound, 1000);
+
                 }
             }
         }
@@ -1064,33 +1024,6 @@ function changeModes() {
             drawVoronoi();
         }
     });
-}
-function getMinMax(){
-    let findMax = (ma, v) => Math.max(ma, v.selected)
-    let findMin = (mi, v) => Math.min(mi, v.selected)
-    let max = SITE_DB.reduce(findMax, -Infinity)
-    let min = SITE_DB.reduce(findMin, Infinity)
-    console.log(min,max);
-    return {"min":-5,"max":10};
-}
-
-function setColorRange() {
-    let values=getMinMax();
-    let min=values.min;
-    let max=values.max;
-    
-
-    console.log("new min_max ", min, max);
-
-    return d3.scaleSequential().domain([-5, 10]) //min, max
-        .interpolator(d3.interpolateRdYlGn);
-}
-
-function slope(x, x1, y1, x2, y2) {
-    let midX = (x1 + x2) / 2;
-    let midY = (y1 + y2) / 2;
-    let slope = (y2 - y1) / (x2 - x1);
-    return (-1 / slope) * (x - midX) + midY;
 }
 
 
@@ -1108,189 +1041,23 @@ function InitialiseNodes() {
     }
 }
 
-class Node {
-    constructor(id) {
-
-        this.id = id;
-        this.name = null;
-
-        this.lat = null;
-        this.lng = null;
-        this.x = null;
-        this.y = null;
-
-        this.neighbors = [];
-
-        this.travelTime = null;
-        this.travelSpeed = null;
-        this.historicSpeed = null;
-        this.speedDeviation = null;
-
-        this.selected = null;
-        this.selectedName = null;
-
-        this.getName();
-    }
-
-    getName() {
-        for (let i = 0; i < all_sites.length; i++) {
-
-            if (this.id == all_sites[i].id) {
-                this.name = all_sites[i].name;
-                break;
-            }
-        }
-
-    }
-    fetchName(id) {
-        for (let i = 0; i < all_sites.length; i++) {
-
-            if (id == all_sites[i].id) {
-                //this.name = all_sites[i].name;
-                return all_sites[i].name;
-            }
-        }
-
-    }
-    setVisualisation(vis) {
-        this.selectedName = vis;
-        switch (vis) {
-            case "historic speed":
-                this.selected = this.historicSpeed;
-                break;
-            case "travel speed":
-                this.selected = this.travelSpeed;
-                break;
-            case "speed deviation":
-                this.selected = this.speedDeviation;
-                break;
-            default:
-                this.selected = this.speedDeviation; //this.travelSpeed;
-                break;
-
-        }
-        //this.visualise=vis;
-    }
-    getLocation() {
-        let data = all_sites; //"this.sites;
-        for (let i = 0; i < data.length; i++) {
-            if (this.id == data[i].id) {
-                return {
-                    "x": data[i].x,
-                    "y": data[i].y
-                }
-            }
-        }
-    }
-    findNeighbors() //data is all_links
-    {
-        this.neighbors = [];
-        let tt,ntt,travelTime;
-        for (let i = 0; i < all_links.length; i++) {
-            if (this.id == all_links[i].sites[0]) { //from this id
-                //console.log('journeysB',journeys[i].id, this.id,data[i])
-                //console.log(data.length, journeys.length,i);
-                try {
-                    tt = journeys.find(x => x.id === all_links[i].id).travelTime;
-                    ntt = journeys.find(x => x.id === all_links[i].id).normalTravelTime;
-                    travelTime = tt == undefined || null ? ntt : tt;
-                   }
-                   catch(err) {
-                     travelTime=undefined;
-                     ntt=undefined;
-                   }
-               
-                //console.log(tt, travelTime);
-                let link=findLinks(this.id, all_links[i].sites[1]);
-                this.neighbors.push({
-                    "links": {"out": link.out,"in":link.in},                 
-                    "name": all_links[i].name,
-                    "id": all_links[i].sites[1], //to this id
-                    "site": this.fetchName(all_links[i].sites[1]),
-                    "travelTime": travelTime,
-                    "normalTravelTime": ntt,
-                    "dist": all_links[i].length
-                });
-            }
-        }
-    }
-    
-    computeTravelTime() {
-        let avg = [];
-        let sum = 0;
-        for (let i = 0; i < this.neighbors.length; i++) {
-            let link = this.neighbors[i].links.out.id;
-
-            for (let u = 0; u < journeys.length; u++) {
-                if (link == journeys[u].id) {
-                    avg.push(journeys[u].travelTime);
-                }
-            }
-        }
-
-        for (let i = 0; i < avg.length; i++) {
-            sum += avg[i];
-        }
-        this.travelTime = sum / avg.length;
-    }
-
-    computeTravelSpeed() {
-        let currentAverage = [];
-        let historicAverage = [];
-
-        for (let i = 0; i < this.neighbors.length; i++) {
-            let link = this.neighbors[i].links.out.id;
-            let dist = this.neighbors[i].dist;
-
-            for (let u = 0; u < journeys.length; u++) {
-                if (link == journeys[u].id) {
-                    let travelTime = journeys[u].travelTime;
-                    let historicTime = journeys[u].normalTravelTime;
-                    // console.log(historicTime);
-
-                    let currentSpeed = (dist / travelTime) * TO_MPH;
-                    let historicSpeed = (dist / historicTime) * TO_MPH;
-
-                    if (currentSpeed == Infinity || historicSpeed == Infinity) {
-                        break;
-                    }
-
-                    historicAverage.push(historicSpeed);
-                    currentAverage.push(currentSpeed);
-                }
-            }
-            //console.log(historicAverage);
-
-        }
-        if (historicAverage.length > 0) {
-            let historicSum = historicAverage.reduce((previous, current) => current += previous);
-            this.historicSpeed = historicSum / historicAverage.length;
-        }
-
-        if (currentAverage.length > 0) {
-            let currentSum = currentAverage.reduce((previous, current) => current += previous);
-            this.travelSpeed = currentSum / currentAverage.length;
-        }
 
 
-        this.speedDeviation = this.travelSpeed - this.historicSpeed;
-
-    }
-}
-
-function findLinks(id1,id2){
+function findLinks(id1, id2) {
     //id1 from (outbound)
     //id2 to (inbound)
- 
+
     let data = all_links; //this.links;
-    let obj={"out":null, "in":null}
-    for(let i =0; i<data.length; i++){
-        if(id1 == data[i].sites[0]&&id2 == data[i].sites[1]){
-            obj["out"]=data[i];
+    let obj = {
+        "out": null,
+        "in": null
+    }
+    for (let i = 0; i < data.length; i++) {
+        if (id1 == data[i].sites[0] && id2 == data[i].sites[1]) {
+            obj["out"] = data[i];
         }
-        if(id1 == data[i].sites[1]&&id2 == data[i].sites[0])
-        {
-            obj["in"]=data[i];
+        if (id1 == data[i].sites[1] && id2 == data[i].sites[0]) {
+            obj["in"] = data[i];
         }
     }
     return obj;
@@ -1328,30 +1095,6 @@ function generateGraph(s, f) {
     var graph = {};
     start = s; //.name;
     finish = f; //.name;
-
-    //console.log(start,"---",finish);
-    const problem = {
-        S: {
-            A: 5,
-            B: 2
-        },
-        A: {
-            C: 4,
-            D: 2
-        },
-        B: {
-            A: 8,
-            D: 7
-        },
-        C: {
-            D: 6,
-            F: 3
-        },
-        D: {
-            F: 1
-        },
-        F: {}
-    };
 
     SITE_DB.forEach((element) => {
 
@@ -1411,35 +1154,38 @@ function arraysEqual(a, b) {
     if (a === b) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
-  
+
     // If you don't care about the order of the elements inside
     // the array, you should sort both arrays here.
     // Please note that calling sort on an array will modify that array.
     // you might want to clone your array first.
-  
+
     for (var i = 0; i < a.length; ++i) {
-      if (a[i] !== b[i]) return false;
+        if (a[i] !== b[i]) return false;
     }
     return true;
-  }
+}
 
-function calculateDeviation(link){
-    let dist=all_links.find(x=>x.id===link).length;
-    let travelTime,normalTravelTime;
-    try{travelTime=journeys.find(x=>x.id===link).travelTime; 
-        normalTravelTime=journeys.find(x=>x.id===link).normalTravelTime;
-        }
-    catch{return undefined}
-    //TO FIX, MAKE IT NULL
-    if(travelTime==null||travelTime==undefined){
-        travelTime=normalTravelTime;
+function calculateDeviation(link) {
+    let dist = all_links.find(x => x.id === link).length;
+    let travelTime, normalTravelTime;
+    try {
+        travelTime = journeys.find(x => x.id === link).travelTime;
+        normalTravelTime = journeys.find(x => x.id === link).normalTravelTime;
+    } catch {
+        return undefined
     }
-    let current =(dist / travelTime) * TO_MPH;
-    let normal=(dist / normalTravelTime) * TO_MPH;
-    
-    return current-normal;
+    //TO FIX, MAKE IT NULL
+    if (travelTime == null || travelTime == undefined) {
+        travelTime = normalTravelTime;
+    }
+    let current = (dist / travelTime) * TO_MPH;
+    let normal = (dist / normalTravelTime) * TO_MPH;
+
+    return current - normal;
 
 }
+
 function getNeighborObject(i) {
 
     let obj = {};
@@ -1453,10 +1199,46 @@ function getNeighborObject(i) {
 }
 
 
-// element=SITE_DB[i];
-// var name =element.name;
-// var speed =element.travelSpeed;
-// var neighbors=element.neighbors;
-// if(speed==undefined||speed==null){
-//     speed= element.historicSpeed;
-// }
+function map_values(value, start1, stop1, start2, stop2) {
+    let result = start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+    //console.log(result);
+    if (result > start2) {
+        result = start2;
+    }
+    if (result < start1) {
+        result = start1;
+    }
+    return result;
+}
+
+
+function setColorRange() {
+    let values = getMinMax();
+    let min = values.min;
+    let max = values.max;
+
+
+    console.log("new min_max ", min, max);
+
+    return d3.scaleSequential().domain([-5, 10]) //min, max
+        .interpolator(d3.interpolateRdYlGn);
+}
+
+function slope(x, x1, y1, x2, y2) {
+    let midX = (x1 + x2) / 2;
+    let midY = (y1 + y2) / 2;
+    let slope = (y2 - y1) / (x2 - x1);
+    return (-1 / slope) * (x - midX) + midY;
+}
+
+function getMinMax() {
+    let findMax = (ma, v) => Math.max(ma, v.selected)
+    let findMin = (mi, v) => Math.min(mi, v.selected)
+    let max = SITE_DB.reduce(findMax, -Infinity)
+    let min = SITE_DB.reduce(findMin, Infinity)
+    // console.log(min,max);
+    return {
+        "min": -5,
+        "max": 10
+    };
+}
