@@ -16,6 +16,8 @@ class Node {
         this.historicSpeed = null;
         this.speedDeviation = null;
 
+        //selected variable output - tt,ts,hs or sd
+        //to be changed since this is silly
         this.selected = null;
         this.selectedName = null;
 
@@ -81,8 +83,8 @@ class Node {
                 //console.log('journeysB',journeys[i].id, this.id,data[i])
                 //console.log(data.length, journeys.length,i);
                 try {
-                    tt = journeys.find(x => x.id === all_links[i].id).travelTime;
-                    ntt = journeys.find(x => x.id === all_links[i].id).normalTravelTime;
+                    tt = all_journeys.find(x => x.id === all_links[i].id).travelTime;
+                    ntt = all_journeys.find(x => x.id === all_links[i].id).normalTravelTime;
                     travelTime = tt == undefined || null ? ntt : tt;
                    }
                    catch(err) {
@@ -111,9 +113,9 @@ class Node {
         for (let i = 0; i < this.neighbors.length; i++) {
             let link = this.neighbors[i].links.out.id;
 
-            for (let u = 0; u < journeys.length; u++) {
-                if (link == journeys[u].id) {
-                    avg.push(journeys[u].travelTime);
+            for (let u = 0; u < all_journeys.length; u++) {
+                if (link == all_journeys[u].id) {
+                    avg.push(all_journeys[u].travelTime);
                 }
             }
         }
@@ -132,10 +134,10 @@ class Node {
             let link = this.neighbors[i].links.out.id;
             let dist = this.neighbors[i].dist;
 
-            for (let u = 0; u < journeys.length; u++) {
-                if (link == journeys[u].id) {
-                    let travelTime = journeys[u].travelTime;
-                    let historicTime = journeys[u].normalTravelTime;
+            for (let u = 0; u < all_journeys.length; u++) {
+                if (link == all_journeys[u].id) {
+                    let travelTime = all_journeys[u].travelTime;
+                    let historicTime = all_journeys[u].normalTravelTime;
                     // console.log(historicTime);
 
                     let currentSpeed = (dist / travelTime) * TO_MPH;

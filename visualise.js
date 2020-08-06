@@ -5,9 +5,8 @@
 
 // m/sec to mph
 
-var API_TOKEN = 'a62fb5390f070c129591b6ff19c0a8cf06440efc'; //'6909103b0bfbc5e949a31a840f31e17efd58754f';
+const TO_MPH = 2.23694;
 
-var TO_MPH = 2.23694;
 
 // Style options for markers and lines
 var SITE_OPTIONS = {
@@ -48,11 +47,12 @@ var map, // The Leaflet map object itself
     line_map = {}; // Lookup link/route id to displayed polyline
 
 
-var all_sites, all_links, journeys = [];
+var all_sites, all_links, all_journeys = [];
 
 var minmax, myColors;
 var SITE_DB = [];
 var links_drawn = [];
+var links_drawn_SVG = [];
 
 var newPts = [];
 
@@ -65,21 +65,17 @@ var points = [];
 points = all_sites;
 
 
-var voronoi, adjustedSites, vertices, DATA;
-var travelTimes;
-var travelSpeed;
-var historicSpeed;
-var speedDeviation;
+var voronoi, adjustedSites, vertices;
 
 var pathGroup;
 var setColor;
 
 var selectedSites = [];
 
-var lineGroup, dijkstraGroup;
+var lineGroup, dijkstraGroup, road_group;
+var voronoi_cells;
 
-
-class SpaceFloorplan {
+class VoronoiViz {
 
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
     constructor() {
@@ -88,222 +84,175 @@ class SpaceFloorplan {
         // this.viz_tools = new VizTools();
 
         // Transform parameters to scale SVG to screen
-      
+
     }
 
+    
     // init() called when page loaded
-    // init() {}
+    init() {
+        init_map();
+
+        load_api_data().then(() => {
+
+            console.log('Creating Nodes');
+            initialise_nodes();
+            
+            console.log('loading Voronoi');
+            drawVoronoi();
+        });
+    
+        load_road_svg().then((loaded_svg) => {
+    
+           draw_road(loaded_svg);
+        });  
+
+
+        //have a timeout function here
+    }
+    init_api() {
+        
+        load_api_data().then(() => {
+
+            console.log('Creating Nodes');
+            initialise_nodes();
+            
+        
+        });
+
+        //have a timeout function here
+    }
+    update() {
+        // The underlying API updates journey times every 5 minutes.
+        // Schedule an update 5 and-a-bit minutes from the last
+        // timestamp if that looks believable, and in a minute
+        // otherwise.
+        var now = Date.now();
+        var delta = timestamp - now + (5.25 * 60000);
+        if (delta <= 0 || delta > 10 * 60000) {
+            delta = 60000;
+        }
+        console.log('Timestamp was ' + new Date(timestamp));
+        console.log('Delta is ' + delta);
+        console.log('Now is ' + new Date(now));
+        console.log('Next at ' + new Date(now + delta));
+
+        // fix the the timeout from spazing out
+        //setTimeout(self.redrawVoronoi(), delta);
+
+        // Reset the clock
+        clock.update();
+    }
+
+    /*------------------------------------------------------*/
+    /*--------------------HELPER FUNCT----------------------*/
+    /*------------------------------------------------------*/
 
 }
 
 /*------------------------------------------------------*/
 /*----------------------MAIN LOOP-----------------------*/
 /*------------------------------------------------------*/
-$(document).ready(function () {
-    initMap();
-    load_data();
-    add_roads();
-});
+
+console.log('lazy_script');
+var voronoi_visualisation = new VoronoiViz();
+voronoi_visualisation.init();
+
+//setTimeout(voronoi_visualisation.update(), delta);
+
+/*------------------------------------------------------*/
+
+async function load_api_data() {
+
+   await Promise.all([load_sites(), load_routes(), load_links(), load_journeys()]).then((combined_api_reponse) => {
 
 
-function get_svg_data(file_name){
-    console.log('getting','static/'+file_name)
-    $.get('static/'+file_name, function(data) {
-        let a =new XMLSerializer().serializeToString(data)
-        console.log(a.slice(0, 25));
-        console.log('done')
-        let y=0.008;
-    let x=0.018;
-    let road_a = [52.15245+y, 0.004669+x]
-    let road_b = [52.23011+y, 0.19+x]
-   
-    var svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
-    svgElement.setAttribute("viewBox", "0 0 973.7 808.7");
-    svgElement.innerHTML = a;
-    var svgElementBounds = [ road_a, road_b];
-    console.log('L.svgOverlay')
-    L.svgOverlay(svgElement, svgElementBounds, {interactive: true}).addTo(map);
+        let site_response = combined_api_reponse[0]
+        let route_response = combined_api_reponse[1]
+        let journey_response = combined_api_reponse[3]
+        let link_response = combined_api_reponse[2]
 
-        // $bg.append(data);
-    });
-}
-function add_roads() {
-    // let wgb_a = [52.210499, 0.091332]
-    // let wgb_b = [52.211359, 0.092735]
-    // wgb_svg_data = '<path class="st0" id="wgb" d="M507.5,169.1l16.6-61L129.1,0.3L0.3,472.1l147.6,40.3l17.2-60.7L412,519l16.4-60l-27.3-6.4l31-126l28,5l18-70l-27-7l24-94L507.5,169.1z M333.4,429l-144.6-38.5L221.9,266l144.6,38.5L333.4,429z M384.4,236.4l-141.2-37.6l24.7-92.8l141.2,37.6L384.4,236.4z"/></svg>'
-    // wgb_bounds = [wgb_a, wgb_b];
-    // var wgb_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    // wgb_svg.setAttribute('xmlns', "http://www.w3.org/2000/svg");
-    // wgb_svg.setAttribute("viewBox", "0 0 524.4 519.3");
-    // wgb_svg.innerHTML = wgb_svg_data;
-    // var wgb_bounds = [wgb_a, wgb_b];
-    // L.svgOverlay(wgb_svg, wgb_bounds, {
-    //     interactive: true
-    // }).addTo(map);
-
-    console.log('adding roads')
-    let y=0.008;
-    let x=0.018;
-    let road_a = [52.15245+y, 0.004669+x]
-    let road_b = [52.23011+y, 0.19+x]
-    L.marker(road_a).addTo(map);
-    L.marker(road_b).addTo(map);
-
-    get_svg_data('roads.svg')
-
-    
+        all_sites = site_response.site_list;
+        all_routes = route_response.route_list
+        all_links = link_response.link_list;
+        all_journeys = journey_response.request_data;
 
 
-    // var road_loc = 'static/roads.svg',
-    //     road_bounds = [road_a, road_b];
-    // L.imageOverlay(road_loc, road_bounds, {
-    //     interactive: true
-    // }).addTo(map);
-    console.log('roads added', map)
+        /*--------------------------DATA CLEANUP-----------------------------*/
 
-    //L.imageOverlay(wgb_loc, wgb_bounds).bringToFront();
-}
-// Async load data, display it and reschedule
-function load_data() {
-    console.log("load initiated with " + API_TOKEN);
-    var headers = {
-        Authorization: 'Token ' + API_TOKEN
-    };
+        //Some genious assumed that it was OK to use | vertical bars for link ids 
+        //(e.g CAMBRIDGE_JTMS|9800WLZSM8UU), thus not only messing up the ability 
+        //to access such links with D3.js or regex but also not being able to 
+        //reference it in XML for SVG paths.
+        //So here I delete the vertical bars and replace it with '_' so
+        // the actual unique link value becomes CAMBRIDGE_JTMS_9800WLZSM8UU
 
+        all_links.forEach((element) => {
+            element.id = element.id.replace('|', '_');
+        });;
 
-    $.when(
-            $.get({
-                url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/site/',
-                headers: headers,
-                dataType: 'json',
-            }, function () {
-                console.log("loaded")
-            }),
-            $.get({
-                url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/link/',
-                headers: headers,
-                dataType: 'json',
-            }),
-            $.get({
-                url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/route/',
-                headers: headers,
-                dataType: 'json',
-            }),
-            $.get({
-                url: 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/latest/',
-                headers: headers,
-                dataType: 'json',
-            })
-        )
-        .done(function (site_response, link_response, route_response, journey_response) {
-            console.log("done starting");
-
-            all_sites = site_response[0].site_list;
-            all_links = link_response[0].link_list; //.concat(route_response[0].route_list);
-            console.log(link_response[0].link_list.length, route_response[0].route_list.length)
-            console.log('NEW ', all_sites[0], all_links[0]);
-
-            // Sites
-            // all_sites = locations.sites;
-            // all_links = locations.links
-
-            journeys = journey_response[0].request_data;
-            console.log('journeysA', journeys)
-            //draw_sites(sites);
-            //process_journeys(journeys, links, sites);
-
-            // Display the data's timestamp on the clock
-            var timestamp = journey_response[0].ts * 1000;
-            clock.update(new Date(timestamp));
-
-
-            // The underlying API updates journey times every 5 minutes.
-            // Schedule an update 5 and-a-bit minutes from the last
-            // timestamp if that looks believable, and in a minute
-            // otherwise.
-            var now = Date.now();
-            var delta = timestamp - now + (5.25 * 60000);
-            if (delta <= 0 || delta > 10 * 60000) {
-                delta = 60000;
-            }
-            console.log('Timestamp was ' + new Date(timestamp));
-            console.log('Delta is ' + delta);
-            console.log('Now is ' + new Date(now));
-            console.log('Next at ' + new Date(now + delta));
-            setTimeout(load_data, delta);
-
-            // Reset the clock
-            clock.update();
-
-            // Re-schedule for a minute in the future
-            // setTimeout(load_journey_times, 60000);
-
-            d3.select('svg').remove(); //#overlay
-            drawVoronoi();
-            // add_roads();
-
-        })
-
-        // If anything went wrong, try again in a minute
-        .fail(function () {
-            console.log('API call failed - default reschedule');
-            setTimeout(load_data, 60000);
+        all_journeys.forEach((element) => {
+            element.id = element.id.replace('|', '_');
         });
 
+        // Display the data's timestamp on the clock
+        var timestamp = journey_response.ts * 1000;
+        clock.update(new Date(timestamp));
+
+        console.log('loaded api data')
+    })
+
+    //DO SOMETHING WHEN FAILED, LIKE HERE
+    // .fail(function () {
+    //     console.log('API call failed - default reschedule');
+    //     setTimeout(load_data, 60000);
+    // });
 }
 
+function findLinks(id1, id2) {
+    //id1 from (outbound)
+    //id2 to (inbound)
 
-// Set line colour based on travel time (aka speed) compared to normal
-function update_relative_speed(polyline) {
+    let obj = {
+        "out": null,
+        "in": null
+    }
 
-    var journey = polyline.properties.journey;
-    var choice;
-    // Missing
-    if (!journey.travelTime) {
-        choice = BROKEN_COLOUR;
+    for (let i = 0; i < all_links.length; i++) {
+        if (id1 == all_links[i].sites[0] && id2 == all_links[i].sites[1]) {
+            obj["out"] = all_links[i];
+        }
+        if (id1 == all_links[i].sites[1] && id2 == all_links[i].sites[0]) {
+            obj["in"] = all_links[i];
+        }
     }
-    // Worse than normal
-    else if (journey.travelTime > 1.2 * journey.normalTravelTime) {
-        choice = SLOW_COLOUR;
+    return obj;
+}
+
+function initialise_nodes() {
+    SITE_DB = [];
+    BOUNDARY_DB = [];
+    filteredPoints = [];
+
+    for (let i = 0; i < all_sites.length; i++) {
+        SITE_DB.push(new Node(all_sites[i].id));
     }
-    // Better then normal
-    else if (journey.travelTime < 0.8 * journey.normalTravelTime) {
-        choice = FAST_COLOUR;
+
+    for (let i = 0; i < SITE_DB.length; i++) {
+        SITE_DB[i].findNeighbors();
+        SITE_DB[i].computeTravelTime();
+        SITE_DB[i].computeTravelSpeed();
+        SITE_DB[i].setVisualisation(null); //speed deviation//travel speed
+
     }
-    // Normal(ish)
-    else {
-        choice = NORMAL_COLOUR;
-    }
-    polyline.setStyle({
-        color: choice
+
+    //acquire bluetooth sensor locations
+    all_sites.filter(function (d, i) {
+        SITE_DB[i].lat = d.location.lat;
+        SITE_DB[i].lng = d.location.lng;
     });
-
 }
 
-// Set line colour based on actual or expected speed
-function update_actual_normal_speed(polyline) {
 
-    var journey = polyline.properties.journey;
-    var line = polyline.properties.line;
-    var time = speed_display === 'actual' ? journey.travelTime : journey.normalTravelTime;
-    var speed = (line.length / time) * TO_MPH;
-    var choice;
-    if (time === null) {
-        choice = BROKEN_COLOUR;
-    } else if (speed < 5) {
-        choice = VERY_SLOW_COLOUR;
-    } else if (speed < 10) {
-        choice = SLOW_COLOUR;
-    } else if (speed < 20) {
-        choice = MEDIUM_COLOUR;
-    } else {
-        choice = FAST_COLOUR;
-    }
-    polyline.setStyle({
-        color: choice
-    });
-}
 
 
 
@@ -325,7 +274,7 @@ function get_clock() {
         var ss = now.getSeconds();
         // If datetime is today
         control.getContainer().innerHTML = 'Updated ' + hh + ':' + mm;
-        
+
         console.log("updated")
 
     };
@@ -334,7 +283,7 @@ function get_clock() {
 
 
 
-function initMap() {
+function init_map() {
 
     var stamenToner = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}.png', {
         attribution: 'Map tiles by Stamen Design, CC BY 3.0 - Map data © OpenStreetMap',
@@ -348,7 +297,7 @@ function initMap() {
         center: cambridge,
         zoom: 12,
         zoomDelta: 0.5,
-        wheelPxPerZoomLevel: 95, 
+        wheelPxPerZoomLevel: 95,
         layers: [stamenToner],
     });
 
@@ -416,54 +365,37 @@ function initMap() {
     info_widget.addTo(map);
     datepicker_widget.addTo(map);
 
-
+    //change so the api would not be reset
     map.on("viewreset moveend", drawVoronoi);
 
 }
+function draw_road(loaded_svg){
+    let road_a = [52.15245 + 0.008, 0.004669 + 0.018]
+    let road_b = [52.23011 + 0.008, 0.19 + 0.018]
+    L.marker(road_a).addTo(map);
+    L.marker(road_b).addTo(map);
 
+
+    let svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
+    svgElement.setAttribute("viewBox", "0 0 973.7 808.7");
+    svgElement.setAttribute("id", 'roads');
+
+    svgElement.innerHTML = new XMLSerializer().serializeToString(loaded_svg);
+    var svgElementBounds = [road_a, road_b];
+    console.log('loading svg')
+    L.svgOverlay(svgElement, svgElementBounds, {
+        interactive: false
+    }).addTo(map);            //L.imageOverlay(wgb_loc, wgb_bounds).bringToFront();bringToBack()
+
+    d3.select('#roads').style('fill', 'none').style('stroke', 'blue');
+
+}
 function drawVoronoi() {
-
-
-    travelTimes = [];
-    travelSpeed = [];
-    historicSpeed = [];
-    speedDeviation = [];
-
-
-    d3.select(".hover_val").remove();
+    d3.select('#cell_overlay').remove();
 
     // Reset the clock
     clock.update();
-
-    // voronoi = d3.voronoi().extent([
-    //     [0, 0],
-    //     [2000, 2000]
-    // ]); 
-
-    // draw the flow line
-    let flowLine = d3.line()
-        .x((d) => {
-            return d.x;
-        })
-        .y((d) => {
-            return d.y;
-        })
-        .curve(d3.curveBundle.beta(0.5));
-
-    SITE_DB = [];
-    BOUNDARY_DB = [];
-    filteredPoints = [];
-
-    InitialiseNodes();
-
-
-
-    for (let i = 0; i < SITE_DB.length; i++) {
-        travelTimes.push(SITE_DB[i].travelTime);
-        travelSpeed.push(SITE_DB[i].travelSpeed);
-        historicSpeed.push(SITE_DB[i].travelSpeed);
-        speedDeviation.push(SITE_DB[i].speedDeviation);
-    }
 
 
     var bounds = map.getBounds(),
@@ -473,9 +405,11 @@ function drawVoronoi() {
 
     filteredPoints = [];
 
-
+    //voronoi center points - bluetooth sensor locations
     filteredPoints = all_sites.filter(function (d, i) {
         let latlng = new L.latLng(d.location.lat, d.location.lng);
+
+        //make sure not drawing out of bounds
         if (!drawLimit.contains(latlng)) {
             return false
         };
@@ -486,12 +420,11 @@ function drawVoronoi() {
 
         SITE_DB[i].x = d.x;
         SITE_DB[i].y = d.y;
-        SITE_DB[i].lat = d.location.lat;
-        SITE_DB[i].lng = d.location.lng;
-
+     
         return true;
     });
 
+    //voronoi center points that limit the perimeter of the visible cells
     boundaryPoints = boundarySites.filter(function (d, i) {
         let latlng = new L.latLng(d.lat, d.lng);
         if (!drawLimit.contains(latlng)) {
@@ -512,13 +445,6 @@ function drawVoronoi() {
     });
 
     setColor = setColorRange();
-
-    // var maxLength = d3.max(filteredPoints, function (e) {
-    //     return +e.length;
-    // });
-    // var color = d3.scaleLinear()
-    //     .domain([0, maxLength])
-    //     .range(['rgb(255,245,235)', 'rgb(127,39,4)']);
 
     findLatLng();
 
@@ -552,18 +478,11 @@ function drawVoronoi() {
         }
     }
 
-    // var voronoiBoundaryPolygons = voronoi.polygons(boundaryPoints);
-    // for (let i = 0; i < voronoiBoundaryPolygons.length; ++i) {
-    //     if (voronoiBoundaryPolygons[i] !== undefined) {
-    //         readyVoronoiPolygons.push(voronoiBoundaryPolygons[i]);
-    //     }
-    // }
 
-    d3.select("svg").remove();
-    //d3.selectAll(".tooltip").remove(); //style("visibility", "hidden")
+    d3.select('#cell_overlay').remove();
 
-    var voronoi_cells = d3.select(map.getPanes().overlayPane).append("svg")
-        .attr("id", "overlay")
+    voronoi_cells = d3.select(map.getPanes().overlayPane).append("svg")
+        .attr("id", "cell_overlay")
         .attr("class", "leaflet-zoom-hide")
         .style("width", map.getSize().x + "px")
         .style("height", map.getSize().y + "px")
@@ -584,18 +503,6 @@ function drawVoronoi() {
     dijkstraGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
-    // create a tooltip
-    var tooltip = d3.select(map.getPanes().tooltipPane)
-        .append("div")
-        .attr("class", "tooltip")
-        .style("position", "absolute")
-
-        .style("stroke", "black")
-        .style("background", "white")
-        .on("mouseover", function (d, i) {
-            d3.select(this).style("visibility", "visible")
-        })
-        .style("visibility", "hidden");
 
 
     pathGroup.selectAll("g")
@@ -636,7 +543,8 @@ function drawVoronoi() {
         //.style("stroke-opacity", 0.3)
 
         .on('mouseover', function (d, i) {
-            lineGroup.remove();
+            // lineGroup.remove();
+
             lineGroup = voronoi_cells.append("g")
                 .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
             //info.update(d.data);
@@ -649,41 +557,39 @@ function drawVoronoi() {
                 .style("stroke-opacity", 1)
                 .style("fill-opacity", 0.6);
 
+            //I ASSUME THIS WILL FIX THE BUG WHERE UPON MOVING THE MAP COLORS CHANGE AS NOT ALL CELLS ARE LOADED.
+            //COLOR HAS TO BE LOADED BASED ON   d   RATHER THAN i
             let id = d.data.id;
-
             let neighbors = SITE_DB.find(x => x.id === id).neighbors;
 
+            console.log('list of links')
             for (let i = 0; i < neighbors.length; i++) {
                 //console.log(i);
                 let inbound = neighbors[i].links.in.id;
                 let outbound = neighbors[i].links.out.id;
 
-                drawLink(inbound, 350);
-                drawLink(outbound, 350);
+                // drawLink(inbound, 350);
+                // drawLink(outbound, 350);
+
+                drawSVGLinks(inbound, 500);
+                drawSVGLinks(outbound, 500);
+
+
 
             }
 
-            // tooltip.style("visibility", "visible")
-            //     .text(SITE_DB[i].name);
-
-            //d3.select(".hover_val").remove();
-            //d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text(SITE_DB[i].name);//selected
 
 
         })
 
 
-
-        .on("mousemove", function (d, i) {
-            //  tooltip.style("top", (SITE_DB[i].y) + "px") //(event.clientY)+"px"
-            //    .style("left", (SITE_DB[i].x) + "px"); //(event.clientY)+"px"
-            //  console.log(event.clientX,event.clientY);
-
-        })
 
         .on("click", function (d) { //dblclick
             let id = d.data.id;
             console.log(id, " was clicked");
+
+            //removes old paths
+            d3.select('#shortest_path').remove();
 
             selectedSites.push(d.data);
             if (selectedSites.length > 2) {
@@ -702,17 +608,9 @@ function drawVoronoi() {
                 for (let i = 0; i < result.path.length; i++) {
 
                     console.log(result.path[i]);
-                    //   d3.select(document.getElementById(result.path[i]))
-                    // .transition()
-                    // .duration(1000)
-                    // .attr("class","selected");
-                    //.attr("fill-opacity", 0.5)
-                    //.attr("fill", "black");
 
                     var found = SITE_DB.find(x => x.name == result.path[i]);
 
-                    //console.log(found);
-                    //console.log(xc[id]);
                     if (found.x != null || found.x != undefined) {
                         path.push({
                             "x": found.x,
@@ -723,7 +621,7 @@ function drawVoronoi() {
 
 
                 }
-                //console.log("P ", path);
+
                 // 7. d3's line generator
                 var line = d3.line()
                     .x(function (d, ) {
@@ -737,6 +635,7 @@ function drawVoronoi() {
 
                 var lineGraph = dijkstraGroup.append("path")
                     .attr("d", line(path))
+                    .attr('id', 'shortest_path')
                     .attr("stroke", "green")
                     .attr("stroke-width", 5)
                     .attr("fill", "none");
@@ -759,17 +658,19 @@ function drawVoronoi() {
         })
         //.on("click",  d3.selectAll(".tooltip").style("visibility", "hidden"))
         .on('mouseout', function (d, i) {
+            d3.selectAll('.road').style('stroke-width', '0px')
+
             lineGroup.remove();
             links_drawn = [];
+            links_drawn_SVG = [];
             d3.select(this).transition()
                 .duration('500')
-                //JUST CHANGE TO CLASS
+                //the alterinative is to use .classed('class_name', true) but then it's an equal css hassle
                 .attr('stroke', 'black')
                 .attr('stroke-width', '0.5px')
                 .style("stroke-opacity", 0.3)
                 .style("fill-opacity", 0.3);
-            //    tooltip.text(SITE_DB[i].name)
-            //        .style("visibility", "hidden");
+
         });
 
 
@@ -802,6 +703,84 @@ function drawVoronoi() {
     filteredPoints = [];
 
     changeModes();
+
+}
+
+
+
+
+
+
+function drawSVGLinks(link, dur) {
+    let connected_sites = all_links.find(x => x.id === link).sites;
+    let from = SITE_DB.find(x => x.id === connected_sites[0]);
+    let to = SITE_DB.find(x => x.id === connected_sites[1]);
+
+    console.log('LINK', link, from, to);
+
+
+
+    links_drawn_SVG.push(link);
+
+    let color = links_drawn_SVG.includes(inverseLink(link)) ? "magenta" : "green";
+    console.log('SVG', color)
+    let dir = color === "green" ? 1 : -1;
+
+    let values = getMinMax();
+    let deviation = calculateDeviation(link)
+
+    var scale = d3.scaleLinear()
+        .domain([values.min, values.max])
+        .range([1, 4]);
+
+    //let strokeWeight = scale(deviation);
+    let strokeWeight = '3px';
+
+    let inbound = lineGroupSVG('#' + link, color, strokeWeight) //setColor(strokeWeight)
+    try {
+        console.log(d3.select('#' + link), d3.select('#' + link).node().children[0].getTotalLength())
+        let lineLength = inbound.node().children[0].getTotalLength()
+        animateSVGMovement(inbound, lineLength, dur, dir);
+
+    } catch {
+        console.log(link)
+        drawLink(link, 350);
+        console.log('EXCEPTION CAUGHT')
+
+    }
+
+
+}
+
+function lineGroupSVG(path_id, color, strokeWeight) {
+    // d3.selectAll('.road').style('stroke-width', strokeWeight)
+
+    let path = d3.select(path_id)
+        .style("fill", "none")
+        .style("fill-opacity", 0)
+        .attr("stroke", color)
+        .attr("stroke-opacity", 1)
+        .style("stroke-width", strokeWeight);
+
+    return path
+}
+
+function animateSVGMovement(path, outboundLength, dur, dir) {
+
+    return path
+        .attr("stroke-dasharray", outboundLength + " " + outboundLength)
+        .attr("stroke-dashoffset", dir * outboundLength)
+        .transition()
+        .duration(dur)
+        .ease(d3.easeLinear)
+        .attr("stroke-dashoffset", 0)
+        .on("end",
+            function (d, i) {
+
+            }
+
+        );
+
 }
 
 function drawLink(link, dur) {
@@ -813,41 +792,42 @@ function drawLink(link, dur) {
     links_drawn.push(link);
 
     let color = links_drawn.includes(inverseLink(link)) ? "red" : "blue";
-
+    console.log('arcs', color)
     let values = getMinMax();
     let deviation = calculateDeviation(link)
 
     //console.log(deviation);
 
-    var data = [100, 400, 300, 900, 850, 1000];
-
     var scale = d3.scaleLinear()
         .domain([values.min, values.max])
         .range([0.5, 10]);
-    //let strokeWeight=5;
-    let strokeWeight = scale(deviation);
+    //let strokeWeight = scale(deviation);
+    let strokeWeight = '5px';
+
     //console.log(deviation, strokeWeight);
 
-    let inbound = lineGroup_(from, to, color, 5, setColor(strokeWeight));
-    // let outbound =lineGroup_(to, from, "blue");
-
+    let inbound = lineGroup_(from, to, color, strokeWeight, 'blue'); //setColor(strokeWeight)
     let lineLength = inbound.node().getTotalLength();
+
 
     animateMovement(inbound, lineLength, dur);
     //animateMovement(outbound, lineLength,350);
 
 }
 
+
+
 function inverseLink(link) {
     let connected_sites = all_links.find(x => x.id === link).sites;
     let from = SITE_DB.find(x => x.id === connected_sites[0]);
     let to = SITE_DB.find(x => x.id === connected_sites[1]);
-    //console.log(from,to);
 
     let links = findLinks(from.id, to.id);
     return link === links.in.id ? links.out.id : links.in.id;
 
 }
+
+
 
 function lineGroup_(A, B, color, strokeWeight, col) {
 
@@ -1014,8 +994,11 @@ function changeModes() {
                     let inbound = neighbors[i].links.in.id;
                     let outbound = neighbors[i].links.out.id;
 
-                    //drawLink(inbound,1000);
-                    drawLink(outbound, 1000);
+                    // drawLink(inbound, 1000);
+                    // drawLink(outbound, 1000);
+
+                    drawSVGLinks(inbound, 1500);
+                    drawSVGLinks(outbound, 1500);
 
                 }
             }
@@ -1027,41 +1010,6 @@ function changeModes() {
 }
 
 
-function InitialiseNodes() {
-    for (let i = 0; i < all_sites.length; i++) {
-        SITE_DB.push(new Node(all_sites[i].id));
-    }
-
-    for (let i = 0; i < SITE_DB.length; i++) {
-        SITE_DB[i].findNeighbors();
-        SITE_DB[i].computeTravelTime();
-        SITE_DB[i].computeTravelSpeed();
-        SITE_DB[i].setVisualisation(null); //speed deviation//travel speed
-
-    }
-}
-
-
-
-function findLinks(id1, id2) {
-    //id1 from (outbound)
-    //id2 to (inbound)
-
-    let data = all_links; //this.links;
-    let obj = {
-        "out": null,
-        "in": null
-    }
-    for (let i = 0; i < data.length; i++) {
-        if (id1 == data[i].sites[0] && id2 == data[i].sites[1]) {
-            obj["out"] = data[i];
-        }
-        if (id1 == data[i].sites[1] && id2 == data[i].sites[0]) {
-            obj["in"] = data[i];
-        }
-    }
-    return obj;
-}
 
 function findLatLng() {
     map.on('click',
@@ -1099,8 +1047,6 @@ function generateGraph(s, f) {
     SITE_DB.forEach((element) => {
 
         let neighbors = element.neighbors;
-
-
 
         let obj = {};
 
@@ -1170,8 +1116,8 @@ function calculateDeviation(link) {
     let dist = all_links.find(x => x.id === link).length;
     let travelTime, normalTravelTime;
     try {
-        travelTime = journeys.find(x => x.id === link).travelTime;
-        normalTravelTime = journeys.find(x => x.id === link).normalTravelTime;
+        travelTime = all_journeys.find(x => x.id === link).travelTime;
+        normalTravelTime = all_journeys.find(x => x.id === link).normalTravelTime;
     } catch {
         return undefined
     }
