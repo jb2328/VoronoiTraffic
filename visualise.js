@@ -6,7 +6,7 @@
 // m/sec to mph
 
 const TO_MPH = 2.23694;
-
+const SITE_PREFIX = 'SITE_';
 
 // Style options for markers and lines
 var SITE_OPTIONS = {
@@ -87,7 +87,7 @@ class VoronoiViz {
 
     }
 
-    
+
     // init() called when page loaded
     init() {
         init_map();
@@ -96,27 +96,27 @@ class VoronoiViz {
 
             console.log('Creating Nodes');
             initialise_nodes();
-            
+
             console.log('loading Voronoi');
             drawVoronoi();
         });
-    
+
         load_road_svg().then((loaded_svg) => {
-    
-           draw_road(loaded_svg);
-        });  
+
+            draw_road(loaded_svg);
+        });
 
 
         //have a timeout function here
     }
     init_api() {
-        
+
         load_api_data().then(() => {
 
             console.log('Creating Nodes');
             initialise_nodes();
-            
-        
+
+
         });
 
         //have a timeout function here
@@ -163,7 +163,7 @@ voronoi_visualisation.init();
 
 async function load_api_data() {
 
-   await Promise.all([load_sites(), load_routes(), load_links(), load_journeys()]).then((combined_api_reponse) => {
+    await Promise.all([load_sites(), load_routes(), load_links(), load_journeys()]).then((combined_api_reponse) => {
 
 
         let site_response = combined_api_reponse[0]
@@ -194,6 +194,14 @@ async function load_api_data() {
             element.id = element.id.replace('|', '_');
         });
 
+        //For site, we have to add a prefix SITE_ in front of site ids,
+        //'{1F867FB8-83E6-4E63-A265-51CD2E71E053}' =>'SITE_{1F867FB8-83E6-4E63-A265-51CD2E71E053}', 
+        //otherwise we will not be able to select site id from html id tag
+        //because it will start with an invalid character '{'
+        all_sites.forEach((element) => {
+            element.acp_id = SITE_PREFIX + element.id.replace('{', '').replace('}', '');
+        });
+
         // Display the data's timestamp on the clock
         var timestamp = journey_response.ts * 1000;
         clock.update(new Date(timestamp));
@@ -207,6 +215,28 @@ async function load_api_data() {
     //     setTimeout(load_data, 60000);
     // });
 }
+
+
+
+function path_to_poly(path_id) {
+    var numPoints = 8;
+
+    var mypath = document.getElementById(path_id);
+    var pathLength = mypath.getTotalLength();
+    var polygonPoints = [];
+
+    for (var i = 0; i < numPoints; i++) {
+        var p = mypath.getPointAtLength(i * pathLength / numPoints);
+        polygonPoints.push(p.x);
+        polygonPoints.push(p.y);
+    }
+
+    return polygonPoints;
+    //modify to create a new element
+    //var  mypolygon = document.getElementById(path_id);
+    //mypolygon.setAttribute("points", polygonPoints.join(","));
+}
+
 
 function findLinks(id1, id2) {
     //id1 from (outbound)
@@ -369,7 +399,8 @@ function init_map() {
     map.on("viewreset moveend", drawVoronoi);
 
 }
-function draw_road(loaded_svg){
+
+function draw_road(loaded_svg) {
     let road_a = [52.15245 + 0.008, 0.004669 + 0.018]
     let road_b = [52.23011 + 0.008, 0.19 + 0.018]
     L.marker(road_a).addTo(map);
@@ -386,11 +417,12 @@ function draw_road(loaded_svg){
     console.log('loading svg')
     L.svgOverlay(svgElement, svgElementBounds, {
         interactive: false
-    }).addTo(map);            //L.imageOverlay(wgb_loc, wgb_bounds).bringToFront();bringToBack()
+    }).addTo(map); //L.imageOverlay(wgb_loc, wgb_bounds).bringToFront();bringToBack()
 
     d3.select('#roads').style('fill', 'none').style('stroke', 'blue');
 
 }
+
 function drawVoronoi() {
     d3.select('#cell_overlay').remove();
 
@@ -420,7 +452,7 @@ function drawVoronoi() {
 
         SITE_DB[i].x = d.x;
         SITE_DB[i].y = d.y;
-     
+
         return true;
     });
 
@@ -504,12 +536,13 @@ function drawVoronoi() {
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
 
-
+    console.log('voronoi_polygons', readyVoronoiPolygons)
     pathGroup.selectAll("g")
         .data(readyVoronoiPolygons)
         .enter()
         .append("path")
         //.attr("class","cell")//"cell"
+        .attr('id', (d) => d.data.acp_id)
         .attr("class", function (d, i) {
             //console.log(d.data.description);
             if (d.data.description !== undefined) {
@@ -524,32 +557,24 @@ function drawVoronoi() {
         });
 
     pathGroup.selectAll(".cell")
-        .attr("id", function (d) { //let id="test"+d;
-            //console.log(d.data.name);
-            return d.data.name
-        })
-        .attr('fill', function (d, i) {
-            // console.log("\ni", i, SITE_DB[i]);
-
-            let color = SITE_DB[i].selected;
+        .attr('fill', function (d) {
+            //color the cell based on the selected reading from the SITE_DB
+            //the lookup is done based on the matching id values (from SVG and in Nodes)
+            let color = SITE_DB.find(x => x.id === d.data.id).selected;
+            //if undefined,set to gray
             if (color == null || color == undefined) {
                 return "rgb(50,50,50);"
             } else {
-                return setColor(color) //c10[i % 10]
+                return setColor(color)
             }
         })
-        //.style("stroke", "rgb(0,0,0)")
-        //.style("fill-opacity", 0.3)
-        //.style("stroke-opacity", 0.3)
 
         .on('mouseover', function (d, i) {
             // lineGroup.remove();
 
-            lineGroup = voronoi_cells.append("g")
+            lineGroup = circleGroupB.append("g")
                 .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
-            //info.update(d.data);
-            //console.log(SITE_DB[i].name); //WRONG APPROACH, CAUSES RANODM OBJECT DRIFTS
-            // /console.log(d.data.name); //SHOULD FIX THE PROBLEM WITH BS MARKING ON THE MAP AND RANDOM RELOCATIONS
+
             d3.select(this).transition()
                 .duration('300')
                 .attr('stroke', 'black')
@@ -1187,4 +1212,140 @@ function getMinMax() {
         "min": -5,
         "max": 10
     };
+}
+
+function get_outline() {
+    let cell_list = [
+        'SITE_5D6F13FA-AE7B-4924-B37C-F9D899FAA325',
+        'SITE_E5A5E9B5-4AED-43AC-B379-2F5F208F86A1',
+        // 'SITE_F06AFB58-EEBB-4D0A-887E-BF7913B1B9E1',
+        'SITE_CA31BF74-167C-469D-A2BF-63F9C2CE919A'
+    ];
+
+    let point_list = []
+    let point_pairs = []
+
+    // d3.select('#' + cell_list[i]).style('fill', 'white');
+
+    for (let i = 0; i < cell_list.length; i++) {
+        d3.select('#' + cell_list[i]).style('fill', 'red');
+
+        let element = d3.select('#' + cell_list[i]).node();
+        let total_len = parseInt(element.getTotalLength());
+        console.log('total_len', total_len)
+
+
+        for (let u = 0; u < total_len; u += 2) {
+            // console.log(u, element.getPointAtLength(u), total_len)
+            point_pairs.push([element.getPointAtLength(u).x, element.getPointAtLength(u).y])
+            point_list.push(element.getPointAtLength(u))
+        }
+
+
+        d3.select('#' + cell_list[i]).style('fill', 'black');
+
+    }
+
+    var defaultHull = d3.concaveHull().distance(75);
+    var paddedHull = d3.concaveHull().distance(100).padding(25);
+    console.log('default', defaultHull(point_pairs), 'padded', paddedHull(point_pairs))
+
+
+    // var POINT_RADIUS = 10;
+
+    // let points = point_list;
+    // console.log('POINTS', points)
+    let pts = defaultHull(point_pairs)[0]
+    let points = []
+    for (let j = 0; j < pts.length; j++) {
+        points.push({
+            'x': pts[j][0],
+            'y': pts[j][1]
+        })
+    }
+
+    // var dataTest = [{x:4,y:3},{x:6,y:3}]
+
+    console.log(points)
+    var lineFunction = d3.line()
+        .x(function (d, i) {
+            console.log('x', d, i);
+            return d.x;
+        })
+        .y(function (d, i) {
+            console.log('y', d, i);
+            return d.y;
+        });
+
+    lineGroup.append("g")
+        .append("path")
+        .attr("d", lineFunction(points))
+        .style("stroke-width", 5)
+        .style("stroke", "blue")
+        .style("fill", "none");
+
+    // var hull = convexhull.makeHull(points);
+
+    // var s = hull.map(function (point, i) {
+    //     return (i == 0 ? "M" : "L") + point.x + "," + point.y;
+    // }).join("") + "Z";
+
+    // var lineGraph = lineGroup.append("path")
+    // .attr("d", s)
+    // .attr("stroke", "blue")
+    // .attr("stroke-width", 5)
+    // .attr("fill", "none");
+
+
+    //      var lineFunction = d3.line()
+    //             .x(function (d) {
+    //                 return d.x;
+    //             })
+    //             .y(function (d) {
+    //                 return d.y;
+    //             })
+    //             .interpolate("linear");
+
+    // console.log('pts', PushSubscriptionOptions)
+    //         //The line SVG Path we draw
+    //         var lineGraph = svg.append("path")
+    //             .attr("d", lineFunction(points))
+    //             .attr("stroke", "blue")
+    //             .attr("stroke-width", 5)
+    //             .attr("fill", "none");
+
+
+    // var hullSet = new Set(hull);
+    // let outside_points = [];
+    // points.forEach(function (point) {
+    //     var circElem = document.createElementNS('http://www.w3.org/2000/svg', "circle");
+    //     // circElem.setAttribute("cx", point.x);
+    //     // circElem.setAttribute("cy", point.y);
+    //     // circElem.setAttribute("r", POINT_RADIUS);
+
+    //     if (hullSet.has(point)) {
+    //         // onHullGroupElem.appendChild(circElem);
+    //         outside_points.push(point)
+    //         lineGroup.append("circle")
+    //             .attr("cx", point.x)
+    //             .attr("cy", point.y)
+    //             .attr("r", POINT_RADIUS)
+    //             .attr("stroke", "green")
+    //             .attr("stroke-width", 5)
+    //             .attr("fill", "green");
+    //     } else {
+    //         lineGroup.append("circle")
+    //             .attr("cx", point.x)
+    //             .attr("cy", point.y)
+    //             .attr("r", POINT_RADIUS / 2)
+    //             .attr("stroke", "yellow")
+    //             .attr("stroke-width", 2.5)
+    //             .attr("fill", "yellow");
+    //     }
+
+    // else
+    // 	offHullGroupElem.appendChild(circElem);
+    //    / });
+
+
 }

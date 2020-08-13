@@ -2,6 +2,8 @@ class Node {
     constructor(id) {
 
         this.id = id;
+        this.acp_id = null;
+
         this.name = null;
 
         this.lat = null;
@@ -21,27 +23,16 @@ class Node {
         this.selected = null;
         this.selectedName = null;
 
-        this.getName();
+        this.name=this.getName();
     }
 
     getName() {
-        for (let i = 0; i < all_sites.length; i++) {
-
-            if (this.id == all_sites[i].id) {
-                this.name = all_sites[i].name;
-                break;
-            }
-        }
+        return all_sites.find(x => x.id === this.id).name;
+  
 
     }
     fetchName(id) {
-        for (let i = 0; i < all_sites.length; i++) {
-
-            if (id == all_sites[i].id) {
-                //this.name = all_sites[i].name;
-                return all_sites[i].name;
-            }
-        }
+     return all_sites.find(x => x.id === id).name;
 
     }
     setVisualisation(vis) {
