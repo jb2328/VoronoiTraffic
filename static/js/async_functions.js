@@ -1,4 +1,4 @@
-
+"use strict";
 const API_TOKEN = 'a62fb5390f070c129591b6ff19c0a8cf06440efc'; //'6909103b0bfbc5e949a31a840f31e17efd58754f';
 const LINK_URL = 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/link/';
 const SITE_URL = 'https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/site/';

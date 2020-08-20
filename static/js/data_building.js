@@ -1,3 +1,7 @@
+"use strict";
+
+const TO_MPH = 2.23694;
+
 var SITE_DB;
 
 var travelTimes;
@@ -5,10 +9,11 @@ var travelSpeed;
 var historicSpeed;
 var speedDeviation;
 
-var all_sites, all_links, all_journeys = [];
+var all_sites, all_links, all_journeys, all_routes = [];
 
-const TO_MPH = 2.23694;
+//generate_hull();
 
+/*------------------------------------------------------*/
 
 async function load_api_data() {
 
@@ -42,10 +47,22 @@ async function load_api_data() {
         all_journeys.forEach((element) => {
             element.id = element.id.replace('|', '_');
         });
+        //For site, we have to add a prefix SITE_ in front of site ids,
+        //'{1F867FB8-83E6-4E63-A265-51CD2E71E053}' =>'SITE_{1F867FB8-83E6-4E63-A265-51CD2E71E053}', 
+        //otherwise we will not be able to select site id from html id tag
+        //because it will start with an invalid character '{'
+        all_sites.forEach((element) => {
+            element.acp_id = SITE_PREFIX + element.id.replace('{', '').replace('}', '');
+        });
 
+       
     })
 
-
+    //DO SOMETHING WHEN FAILED, LIKE HERE
+    // .fail(function () {
+    //     console.log('API call failed - default reschedule');
+    //     setTimeout(load_data, 60000);
+    // });
 }
 
 function initialise_nodes() {
@@ -70,6 +87,22 @@ function initialise_nodes() {
     });
 }
 
+const arrAvg = arr => arr.reduce((a, b) => a + b, 0) / arr.length
+
+function get_zone_averages() {
+    let zones = Object.keys(CELL_GROUPS);
+    let zone_readings = [];
+    for (let i = 0; i < zones.length; i++) {
+        let zone_temp = []
+        SITE_DB.filter(node => node.parent == zones[i]).forEach(zone_node => zone_temp.push(zone_node.selected))
+        zone_readings.push({
+            'zone': zones[i],
+            'value': arrAvg(zone_temp)
+        })
+
+    }
+    return zone_readings
+}
 
 function findLinks(id1, id2) {
     //id1 from (outbound)

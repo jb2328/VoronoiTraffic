@@ -5,8 +5,7 @@
 
 // m/sec to mph
 
-const TO_MPH = 2.23694;
-const SITE_PREFIX = 'SITE_';
+//const TO_MPH = 2.23694;
 
 // Style options for markers and lines
 var SITE_OPTIONS = {
@@ -50,7 +49,7 @@ var map, // The Leaflet map object itself
 var all_sites, all_links, all_journeys = [];
 
 var minmax, myColors;
-var SITE_DB = [];
+//var SITE_DB = [];
 var links_drawn = [];
 var links_drawn_SVG = [];
 
@@ -72,7 +71,7 @@ var setColor;
 
 var selectedSites = [];
 
-var lineGroup, dijkstraGroup, road_group;
+var lineGroup, cell_outlines, dijkstraGroup, road_group;
 var voronoi_cells;
 
 class VoronoiViz {
@@ -96,9 +95,14 @@ class VoronoiViz {
 
             console.log('Creating Nodes');
             initialise_nodes();
+            console.log('draw bar chart')
+
+            show_bar(get_zone_averages());
 
             console.log('loading Voronoi');
             drawVoronoi();
+            generate_hull();
+
         });
 
         load_road_svg().then((loaded_svg) => {
@@ -109,23 +113,19 @@ class VoronoiViz {
 
         //have a timeout function here
     }
-    init_api() {
 
-        load_api_data().then(() => {
-
-            console.log('Creating Nodes');
-            initialise_nodes();
-
-
-        });
-
-        //have a timeout function here
-    }
     update() {
         // The underlying API updates journey times every 5 minutes.
         // Schedule an update 5 and-a-bit minutes from the last
         // timestamp if that looks believable, and in a minute
         // otherwise.
+
+         // Display the data's timestamp on the clock
+        //  var timestamp = journey_response.ts * 1000;
+        //  clock.update(new Date(timestamp));
+ 
+        //  console.log('loaded api data')
+
         var now = Date.now();
         var delta = timestamp - now + (5.25 * 60000);
         if (delta <= 0 || delta > 10 * 60000) {
@@ -159,62 +159,7 @@ voronoi_visualisation.init();
 
 //setTimeout(voronoi_visualisation.update(), delta);
 
-/*------------------------------------------------------*/
 
-async function load_api_data() {
-
-    await Promise.all([load_sites(), load_routes(), load_links(), load_journeys()]).then((combined_api_reponse) => {
-
-
-        let site_response = combined_api_reponse[0]
-        let route_response = combined_api_reponse[1]
-        let journey_response = combined_api_reponse[3]
-        let link_response = combined_api_reponse[2]
-
-        all_sites = site_response.site_list;
-        all_routes = route_response.route_list
-        all_links = link_response.link_list;
-        all_journeys = journey_response.request_data;
-
-
-        /*--------------------------DATA CLEANUP-----------------------------*/
-
-        //Some genious assumed that it was OK to use | vertical bars for link ids 
-        //(e.g CAMBRIDGE_JTMS|9800WLZSM8UU), thus not only messing up the ability 
-        //to access such links with D3.js or regex but also not being able to 
-        //reference it in XML for SVG paths.
-        //So here I delete the vertical bars and replace it with '_' so
-        // the actual unique link value becomes CAMBRIDGE_JTMS_9800WLZSM8UU
-
-        all_links.forEach((element) => {
-            element.id = element.id.replace('|', '_');
-        });;
-
-        all_journeys.forEach((element) => {
-            element.id = element.id.replace('|', '_');
-        });
-
-        //For site, we have to add a prefix SITE_ in front of site ids,
-        //'{1F867FB8-83E6-4E63-A265-51CD2E71E053}' =>'SITE_{1F867FB8-83E6-4E63-A265-51CD2E71E053}', 
-        //otherwise we will not be able to select site id from html id tag
-        //because it will start with an invalid character '{'
-        all_sites.forEach((element) => {
-            element.acp_id = SITE_PREFIX + element.id.replace('{', '').replace('}', '');
-        });
-
-        // Display the data's timestamp on the clock
-        var timestamp = journey_response.ts * 1000;
-        clock.update(new Date(timestamp));
-
-        console.log('loaded api data')
-    })
-
-    //DO SOMETHING WHEN FAILED, LIKE HERE
-    // .fail(function () {
-    //     console.log('API call failed - default reschedule');
-    //     setTimeout(load_data, 60000);
-    // });
-}
 
 
 
@@ -236,55 +181,6 @@ function path_to_poly(path_id) {
     //var  mypolygon = document.getElementById(path_id);
     //mypolygon.setAttribute("points", polygonPoints.join(","));
 }
-
-
-function findLinks(id1, id2) {
-    //id1 from (outbound)
-    //id2 to (inbound)
-
-    let obj = {
-        "out": null,
-        "in": null
-    }
-
-    for (let i = 0; i < all_links.length; i++) {
-        if (id1 == all_links[i].sites[0] && id2 == all_links[i].sites[1]) {
-            obj["out"] = all_links[i];
-        }
-        if (id1 == all_links[i].sites[1] && id2 == all_links[i].sites[0]) {
-            obj["in"] = all_links[i];
-        }
-    }
-    return obj;
-}
-
-function initialise_nodes() {
-    SITE_DB = [];
-    BOUNDARY_DB = [];
-    filteredPoints = [];
-
-    for (let i = 0; i < all_sites.length; i++) {
-        SITE_DB.push(new Node(all_sites[i].id));
-    }
-
-    for (let i = 0; i < SITE_DB.length; i++) {
-        SITE_DB[i].findNeighbors();
-        SITE_DB[i].computeTravelTime();
-        SITE_DB[i].computeTravelSpeed();
-        SITE_DB[i].setVisualisation(null); //speed deviation//travel speed
-
-    }
-
-    //acquire bluetooth sensor locations
-    all_sites.filter(function (d, i) {
-        SITE_DB[i].lat = d.location.lat;
-        SITE_DB[i].lng = d.location.lng;
-    });
-}
-
-
-
-
 
 
 function get_clock() {
@@ -336,6 +232,8 @@ function init_map() {
 
     var info_widget = L.control();
     var datepicker_widget = L.control();
+    var horizontal_chart = L.control();
+
 
     info_widget.onAdd = function (map) {
         this.info_div = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
@@ -352,6 +250,26 @@ function init_map() {
         return this.datepicker_div;
     };
 
+    horizontal_chart.onAdd = function (map) {
+        this.horizontal_chart = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
+        this.horizontal_chart.id = "bar_chart";
+        this.update();
+
+        return this.horizontal_chart;
+    };
+
+
+    horizontal_chart.update = function (e) {
+        if (e === undefined) {
+            this.horizontal_chart.innerHTML =
+                '<h4>Horizontal Bar Chart</h4>'
+            // +'<br>' 
+            return;
+        }
+
+    };
+
+
     info_widget.update = function (e) {
         if (e === undefined) {
             this.info_div.innerHTML =
@@ -360,7 +278,9 @@ function init_map() {
                 "<div>" +
                 "<form id='routes'>" +
                 "<input type='radio' name='mode' value='routes'> Routes<br>" +
-                "<input type='radio' name='mode' value='polygons'> Polygons" +
+                "<input type='radio' name='mode' value='polygons'> Polygons<br>" +
+                "<input type='radio' name='mode' value='groups'> Show Groups<br>" +
+
                 "</form>" +
                 "<br>" +
                 "</div>" +
@@ -385,8 +305,6 @@ function init_map() {
                 '<br>' +
                 '<input type="text" name="datefilter" id="datepicker" value="" />';
 
-
-
             return;
         }
 
@@ -394,6 +312,7 @@ function init_map() {
 
     info_widget.addTo(map);
     datepicker_widget.addTo(map);
+    horizontal_chart.addTo(map);
 
     //change so the api would not be reset
     map.on("viewreset moveend", drawVoronoi);
@@ -530,6 +449,8 @@ function drawVoronoi() {
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
     lineGroup = voronoi_cells.append("g")
+        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+    cell_outlines = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
     dijkstraGroup = voronoi_cells.append("g")
@@ -741,7 +662,7 @@ function drawSVGLinks(link, dur) {
     let from = SITE_DB.find(x => x.id === connected_sites[0]);
     let to = SITE_DB.find(x => x.id === connected_sites[1]);
 
-    console.log('LINK', link, from, to);
+    // console.log('LINK', link, from, to);
 
 
 
@@ -1214,138 +1135,100 @@ function getMinMax() {
     };
 }
 
-function get_outline() {
-    let cell_list = [
-        'SITE_5D6F13FA-AE7B-4924-B37C-F9D899FAA325',
-        'SITE_E5A5E9B5-4AED-43AC-B379-2F5F208F86A1',
-        // 'SITE_F06AFB58-EEBB-4D0A-887E-BF7913B1B9E1',
-        'SITE_CA31BF74-167C-469D-A2BF-63F9C2CE919A'
-    ];
+function generate_hull() {
 
-    let point_list = []
-    let point_pairs = []
+    //get a list of group ids  e.g (north, south, center etc)
+    ZONES.forEach((group_id) => {
 
-    // d3.select('#' + cell_list[i]).style('fill', 'white');
+        let site_id_list = CELL_GROUPS[group_id]['acp_ids']
+        let point_list = []
+        let point_pairs = []
+        //get a list of site IDs inside a group e.g ('SITE_CA31BF74-167C-469D-A2BF-63F9C2CE919A',... etc)
+        site_id_list.forEach((site_acp_id) => {
+            // let site_id='{'+site_acp_id.replace(SITE_PREFIX,'')+'}';
+            // console.log('SITE',site_acp_id, site_id)
 
-    for (let i = 0; i < cell_list.length; i++) {
-        d3.select('#' + cell_list[i]).style('fill', 'red');
+            let element = d3.select('#' + site_acp_id).node();
+            let total_len = parseInt(element.getTotalLength());
 
-        let element = d3.select('#' + cell_list[i]).node();
-        let total_len = parseInt(element.getTotalLength());
-        console.log('total_len', total_len)
+            for (let u = 0; u < total_len; u += 2) {
+                point_pairs.push([element.getPointAtLength(u).x, element.getPointAtLength(u).y])
+                point_list.push(element.getPointAtLength(u))
+            }
 
 
-        for (let u = 0; u < total_len; u += 2) {
-            // console.log(u, element.getPointAtLength(u), total_len)
-            point_pairs.push([element.getPointAtLength(u).x, element.getPointAtLength(u).y])
-            point_list.push(element.getPointAtLength(u))
+
+
+        });
+
+
+        let defaultHull = d3.concaveHull().distance(85);
+        let paddedHull = d3.concaveHull().distance(85).padding(5);
+
+        CELL_GROUPS[group_id]['default_hull'] = defaultHull(point_pairs);
+        CELL_GROUPS[group_id]['padded_hull'] = paddedHull(point_pairs);
+
+
+        let padded_cell_outline = paddedHull(point_pairs)[0]
+
+        let points = []
+
+        for (let j = 0; j < padded_cell_outline.length; j++) {
+            points.push({
+                'x': padded_cell_outline[j][0],
+                'y': padded_cell_outline[j][1]
+            })
         }
 
+        CELL_GROUPS[group_id]['points'] = points;
 
-        d3.select('#' + cell_list[i]).style('fill', 'black');
+    })
+}
 
-    }
+function get_outline(zone_id) {
+    //generate_hull(); // perhaps should initiate somewhere else
 
-    var defaultHull = d3.concaveHull().distance(75);
-    var paddedHull = d3.concaveHull().distance(100).padding(25);
-    console.log('default', defaultHull(point_pairs), 'padded', paddedHull(point_pairs))
+    let cell_group_list = Object.keys(CELL_GROUPS);
 
-
-    // var POINT_RADIUS = 10;
-
-    // let points = point_list;
-    // console.log('POINTS', points)
-    let pts = defaultHull(point_pairs)[0]
-    let points = []
-    for (let j = 0; j < pts.length; j++) {
-        points.push({
-            'x': pts[j][0],
-            'y': pts[j][1]
-        })
-    }
-
-    // var dataTest = [{x:4,y:3},{x:6,y:3}]
-
-    console.log(points)
     var lineFunction = d3.line()
         .x(function (d, i) {
-            console.log('x', d, i);
             return d.x;
         })
         .y(function (d, i) {
-            console.log('y', d, i);
             return d.y;
         });
+    if (zone_id != undefined) {
+        cell_outlines.append("g")
+            .append("path")
+            .attr('class', 'cell_outline')
+            .attr("d", lineFunction(CELL_GROUPS[zone_id]['points']))
+            .style("stroke-width", 5)
+            .style("stroke", CELL_GROUPS[zone_id]['color'])
+            .style("fill", "none")
+            .style("opacity", 0)
+            .transition()
+            .duration(500)
+            .ease(d3.easeLinear)
+            .style("opacity", 1)
 
-    lineGroup.append("g")
-        .append("path")
-        .attr("d", lineFunction(points))
-        .style("stroke-width", 5)
-        .style("stroke", "blue")
-        .style("fill", "none");
+            .on("end", function (d, i) {});
+    } else {
+        for (let j = 0; j < cell_group_list.length; j++) {
+            cell_outlines.append("g")
+                .append("path")
+                .attr('class', 'cell_outline')
+                .attr("d", lineFunction(CELL_GROUPS[cell_group_list[j]]['points']))
+                .style("stroke-width", 5)
+                .style("stroke", CELL_GROUPS[cell_group_list[j]]['color'])
+                .style("fill", "none")
+                .style("opacity", 0)
+                .transition()
+                .duration(500)
+                .ease(d3.easeLinear)
+                .style("opacity", 1)
 
-    // var hull = convexhull.makeHull(points);
-
-    // var s = hull.map(function (point, i) {
-    //     return (i == 0 ? "M" : "L") + point.x + "," + point.y;
-    // }).join("") + "Z";
-
-    // var lineGraph = lineGroup.append("path")
-    // .attr("d", s)
-    // .attr("stroke", "blue")
-    // .attr("stroke-width", 5)
-    // .attr("fill", "none");
-
-
-    //      var lineFunction = d3.line()
-    //             .x(function (d) {
-    //                 return d.x;
-    //             })
-    //             .y(function (d) {
-    //                 return d.y;
-    //             })
-    //             .interpolate("linear");
-
-    // console.log('pts', PushSubscriptionOptions)
-    //         //The line SVG Path we draw
-    //         var lineGraph = svg.append("path")
-    //             .attr("d", lineFunction(points))
-    //             .attr("stroke", "blue")
-    //             .attr("stroke-width", 5)
-    //             .attr("fill", "none");
-
-
-    // var hullSet = new Set(hull);
-    // let outside_points = [];
-    // points.forEach(function (point) {
-    //     var circElem = document.createElementNS('http://www.w3.org/2000/svg', "circle");
-    //     // circElem.setAttribute("cx", point.x);
-    //     // circElem.setAttribute("cy", point.y);
-    //     // circElem.setAttribute("r", POINT_RADIUS);
-
-    //     if (hullSet.has(point)) {
-    //         // onHullGroupElem.appendChild(circElem);
-    //         outside_points.push(point)
-    //         lineGroup.append("circle")
-    //             .attr("cx", point.x)
-    //             .attr("cy", point.y)
-    //             .attr("r", POINT_RADIUS)
-    //             .attr("stroke", "green")
-    //             .attr("stroke-width", 5)
-    //             .attr("fill", "green");
-    //     } else {
-    //         lineGroup.append("circle")
-    //             .attr("cx", point.x)
-    //             .attr("cy", point.y)
-    //             .attr("r", POINT_RADIUS / 2)
-    //             .attr("stroke", "yellow")
-    //             .attr("stroke-width", 2.5)
-    //             .attr("fill", "yellow");
-    //     }
-
-    // else
-    // 	offHullGroupElem.appendChild(circElem);
-    //    / });
-
+                .on("end", function (d, i) {});
+        }
+    }
 
 }

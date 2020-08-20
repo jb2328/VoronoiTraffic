@@ -1,8 +1,12 @@
+"use strict";
+
+const SITE_PREFIX = 'SITE_';
+
 class Node {
     constructor(id) {
 
         this.id = id;
-        this.acp_id = null;
+        this.acp_id = SITE_PREFIX + this.id.replace('{', '').replace('}', '');
 
         this.name = null;
 
@@ -23,16 +27,28 @@ class Node {
         this.selected = null;
         this.selectedName = null;
 
-        this.name=this.getName();
+        this.parent = this.getParent();
+        this.name = this.getName();
+    }
+
+    getParent() {
+
+        let groups = Object.keys(CELL_GROUPS);
+        for (let i = 0; i < groups.length; i++) {
+            let group_id = groups[i];
+            if (CELL_GROUPS[group_id]['acp_ids'].includes(this.acp_id)) {
+                return group_id;
+            }
+        }
     }
 
     getName() {
         return all_sites.find(x => x.id === this.id).name;
-  
+
 
     }
     fetchName(id) {
-     return all_sites.find(x => x.id === id).name;
+        return all_sites.find(x => x.id === id).name;
 
     }
     setVisualisation(vis) {
@@ -68,7 +84,7 @@ class Node {
     findNeighbors() //data is all_links
     {
         this.neighbors = [];
-        let tt,ntt,travelTime;
+        let tt, ntt, travelTime;
         for (let i = 0; i < all_links.length; i++) {
             if (this.id == all_links[i].sites[0]) { //from this id
                 //console.log('journeysB',journeys[i].id, this.id,data[i])
@@ -77,16 +93,18 @@ class Node {
                     tt = all_journeys.find(x => x.id === all_links[i].id).travelTime;
                     ntt = all_journeys.find(x => x.id === all_links[i].id).normalTravelTime;
                     travelTime = tt == undefined || null ? ntt : tt;
-                   }
-                   catch(err) {
-                     travelTime=undefined;
-                     ntt=undefined;
-                   }
-               
+                } catch (err) {
+                    travelTime = undefined;
+                    ntt = undefined;
+                }
+
                 //console.log(tt, travelTime);
-                let link=findLinks(this.id, all_links[i].sites[1]);
+                let link = findLinks(this.id, all_links[i].sites[1]);
                 this.neighbors.push({
-                    "links": {"out": link.out,"in":link.in},                 
+                    "links": {
+                        "out": link.out,
+                        "in": link.in
+                    },
                     "name": all_links[i].name,
                     "id": all_links[i].sites[1], //to this id
                     "site": this.fetchName(all_links[i].sites[1]),
@@ -97,7 +115,7 @@ class Node {
             }
         }
     }
-    
+
     computeTravelTime() {
         let avg = [];
         let sum = 0;

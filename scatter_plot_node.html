@@ -5,9 +5,11 @@
 <!-- Load d3.js -->
 <script src="https://d3js.org/d3.v5.min.js"></script>
 
-<script type="text/javascript" src="node_class.js"></script>
-<script type="text/javascript" src="async_functions.js"></script>
-<script type="text/javascript" src="data_building.js"></script>
+<script type="text/javascript" src="/static/js/node_class.js"></script>
+<script type="text/javascript" src="/static/js/async_functions.js"></script>
+<script type="text/javascript" src="/static/js/data_building.js"></script>
+<script type="text/javascript" src="/static/js/cell_groups.js"></script>
+
 
 <!-- Create a div where the graph will take place -->
 <div id="my_dataviz"></div>
@@ -37,12 +39,16 @@
 
 
   var LINK = '9800WLZSM8UU'; //9800W1CHALH6
-  var START = '2020-07-01'
-  var END = '2020-07-31'
+  var NODE='{11AB98B0-4A1A-478A-857D-A23C30C9CC48}';
+  var START = '2020-08-20'
+  var END= '2020-08-21'
+//  var END='2020-20-08'
+  // var START = '2020-07-01'
+  // var END = '2020-07-31'
 
   load_api_data().then(() => {
     initialise_nodes()
-    show_node_tt_past('{11AB98B0-4A1A-478A-857D-A23C30C9CC48}', START, END)
+    show_node_tt_past(NODE, START, END)
 
   });
   //    "https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/site/%7B0D7C672E-EEE9-4924-815E-B49CC382DFFA%7D/"
@@ -300,7 +306,7 @@
       .attr("text-anchor", "middle")
       .style("font-size", "16px")
       .style("text-decoration", "none") //underline  
-      .text("Travel time for " + LINK + " on " + START + ' ' + END);
+      .text("Travel time for " + NODE + " on " + START + ' ' + END);
 
     svg.append("g")
       .attr("transform", "translate(0," + height + ")")
