@@ -234,6 +234,27 @@ function init_map() {
     var datepicker_widget = L.control();
     var horizontal_chart = L.control();
 
+    //to be modified with https://stackoverflow.com/questions/33614912/how-to-locate-leaflet-zoom-control-in-a-desired-position
+    var test_graph = L.control({position: 'bottomleft'});//{       position: 'bottom'    }
+    test_graph.onAdd = function (map) {
+        this.test_graph = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
+        this.test_graph.id = "test_graph";
+        this.update();
+
+        return this.test_graph;
+    };
+    test_graph.update = function (e) {
+        if (e === undefined) {
+            this.test_graph.innerHTML =
+                '<h4>Test GRAPH</h4>'
+            // +'<br>' 
+            return;
+        }
+
+    };
+
+    test_graph.addTo(map);
+
 
     info_widget.onAdd = function (map) {
         this.info_div = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
@@ -491,6 +512,16 @@ function drawVoronoi() {
         })
 
         .on('mouseover', function (d, i) {
+
+            let START = '2020-08-21'
+            let END= '2020-08-22'
+
+            console.log(d.data.acp_id, d.data.id)
+            let NODE=d.data.id
+            d3.select('#test_graph')._groups[0][0].innerHTML='<img src="./static/images/loading_icon.gif "width="100px" height="100px" >'
+            console.log('INNERHTML', d3.select('#test_graph')._groups[0][0].innerHTML)
+            show_node_tt_past(NODE, START)
+
             // lineGroup.remove();
 
             lineGroup = circleGroupB.append("g")
@@ -514,11 +545,11 @@ function drawVoronoi() {
                 let inbound = neighbors[i].links.in.id;
                 let outbound = neighbors[i].links.out.id;
 
-                // drawLink(inbound, 350);
-                // drawLink(outbound, 350);
+                drawLink(inbound, 350);
+                drawLink(outbound, 350);
 
-                drawSVGLinks(inbound, 500);
-                drawSVGLinks(outbound, 500);
+                // drawSVGLinks(inbound, 500);
+                // drawSVGLinks(outbound, 500);
 
 
 
@@ -747,12 +778,12 @@ function drawLink(link, dur) {
     var scale = d3.scaleLinear()
         .domain([values.min, values.max])
         .range([0.5, 10]);
-    //let strokeWeight = scale(deviation);
-    let strokeWeight = '5px';
+    let strokeWeight = scale(deviation);
+    //let strokeWeight = '5px';
 
     //console.log(deviation, strokeWeight);
 
-    let inbound = lineGroup_(from, to, color, strokeWeight, 'blue'); //setColor(strokeWeight)
+    let inbound = lineGroup_(from, to, color, strokeWeight, setColor(strokeWeight)); //setColor(strokeWeight)
     let lineLength = inbound.node().getTotalLength();
 
 
