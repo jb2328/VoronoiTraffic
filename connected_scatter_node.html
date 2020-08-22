@@ -1,0 +1,34 @@
+<!-- Code from d3-graph-gallery.com -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v5.min.js"></script>
+
+<script type="text/javascript" src="/static/js/node_class.js"></script>
+<script type="text/javascript" src="/static/js/async_functions.js"></script>
+<script type="text/javascript" src="/static/js/data_building.js"></script>
+<script type="text/javascript" src="/static/js/cell_groups.js"></script>
+
+<script type="text/javascript" src="/static/js/scatter_node.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
+<div id="test_graph"></div>
+
+
+<script>
+
+  //var LINK = '9800WLZSM8UU'; //9800W1CHALH6
+let NODE='{11AB98B0-4A1A-478A-857D-A23C30C9CC48}';
+let START = '2020-08-21'
+let END= '2020-08-22'
+//  var END='2020-20-08'
+
+load_api_data().then(() => {
+  initialise_nodes()
+  show_node_tt_past(NODE, START)
+
+});
+
+</script>

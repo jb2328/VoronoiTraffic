@@ -74,6 +74,8 @@ var selectedSites = [];
 var lineGroup, cell_outlines, dijkstraGroup, road_group;
 var voronoi_cells;
 
+var bounds;
+
 class VoronoiViz {
 
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
@@ -120,10 +122,10 @@ class VoronoiViz {
         // timestamp if that looks believable, and in a minute
         // otherwise.
 
-         // Display the data's timestamp on the clock
+        // Display the data's timestamp on the clock
         //  var timestamp = journey_response.ts * 1000;
         //  clock.update(new Date(timestamp));
- 
+
         //  console.log('loaded api data')
 
         var now = Date.now();
@@ -235,7 +237,9 @@ function init_map() {
     var horizontal_chart = L.control();
 
     //to be modified with https://stackoverflow.com/questions/33614912/how-to-locate-leaflet-zoom-control-in-a-desired-position
-    var test_graph = L.control({position: 'bottomleft'});//{       position: 'bottom'    }
+    var test_graph = L.control({
+        position: 'bottomleft'
+    }); //{       position: 'bottom'    }
     test_graph.onAdd = function (map) {
         this.test_graph = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
         this.test_graph.id = "test_graph";
@@ -246,7 +250,7 @@ function init_map() {
     test_graph.update = function (e) {
         if (e === undefined) {
             this.test_graph.innerHTML =
-                '<h4>Test GRAPH</h4>'
+                '<h4>Hover over a Cell</h4>'
             // +'<br>' 
             return;
         }
@@ -301,6 +305,8 @@ function init_map() {
                 "<input type='radio' name='mode' value='routes'> Routes<br>" +
                 "<input type='radio' name='mode' value='polygons'> Polygons<br>" +
                 "<input type='radio' name='mode' value='groups'> Show Groups<br>" +
+                "<input type='radio' name='mode' value='best_route'> Find Best Route<br>" +
+
 
                 "</form>" +
                 "<br>" +
@@ -341,10 +347,10 @@ function init_map() {
 }
 
 function draw_road(loaded_svg) {
-    let road_a = [52.15245 + 0.008, 0.004669 + 0.018]
-    let road_b = [52.23011 + 0.008, 0.19 + 0.018]
-    L.marker(road_a).addTo(map);
-    L.marker(road_b).addTo(map);
+    let road_a = [52.16045, 0.0226689]
+    let road_b = [52.23811, 0.208]
+    // L.marker(road_a).addTo(map);
+    // L.marker(road_b).addTo(map);
 
 
     let svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -370,7 +376,7 @@ function drawVoronoi() {
     clock.update();
 
 
-    var bounds = map.getBounds(),
+    bounds = map.getBounds(),
         topLeft = map.latLngToLayerPoint(bounds.getNorthWest()),
         bottomRight = map.latLngToLayerPoint(bounds.getSouthEast()),
         drawLimit = bounds.pad(0.4);
@@ -466,8 +472,8 @@ function drawVoronoi() {
     var circleGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
-    var circleGroupB = voronoi_cells.append("g")
-        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+    //var circleGroupB = voronoi_cells.append("g")
+    //   .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
     lineGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
@@ -512,20 +518,23 @@ function drawVoronoi() {
         })
 
         .on('mouseover', function (d, i) {
+            let today = new Date();
 
-            let START = '2020-08-21'
-            let END= '2020-08-22'
+            let START = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+            let END = '2020-08-22'
+
+            console.log(START)
 
             console.log(d.data.acp_id, d.data.id)
-            let NODE=d.data.id
-            d3.select('#test_graph')._groups[0][0].innerHTML='<img src="./static/images/loading_icon.gif "width="100px" height="100px" >'
+            let NODE = d.data.id
+            d3.select('#test_graph')._groups[0][0].innerHTML = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >'
             console.log('INNERHTML', d3.select('#test_graph')._groups[0][0].innerHTML)
             show_node_tt_past(NODE, START)
 
-            // lineGroup.remove();
 
-            lineGroup = circleGroupB.append("g")
-                .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+
+            //  lineGroup = voronoi_cells.append("g")
+            //     .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
             d3.select(this).transition()
                 .duration('300')
@@ -540,6 +549,9 @@ function drawVoronoi() {
             let neighbors = SITE_DB.find(x => x.id === id).neighbors;
 
             console.log('list of links')
+            d3.selectAll('.arch_line').remove()
+
+            lineGroup.remove();
             for (let i = 0; i < neighbors.length; i++) {
                 //console.log(i);
                 let inbound = neighbors[i].links.in.id;
@@ -637,7 +649,8 @@ function drawVoronoi() {
         .on('mouseout', function (d, i) {
             d3.selectAll('.road').style('stroke-width', '0px')
 
-            lineGroup.remove();
+
+
             links_drawn = [];
             links_drawn_SVG = [];
             d3.select(this).transition()
@@ -647,6 +660,10 @@ function drawVoronoi() {
                 .attr('stroke-width', '0.5px')
                 .style("stroke-opacity", 0.3)
                 .style("fill-opacity", 0.3);
+
+
+            lineGroup.remove();
+            d3.selectAll('.arch_line').remove()
 
         });
 
@@ -760,16 +777,26 @@ function animateSVGMovement(path, outboundLength, dur, dir) {
 
 }
 
-function drawLink(link, dur) {
+function drawLink(link, dur, col) {
+    //lineGroup.remove();
+
+
+    lineGroup = voronoi_cells.append("g")
+        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+
+    console.log('LINK', link)
 
     let connected_sites = all_links.find(x => x.id === link).sites;
     let from = SITE_DB.find(x => x.id === connected_sites[0]);
     let to = SITE_DB.find(x => x.id === connected_sites[1]);
 
+    console.log('LINK ft', from, to)
+
+
     links_drawn.push(link);
 
-    let color = links_drawn.includes(inverseLink(link)) ? "red" : "blue";
-    console.log('arcs', color)
+    let direction = links_drawn.includes(inverseLink(link)) ? "red" : "blue";
+    console.log('arcs', direction)
     let values = getMinMax();
     let deviation = calculateDeviation(link)
 
@@ -779,11 +806,12 @@ function drawLink(link, dur) {
         .domain([values.min, values.max])
         .range([0.5, 10]);
     let strokeWeight = scale(deviation);
+    let color = col == undefined ? setColor(strokeWeight) : col;
     //let strokeWeight = '5px';
 
     //console.log(deviation, strokeWeight);
 
-    let inbound = lineGroup_(from, to, color, strokeWeight, setColor(strokeWeight)); //setColor(strokeWeight)
+    let inbound = lineGroup_(from, to, direction, strokeWeight, color); //setColor(strokeWeight)
     let lineLength = inbound.node().getTotalLength();
 
 
@@ -806,21 +834,22 @@ function inverseLink(link) {
 
 
 
-function lineGroup_(A, B, color, strokeWeight, col) {
+function lineGroup_(A, B, direction, strokeWeight, stroke) {
 
     return lineGroup
         .append('path')
-        .attr('d', curvedLine(A.x, A.y, B.x, B.y, color === "red" ? 1 : -1))
+        .attr('d', curvedLine(A.x, A.y, B.x, B.y, direction === "red" ? 1 : -1))
+        .attr('class', 'arch_line')
         .style("fill", "none")
         .style("fill-opacity", 0)
-        .attr("stroke", col)
+        .attr("stroke", stroke)
         .attr("stroke-opacity", 1)
         .style("stroke-width", strokeWeight);
 }
 
-function animateMovement(blue, outboundLength, dur) {
+function animateMovement(line, outboundLength, dur) {
 
-    return blue
+    return line
         .attr("stroke-dasharray", outboundLength + " " + outboundLength)
         .attr("stroke-dashoffset", outboundLength)
         .transition()
@@ -829,7 +858,7 @@ function animateMovement(blue, outboundLength, dur) {
         .attr("stroke-dashoffset", 0)
         .on("end",
             function (d, i) {
-
+                // d3.select(this).remove()
             }
 
         );
