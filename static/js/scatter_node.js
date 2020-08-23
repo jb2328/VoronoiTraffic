@@ -432,10 +432,10 @@ const HALF_TAB='&emsp;&emsp;'
 //console.log("STROKES",get_route_stroke_to,get_route_stroke_from)
 
 
-let to=HALF_TAB+"<div class='metadata' id='META_"+neighbour.links.in.id+"'>"+"To: "+dir_in+"</div>"+TAB+"Current Speed: "+parseInt((neighbour.dist/neighbour.travelTime)*TO_MPH)+"MPH"+"<br>";
-let from=HALF_TAB+"<div class='metadata' id='META_"+neighbour.links.out.id+"'>"+"From: "+dir_out+"</div>"+TAB+"Current Speed: "+parseInt((neighbour.dist/neighbour.travelTime)*TO_MPH)+"MPH"+"<br>";
+let to=HALF_TAB+"<div class='metadata' id='META_"+neighbour.links.in.id+"'>"+TAB+"<b>To:</b> "+"Current Speed: "+parseInt((neighbour.dist/neighbour.travelTime)*TO_MPH)+"MPH"+"</div>";
+let from=HALF_TAB+"<div class='metadata' id='META_"+neighbour.links.out.id+"'>"+TAB+"<b>From:</b> "+"Current Speed: "+parseInt((neighbour.dist/neighbour.travelTime)*TO_MPH)+"MPH"+"</div>";
 
-    neighbour_info+='<br>'+"<i>"+neighbour.site+"</i>"+"<br>"+to+from;
+    neighbour_info+="<br>"+"<i>"+neighbour.site+"</i>"+to+from;
   }
   d3.select('#metadata_table')._groups[0][0].innerHTML ="<b>"+SITE.name+"</b>"+'<br>'+
                                                         "Average Travel Speed: "+parseInt(SITE.travelSpeed)+"MPH"+'<br>'+

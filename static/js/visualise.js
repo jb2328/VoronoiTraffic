@@ -107,10 +107,10 @@ class VoronoiViz {
 
         });
 
-        load_road_svg().then((loaded_svg) => {
+        // load_road_svg().then((loaded_svg) => {
 
-            draw_road(loaded_svg);
-        });
+        //     draw_road(loaded_svg);
+        // });
 
 
         //have a timeout function here
@@ -220,7 +220,7 @@ function init_map() {
         maxZoom: 20,
         ext: 'png'
     });
-    var cambridge = new L.LatLng(52.20038, 0.165);
+    var cambridge = new L.LatLng(52.20038, 0.1);
     map = new L.Map("map", {
         center: cambridge,
         zoom: 12,
@@ -364,6 +364,9 @@ function init_map() {
     info_widget.addTo(map);
     datepicker_widget.addTo(map);
     horizontal_chart.addTo(map);
+
+
+    
 
     //also change so that zones would not mess up position
     //change so the api would not be reset
