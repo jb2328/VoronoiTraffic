@@ -236,6 +236,29 @@ function init_map() {
     var datepicker_widget = L.control();
     var horizontal_chart = L.control();
 
+
+    var metadata_table = L.control({
+        position: 'bottomleft'
+    }); //{       position: 'bottom'    }
+    metadata_table.onAdd = function (map) {
+        this.metadata_table = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
+        this.metadata_table.id = "metadata_table";
+        this.update();
+
+        return this.metadata_table;
+    };
+    metadata_table.update = function (e) {
+        if (e === undefined) {
+            this.metadata_table.innerHTML =
+                '<h4>Hover over a Cell - METADATA</h4>'
+            // +'<br>' 
+            return;
+        }
+
+    };
+
+
+
     //to be modified with https://stackoverflow.com/questions/33614912/how-to-locate-leaflet-zoom-control-in-a-desired-position
     var test_graph = L.control({
         position: 'bottomleft'
@@ -259,6 +282,7 @@ function init_map() {
 
     test_graph.addTo(map);
 
+    metadata_table.addTo(map);
 
     info_widget.onAdd = function (map) {
         this.info_div = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
@@ -341,6 +365,7 @@ function init_map() {
     datepicker_widget.addTo(map);
     horizontal_chart.addTo(map);
 
+    //also change so that zones would not mess up position
     //change so the api would not be reset
     map.on("viewreset moveend", drawVoronoi);
 
@@ -530,6 +555,7 @@ function drawVoronoi() {
             d3.select('#test_graph')._groups[0][0].innerHTML = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >'
             console.log('INNERHTML', d3.select('#test_graph')._groups[0][0].innerHTML)
             show_node_tt_past(NODE, START)
+            show_node_tt_now(NODE)
 
 
 

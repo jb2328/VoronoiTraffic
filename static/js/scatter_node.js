@@ -21,12 +21,12 @@ async function historical_link(link_id, date1, date2) {
 
 }
 
-
-function show_node_tt_past(site_id, date_start, date_end) {
+var NODE;
+async function show_node_tt_past(site_id, date_start, date_end) {
   //find the requested site_id in the SITE_DB
   let site = SITE_DB.find(x => x.id == site_id);
-  //console.log('site', site)
-
+  console.log('site', site)
+NODE=site_id;
   //lookup neighbours
   let promise_list = []
   let all_lists = []
@@ -100,9 +100,10 @@ function show_node_tt_past(site_id, date_start, date_end) {
     show_line_plot(all_data, min_max, site_id, date_start, date_end);
     //show_plot(all_data, min_max, site_id, date_start, date_end)
 
+    
   })
 
-
+  
 }
 
 
@@ -115,6 +116,7 @@ async function compile_data(cond1, cond2) {
     test: cond2
   })
   console.log('promises have been resolved');
+  
 }
 
 
@@ -213,6 +215,7 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
   let temp_id = total_list[0].acp_id;
   let new_sublist = [];
   let colors = ['Black', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
+
   for (let i = 0; i < total_list.length; i++) {
     let current_id = total_list[i].acp_id;
     if (current_id != temp_id) {
@@ -246,7 +249,15 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
         .y(function (d) {
           return y(d.y)
         })
-      )
+      );
+
+      d3.select('#META_'+new_list[u][0].acp_id).style('color',colors[u])
+      //document.getElementById("meta_"+dir_in).getAttribute('stroke')
+
+      //let get_route_stroke_to=document.getElementById("LG_"+dir_in).getAttribute('stroke')
+//let get_route_stroke_from=document.getElementById("LG_"+dir_out).getAttribute('stroke')
+//console.log("STROKES",get_route_stroke_to,get_route_stroke_from)
+
     // create a tooltip
     // var tooltip = d3.select("#my_dataviz")
     // .append("div")
@@ -267,9 +278,6 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
       // Use D3 to select element, change color and size
       d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.4)
       d3.select(this).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
-
-      console.log('DRAW THIS')
-
       drawLink(d[0].acp_id, 350, colors[i]);
 
 
@@ -282,6 +290,9 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
       d3.selectAll('.arch_line').remove()
     })
 
+
+      console.log('LOOOOOOOOOOOOOOOOOADED')
+    
 }
 
 function show_plot(total_list, min_max, NODE, START, END) {
@@ -404,16 +415,41 @@ function show_plot(total_list, min_max, NODE, START, END) {
 function show_node_tt_now(site_id) {
   console.log('showing', site_id)
   //find the requested site_id in the SITE_DB
-  let site = SITE_DB.find(x => x.id == site_id);
-  console.log('site', site)
+  let SITE = SITE_DB.find(x => x.id == site_id);
+  let neighbour_info="<b>Surrounding nodes:</b> "+"<br>";
+  for(let u=0;u<SITE.neighbors.length;u++){
+    let neighbour=SITE.neighbors[u];
+  
+    //double check
+    let dir_in =SITE_DB.find(x => x.id === neighbour.links.out.sites[1]).name;
+    let dir_out =SITE_DB.find(x => x.id === neighbour.links.in.sites[0]).name;
+    console.log('dir', neighbour.links)
+
+const TAB='&emsp;&emsp;&emsp;&emsp;'
+const HALF_TAB='&emsp;&emsp;'
+//let get_route_stroke_to=document.getElementById("LG_"+dir_in).getAttribute('stroke')
+//let get_route_stroke_from=document.getElementById("LG_"+dir_out).getAttribute('stroke')
+//console.log("STROKES",get_route_stroke_to,get_route_stroke_from)
+
+
+let to=HALF_TAB+"<div class='metadata' id='META_"+neighbour.links.in.id+"'>"+"To: "+dir_in+"</div>"+TAB+"Current Speed: "+parseInt((neighbour.dist/neighbour.travelTime)*TO_MPH)+"MPH"+"<br>";
+let from=HALF_TAB+"<div class='metadata' id='META_"+neighbour.links.out.id+"'>"+"From: "+dir_out+"</div>"+TAB+"Current Speed: "+parseInt((neighbour.dist/neighbour.travelTime)*TO_MPH)+"MPH"+"<br>";
+
+    neighbour_info+='<br>'+"<i>"+neighbour.site+"</i>"+"<br>"+to+from;
+  }
+  d3.select('#metadata_table')._groups[0][0].innerHTML ="<b>"+SITE.name+"</b>"+'<br>'+
+                                                        "Average Travel Speed: "+parseInt(SITE.travelSpeed)+"MPH"+'<br>'+
+                                                         "Speed Deviation: "+SITE.deviation+'<br><br>'+neighbour_info;
+
+  console.log('site', SITE)
 
   //compute average in+out travel time from all neighbors
   let combined_tt = 0;
-  for (let i = 0; i < site.neighbors.length; i++) {
-    combined_tt += site.neighbors[i].travelTime; //this will change when Node class get restructured to differentiate between in and out travel time
+  for (let i = 0; i < SITE.neighbors.length; i++) {
+    combined_tt += SITE.neighbors[i].travelTime; //this will change when Node class get restructured to differentiate between in and out travel time
   }
   //compute average
-  let avg_tt = combined_tt / site.neighbors.length;
+  let avg_tt = combined_tt / SITE.neighbors.length;
   //the answer doesnt match with site.travelTime for some reason
   console.log('avg speed now', avg_tt)
 
