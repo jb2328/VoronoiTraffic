@@ -21,12 +21,11 @@ async function historical_link(link_id, date1, date2) {
 
 }
 
-var NODE;
 async function show_node_tt_past(site_id, date_start, date_end) {
+
   //find the requested site_id in the SITE_DB
   let site = SITE_DB.find(x => x.id == site_id);
-  console.log('site', site)
-  NODE = site_id;
+  console.log('site', site,site.neighbors)
   //lookup neighbours
   let promise_list = []
   let all_lists = []
@@ -47,12 +46,9 @@ async function show_node_tt_past(site_id, date_start, date_end) {
   }
 
   compile_data(all_lists.length, site.neighbors.length).then(() => {
-    //console.log('all_lists', all_lists)
 
-    let all_data = []
+    let hist_data = []
 
-    // console.log('lists', all_lists[0].request_data)
-    //console.log('all_lists', all_lists[0].request_data)
 
     all_lists.forEach(item => {
 
@@ -65,7 +61,7 @@ async function show_node_tt_past(site_id, date_start, date_end) {
 
         if ((element.travelTime < 300) && (element.travelTime > 0)) {
 
-          all_data.push({
+          hist_data.push({
             'id': element.id,
             'acp_id': element.acp_id.replace('|', '_'),
             "x": element.acp_ts,
@@ -80,14 +76,14 @@ async function show_node_tt_past(site_id, date_start, date_end) {
       })
 
     })
-    //console.log(all_data.length);
+    //console.log(hist_data.length);
     // Add X axis
 
     let min_max = {
-      'min_x': Math.min(...all_data.map(a => a.x)),
-      'min_y': Math.min(...all_data.map(a => a.y)),
-      'max_x': Math.max(...all_data.map(a => a.x)),
-      'max_y': Math.max(...all_data.map(a => a.y))
+      'min_x': Math.min(...hist_data.map(a => a.x)),
+      'min_y': Math.min(...hist_data.map(a => a.y)),
+      'max_x': Math.max(...hist_data.map(a => a.x)),
+      'max_y': Math.max(...hist_data.map(a => a.y))
     }
 
     //if queried data is for today, our x axis should still show 24hours
@@ -97,8 +93,8 @@ async function show_node_tt_past(site_id, date_start, date_end) {
     let queried_date = new Date(min_max.min_x * 1000)
 
     let title_date = queried_date.toLocaleString()
-    show_line_plot(all_data, min_max, site_id, date_start, date_end);
-    //show_plot(all_data, min_max, site_id, date_start, date_end)
+    show_line_plot(hist_data, min_max, site_id, date_start, date_end);
+    //show_plot(hist_data, min_max, site_id, date_start, date_end)
 
 
   })
@@ -112,8 +108,8 @@ async function show_node_tt_past(site_id, date_start, date_end) {
 async function compile_data(cond1, cond2) {
   console.log('waiting to resolve promises');
   await waitForCondition({
-    arg: cond1,
-    test: cond2
+    asked: cond1,
+    asnwered: cond2
   })
   console.log('promises have been resolved');
 
@@ -130,7 +126,7 @@ async function waitForCondition(conditionObj) {
   while (true) {
     //arg and test are the two parameters that 
     //have the conditional information on promises
-    if (conditionObj.arg == conditionObj.test) {
+    if (conditionObj.asked == conditionObj.asnwered) {
       console.log('met');
       break; // or return
     }
@@ -143,7 +139,7 @@ async function waitForCondition(conditionObj) {
 }
 
 
-function show_line_plot(total_list, min_max, NODE, START, END) {
+function show_line_plot(total_list, min_max, current_node, START, END) {
   // set the dimensions and margins of the graph
   var margin = {
       top: 30,
@@ -188,7 +184,7 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
     .attr("text-anchor", "middle")
     .style("font-size", "10px")
     .style("text-decoration", "none") //underline  
-    .text("Travel time for " + NODE + " on " + START + ' ' + END);
+    .text("Travel time for " + current_node + " on " + START + ' ' + END);
 
   svg.append("g")
     .attr("transform", "translate(0," + height + ")")
@@ -234,6 +230,8 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
   //new_list.shift()
   let keys = []
   for (let u = 0; u < new_list.length; u++) {
+    console.log('new_list', new_list[u])
+
     // Add the line
     svg.append("path")
       .datum(new_list[u])
@@ -259,25 +257,7 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
       'name': new_list[u][0].acp_id.substr(27 - 12, 27),
       'color': colors[u]
     })
-    //document.getElementById("meta_"+dir_in).getAttribute('stroke')
-
-    //let get_route_stroke_to=document.getElementById("LG_"+dir_in).getAttribute('stroke')
-    //let get_route_stroke_from=document.getElementById("LG_"+dir_out).getAttribute('stroke')
-    //console.log("STROKES",get_route_stroke_to,get_route_stroke_from)
-
-    // create a tooltip
-    // var tooltip = d3.select("#my_dataviz")
-    // .append("div")
-    //   .style("position", "absolute")
-    //   .style("visibility", "hidden")
-    //   .text("I'm a circle!");
-
-    // //
-    // d3.select("#circleBasicTooltip")
-    // .on("mouseover", function(){return tooltip.style("visibility", "visible");})
-    // .on("mousemove", function(){return tooltip.style("top", (event.pageY-800)+"px").style("left",(event.pageX-800)+"px");})
-    // .on("mouseout", function(){return tooltip.style("visibility", "hidden");});
-
+   
   }
 
 
@@ -322,7 +302,7 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
       d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 1)
       d3.select('#LG_' + selected).attr("stroke-width", 2.5);
       lineGroup.remove();
-      d3.selectAll('.arch_line').remove()
+      d3.selectAll('.arc_line').remove()
     });
 
   // Add one dot in the legend for each name.
@@ -352,23 +332,20 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
       d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.4)
       d3.select(this).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
       drawLink(d[0].acp_id, 350, colors[i]);
-
-
     })
     .on('mouseout', function () {
       // Use D3 to select element, change color and size
       d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 1)
       d3.select(this).attr("stroke-width", 2.5);
       lineGroup.remove();
-      d3.selectAll('.arch_line').remove()
-    })
+      d3.selectAll('.arc_line').remove()
+    });
 
 
-  console.log('LOOOOOOOOOOOOOOOOOADED')
 
 }
 
-function show_plot(total_list, min_max, NODE, START, END) {
+function show_plot(total_list, min_max, current_node, START, END) {
   // set the dimensions and margins of the graph
   var margin = {
       top: 30,
@@ -412,7 +389,7 @@ function show_plot(total_list, min_max, NODE, START, END) {
     .attr("text-anchor", "middle")
     .style("font-size", "10px")
     .style("text-decoration", "none") //underline  
-    .text("Travel time for " + NODE + " on " + START + ' ' + END);
+    .text("Travel time for " + current_node + " on " + START + ' ' + END);
 
   svg.append("g")
     .attr("transform", "translate(0," + height + ")")

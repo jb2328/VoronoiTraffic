@@ -141,9 +141,11 @@ function get_zone_metadata(ZONE) {
         cell_mouseout(cell)
     })
     d3.selectAll('.metadata_zone').on('click', function (d, i) {
-        let highlighted_cell={'data':SITE_DB.find(x=>x.acp_id==this.id.replace('META_ZONE_', ''))}
+        let highlighted_cell = {
+            'data': SITE_DB.find(x => x.acp_id == this.id.replace('META_ZONE_', ''))
+        }
 
-        console.log(highlighted_cell)
+        console.log('HIGHLIGHT',highlighted_cell)
         show_node_information(highlighted_cell)
     })
 }

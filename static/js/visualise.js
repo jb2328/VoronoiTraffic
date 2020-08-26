@@ -284,17 +284,18 @@ function init_map() {
     var selected_cell = L.control({
         position: 'topright'
     }); //{       position: 'bottom'    }
-    zone_table.onAdd = function (map) {
-        this.zone_table = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
-        this.zone_table.id = "zone_table";
+
+    selected_cell.onAdd = function (map) {
+        this.selected_cell = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
+        this.selected_cell.id = "selected_cell";
         this.update();
 
-        return this.zone_table;
+        return this.selected_cell;
     };
-    zone_table.update = function (e) {
+    selected_cell.update = function (e) {
         if (e === undefined) {
-            this.zone_table.innerHTML =
-                '<h4>Bar Chart- METADATA</h4>'
+            this.selected_cell.innerHTML =
+                '<h4>Select a Cell</h4>'
             // +'<br>' 
             return;
         }
@@ -404,6 +405,7 @@ function init_map() {
         }
 
     };
+    selected_cell.addTo(map);
 
     info_widget.addTo(map);
     datepicker_widget.addTo(map);
@@ -591,7 +593,10 @@ function drawVoronoi() {
             }
         })
         .on('click', function(d,i){
-            show_node_information(d)
+           
+            document.getElementById("selected_cell").innerHTML ="<h1>"+d.data.name+"</h1>";
+            show_node_information(d);
+            
 
         })
 
@@ -608,7 +613,7 @@ function drawVoronoi() {
             let neighbors = SITE_DB.find(x => x.id === id).neighbors;
 
             console.log('list of links')
-            d3.selectAll('.arch_line').remove()
+            d3.selectAll('.arc_line').remove()
 
             lineGroup.remove();
             for (let i = 0; i < neighbors.length; i++) {
@@ -719,7 +724,7 @@ function drawVoronoi() {
 
 
             lineGroup.remove();
-            d3.selectAll('.arch_line').remove()
+            d3.selectAll('.arc_line').remove()
 
         });
 
@@ -778,11 +783,10 @@ var show_node_information=(d)=>{
     let today = new Date();
     let START = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
     let END = '2020-08-22'
+    let NODE= d.data.id;
 
-    let NODE = d.data.id
+    document.getElementById("test_graph").innerHTML ='<img src="./static/images/loading_icon.gif "width="100px" height="100px" >'
 
-    d3.select('#test_graph')._groups[0][0].innerHTML = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >'
-    console.log('INNERHTML', d3.select('#test_graph')._groups[0][0].innerHTML)
     show_node_tt_past(NODE, START)
     show_node_metadata(NODE)
 }
@@ -867,19 +871,14 @@ function drawLink(link, dur, col) {
     lineGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
-    console.log('LINK', link)
-
     let connected_sites = all_links.find(x => x.id === link).sites;
     let from = SITE_DB.find(x => x.id === connected_sites[0]);
     let to = SITE_DB.find(x => x.id === connected_sites[1]);
 
-    console.log('LINK ft', from, to)
-
-
     links_drawn.push(link);
 
     let direction = links_drawn.includes(inverseLink(link)) ? "red" : "blue";
-    console.log('arcs', direction)
+
     let values = getMinMax();
     let deviation = calculateDeviation(link)
 
@@ -887,7 +886,7 @@ function drawLink(link, dur, col) {
 
     var scale = d3.scaleLinear()
         .domain([values.min, values.max])
-        .range([0.5, 10]);
+        .range([1, 5]);
     let strokeWeight = scale(deviation);
     let color = col == undefined ? setColor(strokeWeight) : col;
     //let strokeWeight = '5px';
@@ -922,7 +921,7 @@ function lineGroup_(A, B, direction, strokeWeight, stroke) {
     return lineGroup
         .append('path')
         .attr('d', curvedLine(A.x, A.y, B.x, B.y, direction === "red" ? 1 : -1))
-        .attr('class', 'arch_line')
+        .attr('class', 'arc_line')
         .style("fill", "none")
         .style("fill-opacity", 0)
         .attr("stroke", stroke)
