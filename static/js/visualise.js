@@ -224,10 +224,14 @@ function init_map() {
     map = new L.Map("map", {
         center: cambridge,
         zoom: 12,
-        zoomDelta: 0.5,
-        wheelPxPerZoomLevel: 95,
+        zoomDelta: 0.1,
+        wheelPxPerZoomLevel: 150,
         layers: [stamenToner],
+        doubleClickZoom: false,
     });
+
+    map.doubleClickZoom.disable(); 
+
 
     // Clock
     clock = get_clock().addTo(map)
@@ -259,6 +263,26 @@ function init_map() {
 
     var zone_table = L.control({
         position: 'bottomright'
+    }); //{       position: 'bottom'    }
+    zone_table.onAdd = function (map) {
+        this.zone_table = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
+        this.zone_table.id = "zone_table";
+        this.update();
+
+        return this.zone_table;
+    };
+    zone_table.update = function (e) {
+        if (e === undefined) {
+            this.zone_table.innerHTML =
+                '<h4>Bar Chart- METADATA</h4>'
+            // +'<br>' 
+            return;
+        }
+
+    };
+
+    var selected_cell = L.control({
+        position: 'topright'
     }); //{       position: 'bottom'    }
     zone_table.onAdd = function (map) {
         this.zone_table = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
@@ -388,7 +412,7 @@ function init_map() {
     zone_table.addTo(map)
 
 
-    
+
 
     //also change so that zones would not mess up position
     //change so the api would not be reset
@@ -566,33 +590,17 @@ function drawVoronoi() {
                 return setColor(color)
             }
         })
+        .on('click', function(d,i){
+            show_node_information(d)
+
+        })
 
         .on('mouseover', function (d, i) {
-            let today = new Date();
+         
 
-            let START = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
-            let END = '2020-08-22'
-
-            console.log(START)
-
-            console.log(d.data.acp_id, d.data.id)
-            let NODE = d.data.id
-            d3.select('#test_graph')._groups[0][0].innerHTML = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >'
-            console.log('INNERHTML', d3.select('#test_graph')._groups[0][0].innerHTML)
-            show_node_tt_past(NODE, START)
-            show_node_tt_now(NODE)
+            cell_mouseover(this);
 
 
-
-            //  lineGroup = voronoi_cells.append("g")
-            //     .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
-
-            d3.select(this).transition()
-                .duration('300')
-                .attr('stroke', 'black')
-                .attr('stroke-width', '2px')
-                .style("stroke-opacity", 1)
-                .style("fill-opacity", 0.6);
 
             //I ASSUME THIS WILL FIX THE BUG WHERE UPON MOVING THE MAP COLORS CHANGE AS NOT ALL CELLS ARE LOADED.
             //COLOR HAS TO BE LOADED BASED ON   d   RATHER THAN i
@@ -624,7 +632,7 @@ function drawVoronoi() {
 
 
 
-        .on("click", function (d) { //dblclick
+        .on("dblclick", function (d) { //dblclick
             let id = d.data.id;
             console.log(id, " was clicked");
 
@@ -704,13 +712,10 @@ function drawVoronoi() {
 
             links_drawn = [];
             links_drawn_SVG = [];
-            d3.select(this).transition()
-                .duration('500')
-                //the alterinative is to use .classed('class_name', true) but then it's an equal css hassle
-                .attr('stroke', 'black')
-                .attr('stroke-width', '0.5px')
-                .style("stroke-opacity", 0.3)
-                .style("fill-opacity", 0.3);
+
+
+            cell_mouseout(this);
+
 
 
             lineGroup.remove();
@@ -752,8 +757,35 @@ function drawVoronoi() {
 }
 
 
+var cell_mouseover = (cell) => {
+    d3.select(cell).transition()
+        .duration('300')
+        .style('stroke', 'black')
+        .style('stroke-width', 10)
+        .style("stroke-opacity", 1)
+        .style("fill-opacity", 0.8);
+}
+var cell_mouseout = (cell) => {
+    d3.select(cell).transition()
+        .duration('500')
+        .style('stroke', 'black')
+        .style('stroke-width', 0,5)
+        .style("stroke-opacity", 0.3)
+        .style("fill-opacity", 0.3);
+}
 
+var show_node_information=(d)=>{
+    let today = new Date();
+    let START = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+    let END = '2020-08-22'
 
+    let NODE = d.data.id
+
+    d3.select('#test_graph')._groups[0][0].innerHTML = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >'
+    console.log('INNERHTML', d3.select('#test_graph')._groups[0][0].innerHTML)
+    show_node_tt_past(NODE, START)
+    show_node_metadata(NODE)
+}
 
 
 function drawSVGLinks(link, dur) {

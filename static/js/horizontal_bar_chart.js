@@ -51,7 +51,7 @@ function show_bar(data) {
         .data(data)
         .enter().append("rect")
         .attr('id', function (d) {
-            return d.zone+'_bar'
+            return d.zone + '_bar'
         })
         .attr("class", "bar")
         //.attr("x", function(d) { return x(d.sales); })
@@ -73,7 +73,7 @@ function show_bar(data) {
 
             for (let u = 0; u < ZONES.length; u++) {
                 if (d.zone != ZONES[u]) {
-                    d3.select('#' + ZONES[u]+'_bar').transition().duration(250).style('opacity', 0.4)
+                    d3.select('#' + ZONES[u] + '_bar').transition().duration(250).style('opacity', 0.4)
                 }
 
             }
@@ -83,7 +83,11 @@ function show_bar(data) {
         .on('click', function (d, i) {
             get_outline(d.zone);
 
-                  get_zone_metadata(d.zone)
+            get_zone_metadata(d.zone)
+
+        })
+        .on('dblclick', function (d, i) {
+            console.log('DBLCLICK')
 
         })
         .on('mouseout', function (d, i) {
@@ -107,27 +111,39 @@ function show_bar(data) {
 }
 
 
-  
+
 // d3.select('#metadata_table')._groups[0][0].innerHTML = get_site_metadata(SITE)
-function get_zone_metadata(ZONE){
+function get_zone_metadata(ZONE) {
     let zone_children = SITE_DB.filter(x => x.parent === ZONE);
-    //get_zone_metadata(ZONE,zone_children)
+    let child_info = "<b>Inner nodes:</b> " + "<br>";
+    for (let u = 0; u < zone_children.length; u++) {
+        let child = zone_children[u];
+        console.log(child)
 
-  let child_info = "<b>Inner nodes:</b> " + "<br>";
-  for (let u = 0; u < zone_children.length; u++) {
-    let child = zone_children[u];
-console.log(child)
+        const TAB = '&emsp;&emsp;&emsp;&emsp;'
+        const HALF_TAB = '&emsp;&emsp;'
 
-    const TAB = '&emsp;&emsp;&emsp;&emsp;'
-    const HALF_TAB = '&emsp;&emsp;'
-  
-    let child_speed = HALF_TAB + "<div class='metadata_zone' id='META_ZONE_" + child.acp_id + "'>" + TAB + "Current Speed: " + parseInt(child.travelSpeed) + "MPH" + "</div>";
+        let child_speed = HALF_TAB + TAB + "Current Speed: " + parseInt(child.travelSpeed) + "MPH";
 
-    child_info += "<br>" + "<i>" + child.name + "</i>" + child_speed;
+        child_info += "<br>" + "<div class='metadata_zone' id='META_ZONE_" + child.acp_id + "'>" + "<i>" + child.name + "</i>" + "</div>" + child_speed;
 
-  }
-d3.select('#zone_table')._groups[0][0].innerHTML = child_info
-//    "<b>" + SITE.name + "</b>" + '<br>' +
-//   "Average Travel Speed: " + parseInt(SITE.travelSpeed) + "MPH" + '<br>' +
-//   "Speed Deviation: " + SITE.deviation + '<br><br>' + neighbour_info;
+    }
+    d3.select('#zone_table')._groups[0][0].innerHTML = child_info
+
+    d3.selectAll('.metadata_zone').on('mouseover', function (d, i) {
+        d3.select(this).style('color', CELL_GROUPS[ZONE].color).style('font-weight', 'bold')
+        let cell = document.getElementById(this.id.replace('META_ZONE_', ''))
+        cell_mouseover(cell)
+    })
+    d3.selectAll('.metadata_zone').on('mouseout', function (d, i) {
+        d3.select(this).style('color', 'black').style('font-weight', 'normal')
+        let cell = document.getElementById(this.id.replace('META_ZONE_', ''))
+        cell_mouseout(cell)
+    })
+    d3.selectAll('.metadata_zone').on('click', function (d, i) {
+        let highlighted_cell={'data':SITE_DB.find(x=>x.acp_id==this.id.replace('META_ZONE_', ''))}
+
+        console.log(highlighted_cell)
+        show_node_information(highlighted_cell)
+    })
 }

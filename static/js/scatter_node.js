@@ -485,28 +485,15 @@ function show_plot(total_list, min_max, NODE, START, END) {
 
 //unused to function to calculate travelTime (tt) for
 //a given site from the SITE_DB
-function show_node_tt_now(site_id) {
+function show_node_metadata(site_id) {
   console.log('showing', site_id)
   //find the requested site_id in the SITE_DB
   let SITE = SITE_DB.find(x => x.id == site_id);
-  
-  d3.select('#metadata_table')._groups[0][0].innerHTML = get_site_metadata(SITE)
 
-  console.log('site', SITE)
-
-  //compute average in+out travel time from all neighbors
-  let combined_tt = 0;
-  for (let i = 0; i < SITE.neighbors.length; i++) {
-    combined_tt += SITE.neighbors[i].travelTime; //this will change when Node class get restructured to differentiate between in and out travel time
-  }
-  //compute average
-  let avg_tt = combined_tt / SITE.neighbors.length;
-  //the answer doesnt match with site.travelTime for some reason
-  console.log('avg speed now', avg_tt)
-
+  get_site_metadata(SITE)
 }
 
-function get_site_metadata(SITE){
+function get_site_metadata(SITE) {
   let neighbour_info = "<b>Surrounding nodes:</b> " + "<br>";
   for (let u = 0; u < SITE.neighbors.length; u++) {
     let neighbour = SITE.neighbors[u];
@@ -518,14 +505,15 @@ function get_site_metadata(SITE){
 
     const TAB = '&emsp;&emsp;&emsp;&emsp;'
     const HALF_TAB = '&emsp;&emsp;'
-  
+
     let to = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + TAB + "<b>To:</b> " + "Current Speed: " + parseInt((neighbour.dist / neighbour.travelTime) * TO_MPH) + "MPH" + "</div>";
     let from = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + TAB + "<b>From:</b> " + "Current Speed: " + parseInt((neighbour.dist / neighbour.travelTime) * TO_MPH) + "MPH" + "</div>";
 
     neighbour_info += "<br>" + "<i>" + neighbour.site + "</i>" + to + from;
   }
 
-  return "<b>" + SITE.name + "</b>" + '<br>' +
-  "Average Travel Speed: " + parseInt(SITE.travelSpeed) + "MPH" + '<br>' +
-  "Speed Deviation: " + SITE.deviation + '<br><br>' + neighbour_info;
+  let full_metadata = "<b>" + SITE.name + "</b>" + '<br>' +
+    "Average Travel Speed: " + parseInt(SITE.travelSpeed) + "MPH" + '<br>' +
+    "Speed Deviation: " + SITE.deviation + '<br><br>' + neighbour_info;
+  d3.select('#metadata_table')._groups[0][0].innerHTML = full_metadata;
 }
