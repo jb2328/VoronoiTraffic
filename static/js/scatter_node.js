@@ -26,7 +26,7 @@ async function show_node_tt_past(site_id, date_start, date_end) {
   //find the requested site_id in the SITE_DB
   let site = SITE_DB.find(x => x.id == site_id);
   console.log('site', site)
-NODE=site_id;
+  NODE = site_id;
   //lookup neighbours
   let promise_list = []
   let all_lists = []
@@ -100,10 +100,10 @@ NODE=site_id;
     show_line_plot(all_data, min_max, site_id, date_start, date_end);
     //show_plot(all_data, min_max, site_id, date_start, date_end)
 
-    
+
   })
 
-  
+
 }
 
 
@@ -116,7 +116,7 @@ async function compile_data(cond1, cond2) {
     test: cond2
   })
   console.log('promises have been resolved');
-  
+
 }
 
 
@@ -147,8 +147,8 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
   // set the dimensions and margins of the graph
   var margin = {
       top: 30,
-      right: 10,
-      bottom: 30,
+      right: 100,
+      bottom: 40,
       left: 40
     },
     width = 500 - margin.left - margin.right,
@@ -232,7 +232,7 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
 
   //remove the first element
   //new_list.shift()
-
+  let keys = []
   for (let u = 0; u < new_list.length; u++) {
     // Add the line
     svg.append("path")
@@ -251,12 +251,19 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
         })
       );
 
-      d3.select('#META_'+new_list[u][0].acp_id).style('color',colors[u])
-      //document.getElementById("meta_"+dir_in).getAttribute('stroke')
+    d3.select('#META_' + new_list[u][0].acp_id).style('color', colors[u])
 
-      //let get_route_stroke_to=document.getElementById("LG_"+dir_in).getAttribute('stroke')
-//let get_route_stroke_from=document.getElementById("LG_"+dir_out).getAttribute('stroke')
-//console.log("STROKES",get_route_stroke_to,get_route_stroke_from)
+    //27 is th lenght of a rout id, whreas 12 martks the star of the unique string in "CAMBRIDGE_JTMS_9800Z0SUAHN1"
+
+    keys.push({
+      'name': new_list[u][0].acp_id.substr(27 - 12, 27),
+      'color': colors[u]
+    })
+    //document.getElementById("meta_"+dir_in).getAttribute('stroke')
+
+    //let get_route_stroke_to=document.getElementById("LG_"+dir_in).getAttribute('stroke')
+    //let get_route_stroke_from=document.getElementById("LG_"+dir_out).getAttribute('stroke')
+    //console.log("STROKES",get_route_stroke_to,get_route_stroke_from)
 
     // create a tooltip
     // var tooltip = d3.select("#my_dataviz")
@@ -272,6 +279,72 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
     // .on("mouseout", function(){return tooltip.style("visibility", "hidden");});
 
   }
+
+
+  // Add one dot in the legend for each name.
+  var size = 15
+  let y_sizing = 0
+  let x_sizing = 360
+  console.log('keys', keys)
+  svg.selectAll("mydots")
+    .data(keys)
+    .enter()
+    .append("rect")
+    .attr("x", x_sizing)
+    .attr("y", function (d, i) {
+      return y_sizing + i * (size + 5)
+    }) // 100 is where the first dot appears. size+5 is the distance between dots
+    .attr("width", size)
+    .attr("height", size)
+    .style("fill", function (d) {
+      return d.color
+    })
+    .attr("id", function (d, i) {
+      return "LEGEND_CAMBRIDGE_JTMS_" + d.name
+    }) //LG for line graph
+    .attr("class", "legend")
+    .on('mouseover', function (d, i) {
+      let selected = 'CAMBRIDGE_JTMS_' + d.name
+      console.log(d, i)
+      // Use D3 to select element, change color and size
+      d3.selectAll('.connected_scatter_line', '.legend').transition().duration(250).style('opacity', 0.4)
+      d3.select('#LEGEND_' + selected).transition().duration(250).style('opacity', 1)
+
+      d3.selectAll().transition().duration(250).style('opacity', 0.4)
+      d3.select('#LG_' + selected).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
+      drawLink(selected, 350, colors[i]);
+
+    })
+    .on('mouseout', function (d) {
+      let selected = 'CAMBRIDGE_JTMS_' + d.name
+      // Use D3 to select element, change color and size
+      d3.selectAll('.legend').transition().duration(250).style('opacity', 1)
+      d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 1)
+      d3.select('#LG_' + selected).attr("stroke-width", 2.5);
+      lineGroup.remove();
+      d3.selectAll('.arch_line').remove()
+    });
+
+  // Add one dot in the legend for each name.
+  svg.selectAll("mylabels")
+    .data(keys)
+    .enter()
+    .append("text")
+    .attr("x", x_sizing + size * 1.2)
+    .attr("y", function (d, i) {
+      return y_sizing + i * (size + 5) + (size / 2)
+    }) // 100 is where the first dot appears. 25 is the distance between dots
+    .style("fill", function (d) {
+      return d.color
+    })
+    .text(function (d) {
+      return d.name
+    })
+    .attr("text-anchor", "left")
+    .style("alignment-baseline", "middle")
+    .style("font-size", "10px");
+
+
   d3.selectAll('.connected_scatter_line')
     .on('mouseover', function (d, i) {
       console.log(d[0].acp_id)
@@ -291,8 +364,8 @@ function show_line_plot(total_list, min_max, NODE, START, END) {
     })
 
 
-      console.log('LOOOOOOOOOOOOOOOOOADED')
-    
+  console.log('LOOOOOOOOOOOOOOOOOADED')
+
 }
 
 function show_plot(total_list, min_max, NODE, START, END) {
@@ -416,30 +489,8 @@ function show_node_tt_now(site_id) {
   console.log('showing', site_id)
   //find the requested site_id in the SITE_DB
   let SITE = SITE_DB.find(x => x.id == site_id);
-  let neighbour_info="<b>Surrounding nodes:</b> "+"<br>";
-  for(let u=0;u<SITE.neighbors.length;u++){
-    let neighbour=SITE.neighbors[u];
   
-    //double check
-    let dir_in =SITE_DB.find(x => x.id === neighbour.links.out.sites[1]).name;
-    let dir_out =SITE_DB.find(x => x.id === neighbour.links.in.sites[0]).name;
-    console.log('dir', neighbour.links)
-
-const TAB='&emsp;&emsp;&emsp;&emsp;'
-const HALF_TAB='&emsp;&emsp;'
-//let get_route_stroke_to=document.getElementById("LG_"+dir_in).getAttribute('stroke')
-//let get_route_stroke_from=document.getElementById("LG_"+dir_out).getAttribute('stroke')
-//console.log("STROKES",get_route_stroke_to,get_route_stroke_from)
-
-
-let to=HALF_TAB+"<div class='metadata' id='META_"+neighbour.links.in.id+"'>"+TAB+"<b>To:</b> "+"Current Speed: "+parseInt((neighbour.dist/neighbour.travelTime)*TO_MPH)+"MPH"+"</div>";
-let from=HALF_TAB+"<div class='metadata' id='META_"+neighbour.links.out.id+"'>"+TAB+"<b>From:</b> "+"Current Speed: "+parseInt((neighbour.dist/neighbour.travelTime)*TO_MPH)+"MPH"+"</div>";
-
-    neighbour_info+="<br>"+"<i>"+neighbour.site+"</i>"+to+from;
-  }
-  d3.select('#metadata_table')._groups[0][0].innerHTML ="<b>"+SITE.name+"</b>"+'<br>'+
-                                                        "Average Travel Speed: "+parseInt(SITE.travelSpeed)+"MPH"+'<br>'+
-                                                         "Speed Deviation: "+SITE.deviation+'<br><br>'+neighbour_info;
+  d3.select('#metadata_table')._groups[0][0].innerHTML = get_site_metadata(SITE)
 
   console.log('site', SITE)
 
@@ -453,4 +504,28 @@ let from=HALF_TAB+"<div class='metadata' id='META_"+neighbour.links.out.id+"'>"+
   //the answer doesnt match with site.travelTime for some reason
   console.log('avg speed now', avg_tt)
 
+}
+
+function get_site_metadata(SITE){
+  let neighbour_info = "<b>Surrounding nodes:</b> " + "<br>";
+  for (let u = 0; u < SITE.neighbors.length; u++) {
+    let neighbour = SITE.neighbors[u];
+
+    //double check
+    let dir_in = SITE_DB.find(x => x.id === neighbour.links.out.sites[1]).name;
+    let dir_out = SITE_DB.find(x => x.id === neighbour.links.in.sites[0]).name;
+    console.log('dir', neighbour.links)
+
+    const TAB = '&emsp;&emsp;&emsp;&emsp;'
+    const HALF_TAB = '&emsp;&emsp;'
+  
+    let to = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + TAB + "<b>To:</b> " + "Current Speed: " + parseInt((neighbour.dist / neighbour.travelTime) * TO_MPH) + "MPH" + "</div>";
+    let from = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + TAB + "<b>From:</b> " + "Current Speed: " + parseInt((neighbour.dist / neighbour.travelTime) * TO_MPH) + "MPH" + "</div>";
+
+    neighbour_info += "<br>" + "<i>" + neighbour.site + "</i>" + to + from;
+  }
+
+  return "<b>" + SITE.name + "</b>" + '<br>' +
+  "Average Travel Speed: " + parseInt(SITE.travelSpeed) + "MPH" + '<br>' +
+  "Speed Deviation: " + SITE.deviation + '<br><br>' + neighbour_info;
 }

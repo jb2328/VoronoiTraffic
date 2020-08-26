@@ -257,6 +257,26 @@ function init_map() {
 
     };
 
+    var zone_table = L.control({
+        position: 'bottomright'
+    }); //{       position: 'bottom'    }
+    zone_table.onAdd = function (map) {
+        this.zone_table = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
+        this.zone_table.id = "zone_table";
+        this.update();
+
+        return this.zone_table;
+    };
+    zone_table.update = function (e) {
+        if (e === undefined) {
+            this.zone_table.innerHTML =
+                '<h4>Bar Chart- METADATA</h4>'
+            // +'<br>' 
+            return;
+        }
+
+    };
+
 
 
     //to be modified with https://stackoverflow.com/questions/33614912/how-to-locate-leaflet-zoom-control-in-a-desired-position
@@ -364,6 +384,8 @@ function init_map() {
     info_widget.addTo(map);
     datepicker_widget.addTo(map);
     horizontal_chart.addTo(map);
+
+    zone_table.addTo(map)
 
 
     

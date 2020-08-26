@@ -94,7 +94,7 @@ function get_zone_averages() {
     let zone_readings = [];
     for (let i = 0; i < zones.length; i++) {
         let zone_temp = []
-        SITE_DB.filter(node => node.parent == zones[i]).forEach(zone_node => zone_temp.push(zone_node.selected))
+        SITE_DB.filter(node => node.parent == zones[i]).forEach(zone_node => zone_temp.push(zone_node.travelSpeed))
         zone_readings.push({
             'zone': zones[i],
             'value': arrAvg(zone_temp)
