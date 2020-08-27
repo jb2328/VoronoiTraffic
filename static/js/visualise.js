@@ -76,6 +76,9 @@ var voronoi_cells;
 
 var bounds;
 
+const ICON_CLOSE_DIV="<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
+const ICON_LOADING='<img src="./static/images/loading_icon.gif "width="100px" height="100px" >';
+
 class VoronoiViz {
 
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
@@ -253,9 +256,10 @@ function init_map() {
     };
     metadata_table.update = function (e) {
         if (e === undefined) {
-            this.metadata_table.innerHTML =
-                '<h4>Hover over a Cell - METADATA</h4>'
+            this.metadata_table.innerHTML =''
+                //'<h4>Hover over a Cell - METADATA</h4>'
             // +'<br>' 
+            this.metadata_table.style.opacity=0;
             return;
         }
 
@@ -317,9 +321,11 @@ function init_map() {
     };
     test_graph.update = function (e) {
         if (e === undefined) {
-            this.test_graph.innerHTML =
-                '<h4>Hover over a Cell</h4>'
-            // +'<br>' 
+            this.test_graph.innerHTML =ICON_LOADING
+            this.test_graph.style.opacity= 0;
+
+            // ICON_CLOSE_DIV+
+            //     '<h4>Hover over a Cell</h4>'
             return;
         }
 
@@ -355,9 +361,8 @@ function init_map() {
 
     horizontal_chart.update = function (e) {
         if (e === undefined) {
-            this.horizontal_chart.innerHTML =
+            this.horizontal_chart.innerHTML =//            ICON_CLOSE_DIV+
                 '<h4>Horizontal Bar Chart</h4>'
-            // +'<br>' 
             return;
         }
 
@@ -366,17 +371,14 @@ function init_map() {
 
     info_widget.update = function (e) {
         if (e === undefined) {
-            this.info_div.innerHTML =
+            this.info_div.innerHTML =ICON_CLOSE_DIV+
                 '<h4>Information</h4>' +
                 "<br>" +
                 "<div>" +
                 "<form id='routes'>" +
                 "<input type='radio' name='mode' value='routes'> Routes<br>" +
-                "<input type='radio' name='mode' value='polygons'> Polygons<br>" +
-                "<input type='radio' name='mode' value='groups'> Show Groups<br>" +
-                "<input type='radio' name='mode' value='best_route'> Find Best Route<br>" +
-
-
+                "<input type='radio' name='mode' value='polygons'checked='checked'> Polygons<br>" +
+               
                 "</form>" +
                 "<br>" +
                 "</div>" +
@@ -385,7 +387,7 @@ function init_map() {
                 "<form id='modes'>" +
                 "<input type='radio' name='mode' value='current'> Current Speed<br>" +
                 "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
-                "<input type='radio' name='mode' value='deviation'> Deviation<br>" +
+                "<input type='radio' name='mode' value='deviation' checked='checked'> Deviation<br>" +
                 "</form>" +
                 "</div>";
 
@@ -396,7 +398,7 @@ function init_map() {
 
     datepicker_widget.update = function (e) {
         if (e === undefined) {
-            this.datepicker_div.innerHTML =
+            this.datepicker_div.innerHTML =ICON_CLOSE_DIV+
                 '<h4>Pick time and Date</h4>' +
                 '<br>' +
                 '<input type="text" name="datefilter" id="datepicker" value="" />';
@@ -594,7 +596,6 @@ function drawVoronoi() {
         })
         .on('click', function(d,i){
            
-            document.getElementById("selected_cell").innerHTML ="<h1>"+d.data.name+"</h1>";
             show_node_information(d);
             
 
@@ -709,7 +710,6 @@ function drawVoronoi() {
 
             d3.select(this).attr("class", "selected");
         })
-        //.on("click",  d3.selectAll(".tooltip").style("visibility", "hidden"))
         .on('mouseout', function (d, i) {
             d3.selectAll('.road').style('stroke-width', '0px')
 
@@ -780,12 +780,15 @@ var cell_mouseout = (cell) => {
 }
 
 var show_node_information=(d)=>{
+    document.getElementById("selected_cell").innerHTML ="<h1>"+d.data.name+"</h1>";
+    document.getElementById("test_graph").style.opacity =1;
+    document.getElementById("test_graph").innerHTML =ICON_LOADING;
+
+    let NODE= d.data.id;
+
     let today = new Date();
     let START = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
     let END = '2020-08-22'
-    let NODE= d.data.id;
-
-    document.getElementById("test_graph").innerHTML ='<img src="./static/images/loading_icon.gif "width="100px" height="100px" >'
 
     show_node_tt_past(NODE, START)
     show_node_metadata(NODE)

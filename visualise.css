@@ -1,6 +1,16 @@
-#zone_table{#
+#zone_table{
     font-size: 10px;
 
+}
+#close {
+    float:right;
+    display:inline-block;
+    padding:1px 3px;
+    background:rgb(231, 231, 231);
+}
+#close:hover {
+    
+    background:rgb(170, 170, 170);
 }
 #map {
     width: 100%;

@@ -128,7 +128,8 @@ function get_zone_metadata(ZONE) {
         child_info += "<br>" + "<div class='metadata_zone' id='META_ZONE_" + child.acp_id + "'>" + "<i>" + child.name + "</i>" + "</div>" + child_speed;
 
     }
-    d3.select('#zone_table')._groups[0][0].innerHTML = child_info
+    document.getElementById('zone_table').innerHTML = child_info;//ICON_CLOSE_DIV+
+    document.getElementById('zone_table').style.opacity=1;
 
     d3.selectAll('.metadata_zone').on('mouseover', function (d, i) {
         d3.select(this).style('color', CELL_GROUPS[ZONE].color).style('font-weight', 'bold')
@@ -146,6 +147,7 @@ function get_zone_metadata(ZONE) {
         }
 
         console.log('HIGHLIGHT',highlighted_cell)
+        
         show_node_information(highlighted_cell)
     })
 }

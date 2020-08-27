@@ -22,6 +22,7 @@ async function historical_link(link_id, date1, date2) {
 }
 
 async function show_node_tt_past(site_id, date_start, date_end) {
+ 
 
   //find the requested site_id in the SITE_DB
   let site = SITE_DB.find(x => x.id == site_id);
@@ -150,8 +151,10 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
     width = 500 - margin.left - margin.right,
     height = 300 - margin.top - margin.bottom;
 
-  //MAKE SURE THE DIV IS EMPTY 
-  d3.select('#test_graph')._groups[0][0].innerHTML = '';
+  //MAKE SURE THE DIV IS EMPTY and visible
+  document.getElementById('test_graph').innerHTML = ICON_CLOSE_DIV;
+  document.getElementById('test_graph').style.opacity=1;
+
   // append the svg object to the body of the page
   var svg = d3.select("#test_graph")
     .append("svg")
@@ -210,7 +213,7 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
   let new_list = []
   let temp_id = total_list[0].acp_id;
   let new_sublist = [];
-  let colors = ['Black', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
+  let colors = ['MidnightBlue', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
 
   for (let i = 0; i < total_list.length; i++) {
     let current_id = total_list[i].acp_id;
@@ -356,8 +359,10 @@ function show_plot(total_list, min_max, current_node, START, END) {
     width = 500 - margin.left - margin.right,
     height = 300 - margin.top - margin.bottom;
 
-  //MAKE SURE THE DIV IS EMPTY 
-  d3.select('#my_dataviz')._groups[0][0].innerHTML = '';
+  //MAKE SURE THE DIV IS EMPTY and visible
+  document.getElementById('my_dataviz').innerHTML = ICON_CLOSE_DIV;
+  document.getElementById('my_dataviz').style.opacity=1;
+
   // append the svg object to the body of the page
   var svg = d3.select("#my_dataviz")
     .append("svg")
@@ -492,5 +497,6 @@ function get_site_metadata(SITE) {
   let full_metadata = "<b>" + SITE.name + "</b>" + '<br>' +
     "Average Travel Speed: " + parseInt(SITE.travelSpeed) + "MPH" + '<br>' +
     "Speed Deviation: " + SITE.deviation + '<br><br>' + neighbour_info;
-  d3.select('#metadata_table')._groups[0][0].innerHTML = full_metadata;
+    document.getElementById('metadata_table').innerHTML = ICON_CLOSE_DIV+full_metadata;
+    document.getElementById('metadata_table').style.opacity=1;
 }
