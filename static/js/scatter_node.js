@@ -1,34 +1,38 @@
+const LINE_GRAPH_COLORS = ['MidnightBlue', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
+//const colors=['#02AEE3','#ABE06A','#C002E3','#E37202','#65E68A','#E0C769','#0014E6','#E30202']
+
 async function historical_link(link_id, date1, date2) {
   if (date2 != null) {
     return await d3.json(
 
-      "https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/history/" + link_id +
+      HISTORICAL_API + link_id +
       "/?start_date=" + date1 + "&end_date" + date2, {
         headers: new Headers({
-          "Authorization": `Token a62fb5390f070c129591b6ff19c0a8cf06440efc`
+          "Authorization": `Token ` + API_TOKEN
         }),
       })
   }
 
   return await d3.json(
 
-    "https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/history/" + link_id +
+    HISTORICAL_API + link_id +
     "/?start_date=" + date1, {
       headers: new Headers({
-        "Authorization": `Token a62fb5390f070c129591b6ff19c0a8cf06440efc`
+        "Authorization": `Token ` + API_TOKEN
       }),
     })
-
 }
 
+//DOES NOT SHOW DATA FOR MISSING ROUTES, SO MAYBE IT SHOULD DISPLAY HISTORICAL TRAVEL TIMES INSTEAD
 async function show_node_tt_past(site_id, date_start, date_end) {
- 
 
   //find the requested site_id in the SITE_DB
   let site = SITE_DB.find(x => x.id == site_id);
-  console.log('site', site,site.neighbors)
+  let site_name = site.name;
+
+  console.log('site', site, site.neighbors)
+
   //lookup neighbours
-  let promise_list = []
   let all_lists = []
   for (let i = 0; i < site.neighbors.length; i++) {
 
@@ -46,56 +50,34 @@ async function show_node_tt_past(site_id, date_start, date_end) {
 
   }
 
-  compile_data(all_lists.length, site.neighbors.length).then(() => {
+  await_promises(all_lists.length, site.neighbors.length).then(() => {
 
-    let hist_data = []
+    let hist_data = restructure_hist_data(all_lists); //  WHY DO I NEED TWO RESTRUCTURINGS
 
-
-    all_lists.forEach(item => {
-
-      console.log('item', item)
-      let elements = item.request_data;
-
-      elements.forEach(element => {
-
-        // console.log('element', element, "time", element.time.slice(11, 20), "date", element.time.slice(0, 10));
-
-        if ((element.travelTime < 300) && (element.travelTime > 0)) {
-
-          hist_data.push({
-            'id': element.id,
-            'acp_id': element.acp_id.replace('|', '_'),
-            "x": element.acp_ts,
-            "y": element.travelTime, //normalTravelTime
-            "y_2": element.normalTravelTime, //
-            "time": element.time.slice(11, 20),
-            "date": element.time.slice(0, 10)
-          })
-
-        }
-        // console.log();
-      })
-
-    })
     //console.log(hist_data.length);
     // Add X axis
 
     let min_max = {
-      'min_x': Math.min(...hist_data.map(a => a.x)),
-      'min_y': Math.min(...hist_data.map(a => a.y)),
-      'max_x': Math.max(...hist_data.map(a => a.x)),
-      'max_y': Math.max(...hist_data.map(a => a.y))
+      'min_x': Math.min(...hist_data.map(a => a.ts)),
+      'min_y': Math.min(...hist_data.map(a => a.speed)),
+      'max_x': Math.max(...hist_data.map(a => a.ts)),
+      'max_y': Math.max(...hist_data.map(a => a.speed))
     }
 
     //if queried data is for today, our x axis should still show 24hours
-    if (min_max.max_x - min_max.min_x < 86400) { //86400
+    if (min_max.max_x - min_max.min_x < 86399) { //86400
       min_max.max_x = min_max.min_x + 86400;
     }
-    let queried_date = new Date(min_max.min_x * 1000)
 
-    let title_date = queried_date.toLocaleString()
-    show_line_plot(hist_data, min_max, site_id, date_start, date_end);
-    //show_plot(hist_data, min_max, site_id, date_start, date_end)
+
+    //  try {
+    let restructured_route_data = restructure_to_sublists(hist_data)
+    show_line_plot(restructured_route_data, min_max, site_name, date_start, date_end);
+    // } catch (err) {
+    //   console.log('Error message', err)
+    //   document.getElementById('test_graph').innerHTML = "No data received";
+    //   document.getElementById('test_graph').style.opacity = 1;
+    // }
 
 
   })
@@ -103,10 +85,44 @@ async function show_node_tt_past(site_id, date_start, date_end) {
 
 }
 
+function restructure_hist_data(unstr_fetched_data) {
+  let structured_data = []
 
-//compile_data() is used to check that all promises have been
+  unstr_fetched_data.forEach(item => {
+
+    console.log('item', item)
+    let elements = item.request_data;
+
+    elements.forEach(element => {
+
+      //console.log('element', element, "time", element.time.slice(11, 20), "date", element.time.slice(0, 10));
+      let link_length = all_links.find(x => x.acp_id === element.id).length;
+
+      if ((element.travelTime < 500) && (element.travelTime > 0)) {
+
+        structured_data.push({
+          'id': element.id,
+          'acp_id': element.id.replace('|', '_'),
+          "ts": element.acp_ts,
+          "travel_time": element.travelTime, //normalTravelTime
+          "normal_travel_time": element.normalTravelTime, //
+          "speed": (link_length / element.travelTime) * TO_MPH,
+          "normal_speed":(link_length / element.normalTravelTime) * TO_MPH,
+          "time": element.time.slice(11, 20),
+          "date": element.time.slice(0, 10),
+          "length": link_length
+        })
+
+      }
+      // console.log();
+    })
+
+  })
+  return structured_data;
+}
+//await_promises() is used to check that all promises have been
 //resolved by evaluating the two condition arguments
-async function compile_data(cond1, cond2) {
+async function await_promises(cond1, cond2) {
   console.log('waiting to resolve promises');
   await waitForCondition({
     asked: cond1,
@@ -117,7 +133,7 @@ async function compile_data(cond1, cond2) {
 }
 
 
-//wait for condition work with compile_data() to
+//wait for condition work with await_promises() to
 //check that promises have been resolved. We set
 //a timeout every second to check the conditional
 //statement.
@@ -138,14 +154,14 @@ async function waitForCondition(conditionObj) {
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 }
+var x, y;
 
-
-function show_line_plot(total_list, min_max, current_node, START, END) {
+function show_line_plot(route_data, min_max, site_name, START, END) {
   // set the dimensions and margins of the graph
   var margin = {
       top: 30,
       right: 100,
-      bottom: 40,
+      bottom: 35,
       left: 40
     },
     width = 500 - margin.left - margin.right,
@@ -153,7 +169,7 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
 
   //MAKE SURE THE DIV IS EMPTY and visible
   document.getElementById('test_graph').innerHTML = ICON_CLOSE_DIV;
-  document.getElementById('test_graph').style.opacity=1;
+  document.getElementById('test_graph').style.opacity = 1;
 
   // append the svg object to the body of the page
   var svg = d3.select("#test_graph")
@@ -166,28 +182,28 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
 
   // console.log('domains', min_x, max_x, min_y, max_y);
 
-  var x = d3.scaleLinear()
+  x = d3.scaleLinear()
     .domain([min_max.min_x, min_max.max_x])
     .range([0, width]);
 
-  var x_axis = d3.axisBottom(x).ticks(15).tickFormat(function (d, i) {
+  var x_axis = d3.axisBottom(x).ticks(24).tickFormat(function (d, i) {
 
     let dateObject = new Date(d * 1000)
 
     let humanDateFormat = dateObject.toLocaleString() //2019-12-9 10:30:15
 
     // console.log(d, i, humanDateFormat)
-    return humanDateFormat; //.slice(11, 20);
+    return humanDateFormat.slice(11, 20);
   });
 
-  END = END == 'undefined' ? '' : END;
+  END = END == undefined ? '' : END;
   svg.append("text")
     .attr("x", (width / 2))
     .attr("y", 0 - (margin.top / 2))
     .attr("text-anchor", "middle")
-    .style("font-size", "10px")
+    .style("font-size", "12px")
     .style("text-decoration", "none") //underline  
-    .text("Travel time for " + current_node + " on " + START + ' ' + END);
+    .text("Travel time for " + site_name + " on " + START + ' ' + END);
 
   svg.append("g")
     .attr("transform", "translate(0," + height + ")")
@@ -201,66 +217,32 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
     });
 
   // Add Y axis
-  let y_padding = 100;
-  var y = d3.scaleLinear()
+  let y_padding = 10;
+  y = d3.scaleLinear()
     .domain([min_max.min_y - y_padding, min_max.max_y + y_padding])
     .range([height, 0]);
 
   svg.append("g")
     .call(d3.axisLeft(y));
 
-  console.log('list totale', total_list)
-  let new_list = []
-  let temp_id = total_list[0].acp_id;
-  let new_sublist = [];
-  let colors = ['MidnightBlue', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
-
-  for (let i = 0; i < total_list.length; i++) {
-    let current_id = total_list[i].acp_id;
-    if (current_id != temp_id) {
-      temp_id = current_id;
-      new_list.push(new_sublist)
-      new_sublist = [];
-    }
-    new_sublist.push(total_list[i]);
-    console.log(total_list[i].acp_id)
-  }
-  new_list.push(new_sublist)
-
-  console.log('new list', new_list)
-
-  //remove the first element
-  //new_list.shift()
-  let keys = []
-  for (let u = 0; u < new_list.length; u++) {
-    console.log('new_list', new_list[u])
+  let legend_keys = []
+  for (let u = 0; u < route_data.length; u++) {
+    console.log('route_data', route_data[u])
+    let route_acp_id = route_data[u][0].acp_id;
 
     // Add the line
-    svg.append("path")
-      .datum(new_list[u])
-      .attr("fill", "none")
-      .attr("id", "LG_" + new_list[u][0].acp_id) //LG for line graph
-      .attr("class", "connected_scatter_line")
-      .attr("stroke", colors[u])
-      .attr("stroke-width", 2.5)
-      .attr("d", d3.line()
-        .x(function (d) {
-          return x(d.x)
-        })
-        .y(function (d) {
-          return y(d.y)
-        })
-      );
+    let path =create_path(svg, route_data[u], route_acp_id, LINE_GRAPH_COLORS[u]);
 
-    d3.select('#META_' + new_list[u][0].acp_id).style('color', colors[u])
+
+    d3.select('#META_' + route_acp_id).style('color', LINE_GRAPH_COLORS[u])
 
     //27 is th lenght of a rout id, whreas 12 martks the star of the unique string in "CAMBRIDGE_JTMS_9800Z0SUAHN1"
 
-    keys.push({
-      'name': new_list[u][0].acp_id.substr(27 - 12, 27),
-      'color': colors[u]
-    })
-   
+    legend_keys.push({
+      'name': route_acp_id.substr(27 - 12, 27),
+      'color': LINE_GRAPH_COLORS[u]
+    });
+
   }
 
 
@@ -268,9 +250,12 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
   var size = 15
   let y_sizing = 0
   let x_sizing = 360
-  console.log('keys', keys)
+
+  let normal_speed_line;
+
+  console.log('legend_keys', legend_keys)
   svg.selectAll("mydots")
-    .data(keys)
+    .data(legend_keys)
     .enter()
     .append("rect")
     .attr("x", x_sizing)
@@ -290,12 +275,11 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
       let selected = 'CAMBRIDGE_JTMS_' + d.name
       console.log(d, i)
       // Use D3 to select element, change color and size
-      d3.selectAll('.connected_scatter_line', '.legend').transition().duration(250).style('opacity', 0.4)
+      d3.selectAll('.connected_scatter_line', '.legend').transition().duration(250).style('opacity', 0.2)
       d3.select('#LEGEND_' + selected).transition().duration(250).style('opacity', 1)
 
-      d3.selectAll().transition().duration(250).style('opacity', 0.4)
       d3.select('#LG_' + selected).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
-      drawLink(selected, 350, colors[i]);
+      drawLink(selected, 350, LINE_GRAPH_COLORS[i]);
 
     })
     .on('mouseout', function (d) {
@@ -306,11 +290,60 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
       d3.select('#LG_' + selected).attr("stroke-width", 2.5);
       lineGroup.remove();
       d3.selectAll('.arc_line').remove()
+      try{      normal_speed_line.remove();}catch{}
+    })
+    .on('click', function (d, i) {
+      console.log(d.name)
+      let link_id = "CAMBRIDGE_JTMS%7C" + d.name
+      historical_link(link_id, '2020-08-27').then((data) => {
+        console.log('received', data)
+
+        let hist_data = restructure_hist_data([data]); //  WHY DO I NEED TWO RESTRUCTURINGS
+        console.log(hist_data);
+
+        let route_acp_id = 'DASH_'+hist_data[0].acp_id;
+
+        // Add the line
+        normal_speed_line = create_path(svg, hist_data, route_acp_id,'black','historical')
+
+      });
+
+
+
+
+
+      //console.log(hist_data.length);
+      //  // Add X axis
+
+      //  let min_max = {
+      //    'min_x': Math.min(...hist_data.map(a => a.x)),
+      //    'min_y': Math.min(...hist_data.map(a => a.y)),
+      //    'max_x': Math.max(...hist_data.map(a => a.x)),
+      //    'max_y': Math.max(...hist_data.map(a => a.y))
+      //  }
+
+      //  //if queried data is for today, our x axis should still show 24hours
+      //  if (min_max.max_x - min_max.min_x < 86399) { //86400
+      //    min_max.max_x = min_max.min_x + 86400;
+      //  }
+
+
+      // //  try {
+      //    let restructured_route_data = restructure_to_sublists(hist_data)
+      //    show_line_plot(restructured_route_data, min_max, site_name, date_start, date_end);
+      // // } catch (err) {
+      // //   console.log('Error message', err)
+      // //   document.getElementById('test_graph').innerHTML = "No data received";
+      // //   document.getElementById('test_graph').style.opacity = 1;
+      // // }
+
+
+
     });
 
   // Add one dot in the legend for each name.
   svg.selectAll("mylabels")
-    .data(keys)
+    .data(legend_keys)
     .enter()
     .append("text")
     .attr("x", x_sizing + size * 1.2)
@@ -332,9 +365,9 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
     .on('mouseover', function (d, i) {
       console.log(d[0].acp_id)
       // Use D3 to select element, change color and size
-      d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.4)
+      d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.2)
       d3.select(this).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
-      drawLink(d[0].acp_id, 350, colors[i]);
+      drawLink(d[0].acp_id, 350, LINE_GRAPH_COLORS[i]);
     })
     .on('mouseout', function () {
       // Use D3 to select element, change color and size
@@ -348,121 +381,77 @@ function show_line_plot(total_list, min_max, current_node, START, END) {
 
 }
 
-function show_plot(total_list, min_max, current_node, START, END) {
-  // set the dimensions and margins of the graph
-  var margin = {
-      top: 30,
-      right: 10,
-      bottom: 30,
-      left: 40
-    },
-    width = 500 - margin.left - margin.right,
-    height = 300 - margin.top - margin.bottom;
-
-  //MAKE SURE THE DIV IS EMPTY and visible
-  document.getElementById('my_dataviz').innerHTML = ICON_CLOSE_DIV;
-  document.getElementById('my_dataviz').style.opacity=1;
-
-  // append the svg object to the body of the page
-  var svg = d3.select("#my_dataviz")
-    .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform",
-      "translate(" + margin.left + "," + margin.top + ")");
-
-  // console.log('domains', min_x, max_x, min_y, max_y);
-
-  var x = d3.scaleLinear()
-    .domain([min_max.min_x, min_max.max_x])
-    .range([0, width]);
-
-  var x_axis = d3.axisBottom(x).ticks(15).tickFormat(function (d, i) {
-
-    let dateObject = new Date(d * 1000)
-
-    let humanDateFormat = dateObject.toLocaleString() //2019-12-9 10:30:15
-
-    // console.log(d, i, humanDateFormat)
-    return humanDateFormat; //.slice(11, 20);
-  });
-  END = END == 'undefined' ? '' : END;
-  svg.append("text")
-    .attr("x", (width / 2))
-    .attr("y", 0 - (margin.top / 2))
-    .attr("text-anchor", "middle")
-    .style("font-size", "10px")
-    .style("text-decoration", "none") //underline  
-    .text("Travel time for " + current_node + " on " + START + ' ' + END);
-
-  svg.append("g")
-    .attr("transform", "translate(0," + height + ")")
-    .call(x_axis)
-    .selectAll("text")
-    .style("text-anchor", "end")
-    .attr("dx", "-.8em")
-    .attr("dy", ".15em")
-    .attr("transform", function (d) {
-      return "rotate(-30)"
-    });
-
-  // Add Y axis
-  let y_padding = 100;
-  var y = d3.scaleLinear()
-    .domain([min_max.min_y - y_padding, min_max.max_y + y_padding])
-    .range([height, 0]);
-
-  svg.append("g")
-    .call(d3.axisLeft(y));
-
-  // Add dots
-  svg.append('g')
-    .selectAll("dot")
-    .data(total_list)
-    .enter()
-    .append("circle")
-    .attr("cx", function (d, i) {
-      return x(d.x);
-    }) //console.log(d,i,total_list[i].x,d.y);
-    .attr("cy", function (d, i) {
-      return y(d.y_2);
-    })
-    .attr("r", 1.5)
-    .style("fill", "#ff0000")
-    .style('opacity', 0.1);
-
-  // Add dots
-  svg.append('g')
-    .selectAll("dot")
-    .data(total_list)
-    .enter()
-    .append("circle")
-    .attr("cx", function (d, i) {
-      return x(d.x);
-    }) //console.log(d,i,total_list[i].x,d.y);
-    .attr("cy", function (d, i) {
-      return y(d.y);
-    })
-    .attr("r", 2.5)
-    .style("fill", "#69b3a2");
+//turn it into create_speed_path and create_hist_path
+function create_path(canvas, data, id,stroke,mode) {
+  // Add the line
+  let path = canvas.append("path")
+    .datum(data)
+    .attr("fill", "none")
+    .attr("id", "LG_" + id) //LG for line graph
+    .attr("class", "connected_scatter_line")
+    .attr("stroke", stroke)
+    .attr("stroke-width", 2.5)
+    .attr("d", d3.line()
+      .x(function (d) {
+        let time_parameter=mode=='historical'?d.ts+86400:d.ts;
+        return x(time_parameter)
+      })
+      .y(function (d) {
+        let speed_parameter=mode=='historical'?d.normal_speed:d.speed;
+        return y(speed_parameter)
+      })
+    );
 
 
+  let totalLength = path.node().getTotalLength();
 
-  d3.selectAll('circle')
-    .on('mouseover', function (d, i) {
-      console.log(d)
-      // Use D3 to select element, change color and size
-      d3.select(this).attr("r", 10)
-        .style("fill", "#ff00f9");
-    })
-    .on('mouseout', function () {
-      // Use D3 to select element, change color and size
-      d3.select(this).attr("r", 2.5)
-        .style("fill", "#69b3a2");
-    })
+  if(mode){
+    let dash_step=1;
+    path
+    .attr("stroke-dasharray", dash_step + " " + dash_step)
+    .attr("stroke-dashoffset", dash_step)
+    .style('opacity',0)
+    .transition()
+    .duration(350)
+    .ease(d3.easeLinear)
+    .style('opacity',1)
+  }
+  else
+  path
+    .attr("stroke-dasharray", totalLength + " " + totalLength)
+    .attr("stroke-dashoffset", totalLength)
+    .transition()
+    .duration(700)
+    .ease(d3.easeLinear)
+    .attr("stroke-dashoffset", 0);
+  return path
 
 }
+
+function restructure_to_sublists(old_list) {
+  let new_list = []
+  let new_sublist = [];
+
+
+  let temp_id = old_list[0].acp_id;
+
+  for (let i = 0; i < old_list.length; i++) {
+    let current_id = old_list[i].acp_id;
+    if (current_id != temp_id) {
+      temp_id = current_id;
+      new_list.push(new_sublist)
+      new_sublist = [];
+    }
+    new_sublist.push(old_list[i]);
+    console.log(old_list[i].acp_id)
+  }
+  new_list.push(new_sublist)
+
+  console.log('new list', new_list)
+
+  return new_list;
+}
+
 
 
 //unused to function to calculate travelTime (tt) for
@@ -497,6 +486,6 @@ function get_site_metadata(SITE) {
   let full_metadata = "<b>" + SITE.name + "</b>" + '<br>' +
     "Average Travel Speed: " + parseInt(SITE.travelSpeed) + "MPH" + '<br>' +
     "Speed Deviation: " + SITE.deviation + '<br><br>' + neighbour_info;
-    document.getElementById('metadata_table').innerHTML = ICON_CLOSE_DIV+full_metadata;
-    document.getElementById('metadata_table').style.opacity=1;
+  document.getElementById('metadata_table').innerHTML = ICON_CLOSE_DIV + full_metadata;
+  document.getElementById('metadata_table').style.opacity = 1;
 }

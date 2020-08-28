@@ -1,4 +1,8 @@
-function show_bar(data) {
+function show_horizontal_bar(data) {
+    
+    document.getElementById('bar_chart').innerHTML =ICON_CLOSE_DIV;
+    document.getElementById('bar_chart').style.opacity=1;
+
     // set the dimensions and margins of the graph
     let margin = {
             top: 20,
@@ -68,9 +72,6 @@ function show_bar(data) {
         .on('mouseover', function (d, i) {
             get_outline(d.zone);
 
-            //d3.select('#'+d.zone+'_bar').style('opacity', 1)
-            //d3.selectAll('.bar').transition().duration(250).style('opacity', 0.4)
-
             for (let u = 0; u < ZONES.length; u++) {
                 if (d.zone != ZONES[u]) {
                     d3.select('#' + ZONES[u] + '_bar').transition().duration(250).style('opacity', 0.4)
@@ -94,9 +95,7 @@ function show_bar(data) {
 
             d3.selectAll('.cell_outline').remove();
             d3.selectAll('.bar').transition().duration(250).style('opacity', 1)
-            // for (let u = 0; u < ZONES.length; u++) {
-            //     d3.select('#' + ZONES[u]+'_bar').transition().duration(250).style('opacity', 1)
-            // }
+          
         });
 
 
@@ -115,7 +114,7 @@ function show_bar(data) {
 // d3.select('#metadata_table')._groups[0][0].innerHTML = get_site_metadata(SITE)
 function get_zone_metadata(ZONE) {
     let zone_children = SITE_DB.filter(x => x.parent === ZONE);
-    let child_info = "<b>Inner nodes:</b> " + "<br>";
+    let child_info = "<b>Inner nodes for:</b> "+"<b style='color:"+CELL_GROUPS[ZONE].color+"'>"+ZONE+"</b>" + "<br>";
     for (let u = 0; u < zone_children.length; u++) {
         let child = zone_children[u];
         console.log(child)
@@ -128,7 +127,7 @@ function get_zone_metadata(ZONE) {
         child_info += "<br>" + "<div class='metadata_zone' id='META_ZONE_" + child.acp_id + "'>" + "<i>" + child.name + "</i>" + "</div>" + child_speed;
 
     }
-    document.getElementById('zone_table').innerHTML = child_info;//ICON_CLOSE_DIV+
+    document.getElementById('zone_table').innerHTML =ICON_CLOSE_DIV+child_info;
     document.getElementById('zone_table').style.opacity=1;
 
     d3.selectAll('.metadata_zone').on('mouseover', function (d, i) {

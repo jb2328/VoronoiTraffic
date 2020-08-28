@@ -7,31 +7,6 @@
 
 //const TO_MPH = 2.23694;
 
-// Style options for markers and lines
-var SITE_OPTIONS = {
-    color: 'black',
-    fillColor: 'green',
-    fill: true,
-    fillOpacity: 0.8,
-    radius: 7,
-    pane: 'markerPane'
-};
-
-var NORMAL_LINE = {
-    weight: 5,
-    offset: -3
-};
-var HIGHLIGHT_LINE = {
-    weight: 10,
-    offset: -6
-};
-
-var NORMAL_COLOUR = '#3388ff';
-var VERY_SLOW_COLOUR = '#9a111a';
-var SLOW_COLOUR = '#e00018';
-var MEDIUM_COLOUR = '#eb7F1b';
-var FAST_COLOUR = '#85cd50';
-var BROKEN_COLOUR = '#b0b0b0';
 
 // Script state globals
 var map, // The Leaflet map object itself
@@ -102,7 +77,7 @@ class VoronoiViz {
             initialise_nodes();
             console.log('draw bar chart')
 
-            show_bar(get_zone_averages());
+            show_horizontal_bar(get_zone_averages());
 
             console.log('loading Voronoi');
             drawVoronoi();
@@ -182,9 +157,32 @@ function path_to_poly(path_id) {
     }
 
     return polygonPoints;
-    //modify to create a new element
-    //var  mypolygon = document.getElementById(path_id);
-    //mypolygon.setAttribute("points", polygonPoints.join(","));
+}
+ function create_element(element_id, position, inner_text){
+
+    //to be modified with https://stackoverflow.com/questions/33614912/how-to-locate-leaflet-zoom-control-in-a-desired-position
+    let new_element = L.control({
+        position: position
+    }); //{       position: 'bottom'    }
+    new_element.onAdd = function (map) {
+        this.new_element = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
+        this.new_element.id = element_id;
+        this.update();
+
+        return this.new_element;
+    };
+    new_element.update = function (e) {
+        if (e === undefined) {
+            this.new_element.innerHTML =inner_text==undefined?'':ICON_CLOSE_DIV+inner_text;
+            this.new_element.style.opacity=inner_text==undefined?0:1;
+            return;
+        }
+
+    };
+
+   
+    return new_element.addTo(map);
+
 }
 
 
@@ -224,6 +222,7 @@ function init_map() {
         ext: 'png'
     });
     var cambridge = new L.LatLng(52.20038, 0.1);
+
     map = new L.Map("map", {
         center: cambridge,
         zoom: 12,
@@ -237,186 +236,50 @@ function init_map() {
 
 
     // Clock
-    clock = get_clock().addTo(map)
+clock = get_clock().addTo(map)
 
-    var info_widget = L.control();
-    var datepicker_widget = L.control();
-    var horizontal_chart = L.control();
+   let  info_viz_text= '<h4>Information</h4>' +
+    "<br>" +
+    "<div>" +
+    "<form id='routes'>" +
+    "<input type='radio' name='mode' value='routes'> Routes<br>" +
+    "<input type='radio' name='mode' value='polygons'checked='checked'> Polygons<br>" +
+   
+    "</form>" +
+    "<br>" +
+    "</div>" +
+    "<br>" +
+    "<div>" +
+    "<form id='modes'>" +
+    "<input type='radio' name='mode' value='current'> Current Speed<br>" +
+    "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
+    "<input type='radio' name='mode' value='deviation' checked='checked'> Deviation<br>" +
+    "</form>" +
+    "</div>";
+
+    let datepicker_text= '<h4>Pick time and Date</h4>' +
+    '<br>' +
+    '<input type="text" name="datefilter" id="datepicker" value="" />';
 
 
-    var metadata_table = L.control({
-        position: 'bottomleft'
-    }); //{       position: 'bottom'    }
-    metadata_table.onAdd = function (map) {
-        this.metadata_table = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
-        this.metadata_table.id = "metadata_table";
-        this.update();
+    var line_graph_element=create_element('test_graph','bottomleft')
+    var metadata_element=create_element('metadata_table','bottomleft')
 
-        return this.metadata_table;
-    };
-    metadata_table.update = function (e) {
-        if (e === undefined) {
-            this.metadata_table.innerHTML =''
-                //'<h4>Hover over a Cell - METADATA</h4>'
-            // +'<br>' 
-            this.metadata_table.style.opacity=0;
-            return;
-        }
 
-    };
+    var selected_cell=create_element('selected_cell','topright','<h4>Select a Cell</h4>')
 
-    var zone_table = L.control({
-        position: 'bottomright'
-    }); //{       position: 'bottom'    }
-    zone_table.onAdd = function (map) {
-        this.zone_table = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
-        this.zone_table.id = "zone_table";
-        this.update();
 
-        return this.zone_table;
-    };
-    zone_table.update = function (e) {
-        if (e === undefined) {
-            this.zone_table.innerHTML =
-                '<h4>Bar Chart- METADATA</h4>'
-            // +'<br>' 
-            return;
-        }
+    var info_widget =create_element('info_bar','topright',info_viz_text)
+    var datepicker_widget =create_element('datepicker','topright',datepicker_text)
 
-    };
-
-    var selected_cell = L.control({
-        position: 'topright'
-    }); //{       position: 'bottom'    }
-
-    selected_cell.onAdd = function (map) {
-        this.selected_cell = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
-        this.selected_cell.id = "selected_cell";
-        this.update();
-
-        return this.selected_cell;
-    };
-    selected_cell.update = function (e) {
-        if (e === undefined) {
-            this.selected_cell.innerHTML =
-                '<h4>Select a Cell</h4>'
-            // +'<br>' 
-            return;
-        }
-
-    };
+    var horizontal_chart=create_element('bar_chart','topright',ICON_LOADING)
+    var zone_table=create_element('zone_table','bottomright')
 
 
 
-    //to be modified with https://stackoverflow.com/questions/33614912/how-to-locate-leaflet-zoom-control-in-a-desired-position
-    var test_graph = L.control({
-        position: 'bottomleft'
-    }); //{       position: 'bottom'    }
-    test_graph.onAdd = function (map) {
-        this.test_graph = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
-        this.test_graph.id = "test_graph";
-        this.update();
-
-        return this.test_graph;
-    };
-    test_graph.update = function (e) {
-        if (e === undefined) {
-            this.test_graph.innerHTML =ICON_LOADING
-            this.test_graph.style.opacity= 0;
-
-            // ICON_CLOSE_DIV+
-            //     '<h4>Hover over a Cell</h4>'
-            return;
-        }
-
-    };
-
-    test_graph.addTo(map);
-
-    metadata_table.addTo(map);
-
-    info_widget.onAdd = function (map) {
-        this.info_div = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
-        this.update();
-
-        return this.info_div;
-    };
-
-    datepicker_widget.onAdd = function (map) {
-        this.datepicker_div = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
-        //this.datepicker_div.id="datepicker";
-        this.update();
-
-        return this.datepicker_div;
-    };
-
-    horizontal_chart.onAdd = function (map) {
-        this.horizontal_chart = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
-        this.horizontal_chart.id = "bar_chart";
-        this.update();
-
-        return this.horizontal_chart;
-    };
 
 
-    horizontal_chart.update = function (e) {
-        if (e === undefined) {
-            this.horizontal_chart.innerHTML =//            ICON_CLOSE_DIV+
-                '<h4>Horizontal Bar Chart</h4>'
-            return;
-        }
-
-    };
-
-
-    info_widget.update = function (e) {
-        if (e === undefined) {
-            this.info_div.innerHTML =ICON_CLOSE_DIV+
-                '<h4>Information</h4>' +
-                "<br>" +
-                "<div>" +
-                "<form id='routes'>" +
-                "<input type='radio' name='mode' value='routes'> Routes<br>" +
-                "<input type='radio' name='mode' value='polygons'checked='checked'> Polygons<br>" +
-               
-                "</form>" +
-                "<br>" +
-                "</div>" +
-                "<br>" +
-                "<div>" +
-                "<form id='modes'>" +
-                "<input type='radio' name='mode' value='current'> Current Speed<br>" +
-                "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
-                "<input type='radio' name='mode' value='deviation' checked='checked'> Deviation<br>" +
-                "</form>" +
-                "</div>";
-
-            return;
-        }
-        d3.select(".info").attr("id", "test").append("div").attr("class", "hover_val").text("Hello World");
-    };
-
-    datepicker_widget.update = function (e) {
-        if (e === undefined) {
-            this.datepicker_div.innerHTML =ICON_CLOSE_DIV+
-                '<h4>Pick time and Date</h4>' +
-                '<br>' +
-                '<input type="text" name="datefilter" id="datepicker" value="" />';
-
-            return;
-        }
-
-    };
-    selected_cell.addTo(map);
-
-    info_widget.addTo(map);
-    datepicker_widget.addTo(map);
-    horizontal_chart.addTo(map);
-
-    zone_table.addTo(map)
-
-
-
+    
 
     //also change so that zones would not mess up position
     //change so the api would not be reset
@@ -545,16 +408,15 @@ function drawVoronoi() {
         .style("margin-left", topLeft.x + "px")
         .style("margin-top", topLeft.y + "px");
 
+    //cell paths
     pathGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
-    var circleGroup = voronoi_cells.append("g")
+    let circleGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
-
-    //var circleGroupB = voronoi_cells.append("g")
-    //   .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
     lineGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+
     cell_outlines = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
@@ -596,16 +458,16 @@ function drawVoronoi() {
         })
         .on('click', function(d,i){
            
-            show_node_information(d);
+         //d3.select(this).transition().duration(300).style('fill','black');
+             show_node_information(d);
             
 
         })
 
-        .on('mouseover', function (d, i) {
+        .on('mouseover', function (d) {
          
 
             cell_mouseover(this);
-
 
 
             //I ASSUME THIS WILL FIX THE BUG WHERE UPON MOVING THE MAP COLORS CHANGE AS NOT ALL CELLS ARE LOADED.
@@ -618,7 +480,6 @@ function drawVoronoi() {
 
             lineGroup.remove();
             for (let i = 0; i < neighbors.length; i++) {
-                //console.log(i);
                 let inbound = neighbors[i].links.in.id;
                 let outbound = neighbors[i].links.out.id;
 
@@ -627,9 +488,6 @@ function drawVoronoi() {
 
                 // drawSVGLinks(inbound, 500);
                 // drawSVGLinks(outbound, 500);
-
-
-
             }
 
 
@@ -799,10 +657,6 @@ function drawSVGLinks(link, dur) {
     let connected_sites = all_links.find(x => x.id === link).sites;
     let from = SITE_DB.find(x => x.id === connected_sites[0]);
     let to = SITE_DB.find(x => x.id === connected_sites[1]);
-
-    // console.log('LINK', link, from, to);
-
-
 
     links_drawn_SVG.push(link);
 
