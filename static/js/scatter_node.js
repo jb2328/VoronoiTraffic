@@ -478,7 +478,7 @@ function get_site_metadata(SITE) {
     let tt_in, tt_out;
 
 
-
+try{
     if (link_in.travelTime == undefined || link_in.travelTime == null) {
       tt_in = link_in.normalTravelTime;
       console.log('tt in failed', link_in)
@@ -510,6 +510,7 @@ function get_site_metadata(SITE) {
     let from = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + TAB + "<b>From:</b> " + "Current Speed: " + speed_out + "MPH" + "</div>";
 
     neighbour_info += "<br>" + "<i>" + neighbour.site + "</i>" + to + from;
+  }catch{}
   }
 
   let full_metadata = "<b>" + SITE.name + "</b>" + '<br>' +
