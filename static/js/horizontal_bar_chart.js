@@ -1,7 +1,7 @@
 function show_horizontal_bar(data) {
-    
-    document.getElementById('bar_chart').innerHTML =ICON_CLOSE_DIV;
-    document.getElementById('bar_chart').style.opacity=1;
+
+    document.getElementById('bar_chart').innerHTML = ICON_CLOSE_DIV;
+    document.getElementById('bar_chart').style.opacity = 1;
 
     // set the dimensions and margins of the graph
     let margin = {
@@ -95,7 +95,7 @@ function show_horizontal_bar(data) {
 
             d3.selectAll('.cell_outline').remove();
             d3.selectAll('.bar').transition().duration(250).style('opacity', 1)
-          
+
         });
 
 
@@ -110,11 +110,129 @@ function show_horizontal_bar(data) {
 }
 
 
+function show_vertical_bar(data) {
+
+    document.getElementById('bar_chart').innerHTML = ICON_CLOSE_DIV;
+    document.getElementById('bar_chart').style.opacity = 1;
+
+    // set the dimensions and margins of the graph
+    let margin = {
+            top: 35,
+            right: 20,
+            bottom: 30,
+            left: 40
+        },
+        width = 220 - margin.left - margin.right,
+        height = 220 - margin.top - margin.bottom;
+
+    let x = d3.scaleBand().rangeRound([0, width]).padding(0.1),
+        y = d3.scaleLinear().rangeRound([height, 0]);
+
+    let svg = d3.select("#bar_chart").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
+
+    x.domain(data.map(function (d) {
+        return d.zone;
+    }));
+    y.domain([0, d3.max(data, function (d) {
+        return d.value;
+    })]);
+
+    //append title
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", 10 - (margin.top / 2))
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .style("text-decoration", "none") //underline  
+        .text("Zone Speeds");
+
+    svg.append("g")
+        .attr("class", "axis axis--x")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+
+    svg.append("g")
+        .attr("class", "axis axis--y")
+        .call(d3.axisLeft(y))
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", "0.71em")
+        .attr("text-anchor", "end")
+        .text("Frequency");
+
+    // text label for the y axis
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 0 - margin.left)
+        .attr("x", 0 - (height / 2))
+        .attr("dy", "1em")
+        .style("text-anchor", "middle")
+        .text("Speed (MPH)");
+
+
+    svg.selectAll(".bar")
+        .data(data)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr('id', function (d) {
+            return d.zone + '_bar'
+        })
+        .attr("x", function (d) {
+            return x(d.zone);
+        })
+        .attr("y", function (d) {
+            return y(d.value);
+        })
+        .attr("width", x.bandwidth())
+        .attr("height", function (d) {
+            return height - y(d.value);
+        })
+        .style('fill', function (d) {
+            return CELL_GROUPS[d.zone]['color']
+        })
+        .on('mouseover', function (d, i) {
+            get_outline(d.zone);
+
+            for (let u = 0; u < ZONES.length; u++) {
+                if (d.zone != ZONES[u]) {
+                    d3.select('#' + ZONES[u] + '_bar').transition().duration(250).style('opacity', 0.4)
+                }
+
+            }
+
+        })
+        .on('click', function (d, i) {
+            get_outline(d.zone);
+
+            get_zone_metadata(d.zone)
+
+        })
+        .on('dblclick', function (d, i) {
+            console.log('DBLCLICK')
+
+        })
+        .on('mouseout', function (d, i) {
+
+            d3.selectAll('.cell_outline').remove();
+            d3.selectAll('.bar').transition().duration(250).style('opacity', 1)
+
+        });
+
+}
+
+
 
 // d3.select('#metadata_table')._groups[0][0].innerHTML = get_site_metadata(SITE)
 function get_zone_metadata(ZONE) {
     let zone_children = SITE_DB.filter(x => x.parent === ZONE);
-    let child_info = "<b>Inner nodes for:</b> "+"<b style='color:"+CELL_GROUPS[ZONE].color+"'>"+ZONE+"</b>" + "<br>";
+    let child_info = "<b>Inner nodes for:</b> " + "<b style='color:" + CELL_GROUPS[ZONE].color + "'>" + ZONE + "</b>" + "<br>";
     for (let u = 0; u < zone_children.length; u++) {
         let child = zone_children[u];
         console.log(child)
@@ -127,26 +245,63 @@ function get_zone_metadata(ZONE) {
         child_info += "<br>" + "<div class='metadata_zone' id='META_ZONE_" + child.acp_id + "'>" + "<i>" + child.name + "</i>" + "</div>" + child_speed;
 
     }
-    document.getElementById('zone_table').innerHTML =ICON_CLOSE_DIV+child_info;
-    document.getElementById('zone_table').style.opacity=1;
+    document.getElementById('zone_table').innerHTML = ICON_CLOSE_DIV + child_info;
+    document.getElementById('zone_table').style.opacity = 1;
 
-    d3.selectAll('.metadata_zone').on('mouseover', function (d, i) {
-        d3.select(this).style('color', CELL_GROUPS[ZONE].color).style('font-weight', 'bold')
-        let cell = document.getElementById(this.id.replace('META_ZONE_', ''))
-        cell_mouseover(cell)
-    })
-    d3.selectAll('.metadata_zone').on('mouseout', function (d, i) {
+    d3.selectAll('.metadata_zone')
+        .on('mouseover', function (d, i) {
+            d3.select(this).style('color', CELL_GROUPS[ZONE].color).style('font-weight', 'bold')
+            let cell = document.getElementById(this.id.replace('META_ZONE_', ''))
+            cell_mouseover(cell)
+        })
+
+    d3.selectAll('.metadata_zone').
+    on('mouseout', function (d, i) {
         d3.select(this).style('color', 'black').style('font-weight', 'normal')
         let cell = document.getElementById(this.id.replace('META_ZONE_', ''))
         cell_mouseout(cell)
     })
-    d3.selectAll('.metadata_zone').on('click', function (d, i) {
-        let highlighted_cell = {
-            'data': SITE_DB.find(x => x.acp_id == this.id.replace('META_ZONE_', ''))
-        }
 
-        console.log('HIGHLIGHT',highlighted_cell)
-        
-        show_node_information(highlighted_cell)
-    })
+    d3.selectAll('.metadata_zone')
+        .on('click', function (d, i) {
+            let highlighted_cell = {
+                'data': SITE_DB.find(x => x.acp_id == this.id.replace('META_ZONE_', ''))
+            }
+
+            show_node_information(highlighted_cell)
+
+            select(highlighted_cell.data.acp_id)
+
+        })
+}
+
+function select(id) {
+
+    deselectAll()
+    let cell = document.getElementById(id)
+
+    cell_clicked(cell)
+
+
+    //    d3.select('#' + id).style('stroke-opacity', 1).style('stroke', 'black').style('stroke-width', 4)
+
+}
+
+function selectAll() {
+    let cells = document.getElementsByClassName("cell")
+    for (let i = 0; i < cells.length; i++) {
+
+        cell_clicked(cells[i])
+    }
+
+}
+
+
+function deselectAll() {
+    let cells = document.getElementsByClassName("cell")
+
+    for (let i = 0; i < cells.length; i++) {
+
+        cell_regular(cells[i])
+    }
 }

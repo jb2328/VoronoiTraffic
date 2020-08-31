@@ -77,7 +77,8 @@ class VoronoiViz {
             initialise_nodes();
             console.log('draw bar chart')
 
-            show_horizontal_bar(get_zone_averages());
+           // show_horizontal_bar(get_zone_averages());
+            show_vertical_bar(get_zone_averages());
 
             console.log('loading Voronoi');
             drawVoronoi();
@@ -460,8 +461,9 @@ function drawVoronoi() {
            
          //d3.select(this).transition().duration(300).style('fill','black');
              show_node_information(d);
-            
-
+             console.log("CLICKED",d, d.id)
+             
+            select(d.data.acp_id)
         })
 
         .on('mouseover', function (d) {
@@ -624,18 +626,34 @@ var cell_mouseover = (cell) => {
     d3.select(cell).transition()
         .duration('300')
         .style('stroke', 'black')
-        .style('stroke-width', 10)
+        //.style('stroke-width', 10)
         .style("stroke-opacity", 1)
-        .style("fill-opacity", 0.8);
+        .style("fill-opacity", 1);
 }
 var cell_mouseout = (cell) => {
     d3.select(cell).transition()
-        .duration('500')
+        .duration('300')
         .style('stroke', 'black')
-        .style('stroke-width', 0,5)
+       // .style('stroke-width', 0.5)
         .style("stroke-opacity", 0.3)
         .style("fill-opacity", 0.3);
 }
+
+var cell_clicked = (cell) => {
+    d3.select(cell)
+        .style('stroke-opacity',1).style('stroke','black').style('stroke-width',4);
+
+}
+var cell_regular = (cell) => {
+    d3.select(cell)
+    .style('stroke', 'black')
+    .style('stroke-width', 0.5)
+    .style("stroke-opacity", 0.3)
+    .style("fill-opacity", 0.3);
+
+}
+
+
 
 var show_node_information=(d)=>{
     document.getElementById("selected_cell").innerHTML ="<h1>"+d.data.name+"</h1>";
@@ -648,7 +666,7 @@ var show_node_information=(d)=>{
     let START = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
     let END = '2020-08-22'
 
-    show_node_tt_past(NODE, START)
+    show_node_data(NODE, START)
     show_node_metadata(NODE)
 }
 
@@ -1111,8 +1129,19 @@ function setColorRange() {
 
     console.log("new min_max ", min, max);
 
-    return d3.scaleSequential().domain([-5, 10]) //min, max
+    return d3.scaleSequential().domain([min, max]) //min, max -5, 10
         .interpolator(d3.interpolateRdYlGn);
+}
+
+function getMinMax() {
+    let findMax = (ma, v) => Math.max(ma, v.selected)
+    let findMin = (mi, v) => Math.min(mi, v.selected)
+    let max = SITE_DB.reduce(findMax, -Infinity)
+    let min = SITE_DB.reduce(findMin, Infinity)
+    return {
+        "min": min, //-5
+        "max": max  //10
+    };
 }
 
 function slope(x, x1, y1, x2, y2) {
@@ -1121,19 +1150,6 @@ function slope(x, x1, y1, x2, y2) {
     let slope = (y2 - y1) / (x2 - x1);
     return (-1 / slope) * (x - midX) + midY;
 }
-
-function getMinMax() {
-    let findMax = (ma, v) => Math.max(ma, v.selected)
-    let findMin = (mi, v) => Math.min(mi, v.selected)
-    let max = SITE_DB.reduce(findMax, -Infinity)
-    let min = SITE_DB.reduce(findMin, Infinity)
-    // console.log(min,max);
-    return {
-        "min": -5,
-        "max": 10
-    };
-}
-
 function generate_hull() {
 
     //get a list of group ids  e.g (north, south, center etc)

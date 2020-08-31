@@ -1,3 +1,5 @@
+const WEEK = 86400 * 7;
+
 const LINE_GRAPH_COLORS = ['MidnightBlue', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
 //const colors=['#02AEE3','#ABE06A','#C002E3','#E37202','#65E68A','#E0C769','#0014E6','#E30202']
 
@@ -24,7 +26,7 @@ async function historical_link(link_id, date1, date2) {
 }
 
 //DOES NOT SHOW DATA FOR MISSING ROUTES, SO MAYBE IT SHOULD DISPLAY HISTORICAL TRAVEL TIMES INSTEAD
-async function show_node_tt_past(site_id, date_start, date_end) {
+async function show_node_data(site_id, date_start, date_end) {
 
   //find the requested site_id in the SITE_DB
   let site = SITE_DB.find(x => x.id == site_id);
@@ -54,9 +56,6 @@ async function show_node_tt_past(site_id, date_start, date_end) {
 
     let hist_data = restructure_hist_data(all_lists); //  WHY DO I NEED TWO RESTRUCTURINGS
 
-    //console.log(hist_data.length);
-    // Add X axis
-
     let min_max = {
       'min_x': Math.min(...hist_data.map(a => a.ts)),
       'min_y': Math.min(...hist_data.map(a => a.speed)),
@@ -64,10 +63,15 @@ async function show_node_tt_past(site_id, date_start, date_end) {
       'max_y': Math.max(...hist_data.map(a => a.speed))
     }
 
+
+
+    min_max.min_x = toTimestamp(date_start + " 00:00:00")
+
     //if queried data is for today, our x axis should still show 24hours
     if (min_max.max_x - min_max.min_x < 86399) { //86400
       min_max.max_x = min_max.min_x + 86400;
     }
+
 
 
     //  try {
@@ -83,6 +87,11 @@ async function show_node_tt_past(site_id, date_start, date_end) {
   })
 
 
+}
+
+function toTimestamp(strDate) {
+  var datum = Date.parse(strDate);
+  return datum / 1000;
 }
 
 function restructure_hist_data(unstr_fetched_data) {
@@ -107,14 +116,13 @@ function restructure_hist_data(unstr_fetched_data) {
           "travel_time": element.travelTime, //normalTravelTime
           "normal_travel_time": element.normalTravelTime, //
           "speed": (link_length / element.travelTime) * TO_MPH,
-          "normal_speed":(link_length / element.normalTravelTime) * TO_MPH,
+          "normal_speed": (link_length / element.normalTravelTime) * TO_MPH,
           "time": element.time.slice(11, 20),
           "date": element.time.slice(0, 10),
           "length": link_length
         })
 
       }
-      // console.log();
     })
 
   })
@@ -186,14 +194,15 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     .domain([min_max.min_x, min_max.max_x])
     .range([0, width]);
 
-  var x_axis = d3.axisBottom(x).ticks(24).tickFormat(function (d, i) {
+  var x_axis = d3.axisBottom(x).ticks(27).tickFormat(function (d, i) {
 
     let dateObject = new Date(d * 1000)
 
     let humanDateFormat = dateObject.toLocaleString() //2019-12-9 10:30:15
 
     // console.log(d, i, humanDateFormat)
-    return humanDateFormat.slice(11, 20);
+    return humanDateFormat.slice(11, 18);
+    // return i+":00"//humanDateFormat.slice(11, 14) + ":00";
   });
 
   END = END == undefined ? '' : END;
@@ -204,6 +213,15 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     .style("font-size", "12px")
     .style("text-decoration", "none") //underline  
     .text("Travel time for " + site_name + " on " + START + ' ' + END);
+
+  // text label for the y axis
+  svg.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 0 - margin.left)
+    .attr("x", 0 - (height / 2))
+    .attr("dy", "1em")
+    .style("text-anchor", "middle")
+    .text("Speed (MPH)");
 
   svg.append("g")
     .attr("transform", "translate(0," + height + ")")
@@ -231,7 +249,7 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     let route_acp_id = route_data[u][0].acp_id;
 
     // Add the line
-    let path =create_path(svg, route_data[u], route_acp_id, LINE_GRAPH_COLORS[u]);
+    let path = create_path(svg, route_data[u], route_acp_id, LINE_GRAPH_COLORS[u]);
 
 
     d3.select('#META_' + route_acp_id).style('color', LINE_GRAPH_COLORS[u])
@@ -274,12 +292,17 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     .on('mouseover', function (d, i) {
       let selected = 'CAMBRIDGE_JTMS_' + d.name
       console.log(d, i)
+
+
       // Use D3 to select element, change color and size
-      d3.selectAll('.connected_scatter_line', '.legend').transition().duration(250).style('opacity', 0.2)
+      d3.selectAll('.legend').transition().duration(250).style('opacity', 0.2)
+      d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.2)
       d3.select('#LEGEND_' + selected).transition().duration(250).style('opacity', 1)
 
       d3.select('#LG_' + selected).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
       drawLink(selected, 350, LINE_GRAPH_COLORS[i]);
+
+
 
     })
     .on('mouseout', function (d) {
@@ -290,54 +313,34 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
       d3.select('#LG_' + selected).attr("stroke-width", 2.5);
       lineGroup.remove();
       d3.selectAll('.arc_line').remove()
-      try{      normal_speed_line.remove();}catch{}
+      d3.selectAll('.dashed_scatter_line').remove()
     })
     .on('click', function (d, i) {
-      console.log(d.name)
+
+      d3.select(this).transition().duration(50).style('fill', 'black').on('end', function (d) {
+        d3.select(this).transition().duration(100).style('fill', d.color)
+      })
+
+
       let link_id = "CAMBRIDGE_JTMS%7C" + d.name
-      historical_link(link_id, '2020-08-27').then((data) => {
+
+      let week_ago = (Date.parse(START) / 1000) - WEEK
+      let new_ts = new Date(week_ago * 1000)
+      let new_date = new_ts.getFullYear() + "-" + (new_ts.getMonth() + 1) + "-" + new_ts.getDate()
+      console.log('NEW DATE', new_date, new_ts.toLocaleString())
+
+      historical_link(link_id, new_date).then((data) => {
         console.log('received', data)
 
         let hist_data = restructure_hist_data([data]); //  WHY DO I NEED TWO RESTRUCTURINGS
-        console.log(hist_data);
+        console.log('HIST data', hist_data);
 
-        let route_acp_id = 'DASH_'+hist_data[0].acp_id;
+        let route_acp_id = 'DASH_' + hist_data[0].acp_id;
 
         // Add the line
-        normal_speed_line = create_path(svg, hist_data, route_acp_id,'black','historical')
-
+        normal_speed_line = create_path(svg, hist_data, route_acp_id, 'black', 'historical')
+        console.log(normal_speed_line)
       });
-
-
-
-
-
-      //console.log(hist_data.length);
-      //  // Add X axis
-
-      //  let min_max = {
-      //    'min_x': Math.min(...hist_data.map(a => a.x)),
-      //    'min_y': Math.min(...hist_data.map(a => a.y)),
-      //    'max_x': Math.max(...hist_data.map(a => a.x)),
-      //    'max_y': Math.max(...hist_data.map(a => a.y))
-      //  }
-
-      //  //if queried data is for today, our x axis should still show 24hours
-      //  if (min_max.max_x - min_max.min_x < 86399) { //86400
-      //    min_max.max_x = min_max.min_x + 86400;
-      //  }
-
-
-      // //  try {
-      //    let restructured_route_data = restructure_to_sublists(hist_data)
-      //    show_line_plot(restructured_route_data, min_max, site_name, date_start, date_end);
-      // // } catch (err) {
-      // //   console.log('Error message', err)
-      // //   document.getElementById('test_graph').innerHTML = "No data received";
-      // //   document.getElementById('test_graph').style.opacity = 1;
-      // // }
-
-
 
     });
 
@@ -382,48 +385,48 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
 }
 
 //turn it into create_speed_path and create_hist_path
-function create_path(canvas, data, id,stroke,mode) {
+function create_path(canvas, data, id, stroke, mode) {
   // Add the line
   let path = canvas.append("path")
     .datum(data)
     .attr("fill", "none")
     .attr("id", "LG_" + id) //LG for line graph
-    .attr("class", "connected_scatter_line")
     .attr("stroke", stroke)
     .attr("stroke-width", 2.5)
     .attr("d", d3.line()
       .x(function (d) {
-        let time_parameter=mode=='historical'?d.ts+86400:d.ts;
+        let time_parameter = mode == 'historical' ? d.ts + WEEK : d.ts;
         return x(time_parameter)
       })
       .y(function (d) {
-        let speed_parameter=mode=='historical'?d.normal_speed:d.speed;
+        let speed_parameter = mode == 'historical' ? d.normal_speed : d.speed;
         return y(speed_parameter)
       })
     );
 
 
   let totalLength = path.node().getTotalLength();
-
-  if(mode){
-    let dash_step=1;
+  if (mode) {
+    let dash_step = 3;
     path
-    .attr("stroke-dasharray", dash_step + " " + dash_step)
-    .attr("stroke-dashoffset", dash_step)
-    .style('opacity',0)
-    .transition()
-    .duration(350)
-    .ease(d3.easeLinear)
-    .style('opacity',1)
+      .attr("class", "dashed_scatter_line")
+      .attr("stroke-dasharray", dash_step + " " + dash_step)
+      .attr("stroke-dashoffset", 0)
+      .style('opacity', 0)
+      .transition()
+      .duration(350)
+      .ease(d3.easeLinear)
+      .style('opacity', 1)
+  } else {
+    path
+      .attr("class", "connected_scatter_line")
+      .attr("stroke-dasharray", totalLength + " " + totalLength)
+      .attr("stroke-dashoffset", totalLength)
+      .transition()
+      .duration(700)
+      .ease(d3.easeLinear)
+      .attr("stroke-dashoffset", 0);
   }
-  else
-  path
-    .attr("stroke-dasharray", totalLength + " " + totalLength)
-    .attr("stroke-dashoffset", totalLength)
-    .transition()
-    .duration(700)
-    .ease(d3.easeLinear)
-    .attr("stroke-dashoffset", 0);
   return path
 
 }
@@ -468,24 +471,50 @@ function get_site_metadata(SITE) {
   let neighbour_info = "<b>Surrounding nodes:</b> " + "<br>";
   for (let u = 0; u < SITE.neighbors.length; u++) {
     let neighbour = SITE.neighbors[u];
+    console.log('SITE', neighbour.site)
 
-    //double check
-    let dir_in = SITE_DB.find(x => x.id === neighbour.links.out.sites[1]).name;
-    let dir_out = SITE_DB.find(x => x.id === neighbour.links.in.sites[0]).name;
-    console.log('dir', neighbour.links)
+    let link_in = all_journeys.find(journey => journey.id === neighbour.links.in.id)
+    let link_out = all_journeys.find(journey => journey.id === neighbour.links.out.id)
+    let tt_in, tt_out;
 
-    const TAB = '&emsp;&emsp;&emsp;&emsp;'
+
+
+    if (link_in.travelTime == undefined || link_in.travelTime == null) {
+      tt_in = link_in.normalTravelTime;
+      console.log('tt in failed', link_in)
+    } else {
+      tt_in = link_in.travelTime;
+    }
+
+    let speed_in = parseInt((neighbour.links.in.length / tt_in) * TO_MPH);
+    console.log('journey iD:', neighbour.links.in, tt_in, speed_in)
+
+
+    if (link_out.travelTime == undefined || link_out.travelTime == null) {
+      tt_out = link_out.normalTravelTime;
+      console.log('tt our failed', link_out)
+    } else {
+      tt_out = link_out.travelTime;
+
+    }
+
+    let speed_out = parseInt((neighbour.links.out.length / tt_out) * TO_MPH);
+
+    console.log('journey iD:', neighbour.links.out, tt_out, speed_out)
+
     const HALF_TAB = '&emsp;&emsp;'
+    const TAB = '&emsp;&emsp;&emsp;&emsp;'
 
-    let to = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + TAB + "<b>To:</b> " + "Current Speed: " + parseInt((neighbour.dist / neighbour.travelTime) * TO_MPH) + "MPH" + "</div>";
-    let from = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + TAB + "<b>From:</b> " + "Current Speed: " + parseInt((neighbour.dist / neighbour.travelTime) * TO_MPH) + "MPH" + "</div>";
+
+    let to = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + TAB + "<b>To:</b> " + "Current Speed: " + speed_in + "MPH" + "</div>";
+    let from = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + TAB + "<b>From:</b> " + "Current Speed: " + speed_out + "MPH" + "</div>";
 
     neighbour_info += "<br>" + "<i>" + neighbour.site + "</i>" + to + from;
   }
 
   let full_metadata = "<b>" + SITE.name + "</b>" + '<br>' +
     "Average Travel Speed: " + parseInt(SITE.travelSpeed) + "MPH" + '<br>' +
-    "Speed Deviation: " + SITE.deviation + '<br><br>' + neighbour_info;
+    "Speed Deviation from Regular: " + parseInt(SITE.speedDeviation) + "MPH" + '<br><br>' + neighbour_info;
   document.getElementById('metadata_table').innerHTML = ICON_CLOSE_DIV + full_metadata;
   document.getElementById('metadata_table').style.opacity = 1;
 }
