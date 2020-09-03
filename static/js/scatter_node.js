@@ -4,25 +4,30 @@ const LINE_GRAPH_COLORS = ['MidnightBlue', 'Fuchsia', 'Red', 'Teal', 'Orange', '
 //const colors=['#02AEE3','#ABE06A','#C002E3','#E37202','#65E68A','#E0C769','#0014E6','#E30202']
 
 async function historical_link(link_id, date1, date2) {
-  if (date2 != null) {
+
+  if (date2 != undefined) {
+
     return await d3.json(
 
       HISTORICAL_API + link_id +
-      "/?start_date=" + date1 + "&end_date" + date2, {
+      "/?start_date=" + date1 + "&end_date=" + date2, {
+        headers: new Headers({
+          "Authorization": `Token ` + API_TOKEN
+        }),
+      })
+  } else {
+
+    return await d3.json(
+
+      HISTORICAL_API + link_id +
+      "/?start_date=" + date1, {
         headers: new Headers({
           "Authorization": `Token ` + API_TOKEN
         }),
       })
   }
 
-  return await d3.json(
 
-    HISTORICAL_API + link_id +
-    "/?start_date=" + date1, {
-      headers: new Headers({
-        "Authorization": `Token ` + API_TOKEN
-      }),
-    })
 }
 
 //DOES NOT SHOW DATA FOR MISSING ROUTES, SO MAYBE IT SHOULD DISPLAY HISTORICAL TRAVEL TIMES INSTEAD
@@ -33,6 +38,7 @@ async function show_node_data(site_id, date_start, date_end) {
   let site_name = site.name;
 
   console.log('site', site, site.neighbors)
+  console.log('date', date_start, date_end)
 
   //lookup neighbours
   let all_lists = []
@@ -64,7 +70,7 @@ async function show_node_data(site_id, date_start, date_end) {
     }
 
 
-
+    //starts x axis at midnight
     min_max.min_x = toTimestamp(date_start + " 00:00:00")
 
     //if queried data is for today, our x axis should still show 24hours
@@ -73,20 +79,16 @@ async function show_node_data(site_id, date_start, date_end) {
     }
 
 
-
-    //  try {
     let restructured_route_data = restructure_to_sublists(hist_data)
-    show_line_plot(restructured_route_data, min_max, site_name, date_start, date_end);
-    // } catch (err) {
-    //   console.log('Error message', err)
-    //   document.getElementById('test_graph').innerHTML = "No data received";
-    //   document.getElementById('test_graph').style.opacity = 1;
-    // }
 
-
+    try {
+      show_line_plot(restructured_route_data, min_max, site_name, date_start, date_end);
+    } catch (err) {
+      console.log('Error message', err)
+      document.getElementById('test_graph').innerHTML = "No data received";
+      document.getElementById('test_graph').style.opacity = 1;
+    }
   })
-
-
 }
 
 function toTimestamp(strDate) {
@@ -169,7 +171,7 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
   var margin = {
       top: 30,
       right: 100,
-      bottom: 35,
+      bottom: 45,
       left: 40
     },
     width = 500 - margin.left - margin.right,
@@ -195,15 +197,19 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     .range([0, width]);
 
   var x_axis = d3.axisBottom(x).ticks(27).tickFormat(function (d, i) {
+    let event = new Date(d * 1000);
 
-    let dateObject = new Date(d * 1000)
+    let options = {
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric'
+    };
+    let humanDateFormat = event.toLocaleDateString('en-GB', options)
 
-    let humanDateFormat = dateObject.toLocaleString() //2019-12-9 10:30:15
-
-    // console.log(d, i, humanDateFormat)
-    return humanDateFormat.slice(11, 18);
-    // return i+":00"//humanDateFormat.slice(11, 14) + ":00";
+    return humanDateFormat;
   });
+
 
   END = END == undefined ? '' : END;
   svg.append("text")
@@ -324,6 +330,7 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
 
       let link_id = "CAMBRIDGE_JTMS%7C" + d.name
 
+      //get a date that's a week ago
       let week_ago = (Date.parse(START) / 1000) - WEEK
       let new_ts = new Date(week_ago * 1000)
       let new_date = new_ts.getFullYear() + "-" + (new_ts.getMonth() + 1) + "-" + new_ts.getDate()
@@ -478,39 +485,39 @@ function get_site_metadata(SITE) {
     let tt_in, tt_out;
 
 
-try{
-    if (link_in.travelTime == undefined || link_in.travelTime == null) {
-      tt_in = link_in.normalTravelTime;
-      console.log('tt in failed', link_in)
-    } else {
-      tt_in = link_in.travelTime;
-    }
+    try {
+      if (link_in.travelTime == undefined || link_in.travelTime == null) {
+        tt_in = link_in.normalTravelTime;
+        console.log('tt in failed', link_in)
+      } else {
+        tt_in = link_in.travelTime;
+      }
 
-    let speed_in = parseInt((neighbour.links.in.length / tt_in) * TO_MPH);
-    console.log('journey iD:', neighbour.links.in, tt_in, speed_in)
-
-
-    if (link_out.travelTime == undefined || link_out.travelTime == null) {
-      tt_out = link_out.normalTravelTime;
-      console.log('tt our failed', link_out)
-    } else {
-      tt_out = link_out.travelTime;
-
-    }
-
-    let speed_out = parseInt((neighbour.links.out.length / tt_out) * TO_MPH);
-
-    console.log('journey iD:', neighbour.links.out, tt_out, speed_out)
-
-    const HALF_TAB = '&emsp;&emsp;'
-    const TAB = '&emsp;&emsp;&emsp;&emsp;'
+      let speed_in = parseInt((neighbour.links.in.length / tt_in) * TO_MPH);
+      console.log('journey iD:', neighbour.links.in, tt_in, speed_in)
 
 
-    let to = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + TAB + "<b>To:</b> " + "Current Speed: " + speed_in + "MPH" + "</div>";
-    let from = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + TAB + "<b>From:</b> " + "Current Speed: " + speed_out + "MPH" + "</div>";
+      if (link_out.travelTime == undefined || link_out.travelTime == null) {
+        tt_out = link_out.normalTravelTime;
+        console.log('tt our failed', link_out)
+      } else {
+        tt_out = link_out.travelTime;
 
-    neighbour_info += "<br>" + "<i>" + neighbour.site + "</i>" + to + from;
-  }catch{}
+      }
+
+      let speed_out = parseInt((neighbour.links.out.length / tt_out) * TO_MPH);
+
+      console.log('journey iD:', neighbour.links.out, tt_out, speed_out)
+
+      const HALF_TAB = '&emsp;&emsp;'
+      const TAB = '&emsp;&emsp;&emsp;&emsp;'
+
+
+      let to = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + TAB + "<b>To:</b> " + "Current Speed: " + speed_in + "MPH" + "</div>";
+      let from = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + TAB + "<b>From:</b> " + "Current Speed: " + speed_out + "MPH" + "</div>";
+
+      neighbour_info += "<br>" + "<i>" + neighbour.site + "</i>" + to + from;
+    } catch {}
   }
 
   let full_metadata = "<b>" + SITE.name + "</b>" + '<br>' +

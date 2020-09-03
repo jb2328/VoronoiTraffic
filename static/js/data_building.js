@@ -22,8 +22,9 @@ async function load_api_data() {
 
         let site_response = combined_api_reponse[0]
         let route_response = combined_api_reponse[1]
-        let journey_response = combined_api_reponse[3]
         let link_response = combined_api_reponse[2]
+        let journey_response = combined_api_reponse[3]
+
 
         all_sites = site_response.site_list;
         all_routes = route_response.route_list

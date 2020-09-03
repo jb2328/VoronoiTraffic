@@ -173,7 +173,7 @@ class Node {
             this.travelSpeed = currentSum / currentAverage.length;
         }
 
-
+        //double check
         this.speedDeviation = this.travelSpeed - this.historicSpeed;
 
     }

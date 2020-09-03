@@ -1,3 +1,5 @@
+//"use strict";
+
 // Javascript functions for displaying Bluetruth data
 
 /* eslint no-console: "off" */
@@ -20,6 +22,8 @@ var map, // The Leaflet map object itself
     speed_display = 'actual', // Line colour mode - 'actual', 'normal' or 'relative'
     line_map = {}; // Lookup link/route id to displayed polyline
 
+
+var selected_node;
 
 var all_sites, all_links, all_journeys = [];
 
@@ -52,6 +56,8 @@ var voronoi_cells;
 var bounds;
 
 const ICON_CLOSE_DIV="<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
+const ICON_CLOSE_AND_DESELECT="<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); selected_node=undefined; return false;'>x</span>"
+
 const ICON_LOADING='<img src="./static/images/loading_icon.gif "width="100px" height="100px" >';
 
 class VoronoiViz {
@@ -285,6 +291,8 @@ clock = get_clock().addTo(map)
     //also change so that zones would not mess up position
     //change so the api would not be reset
     map.on("viewreset moveend", drawVoronoi);
+    map.on("viewreset moveend", generate_hull);
+
 
 }
 
@@ -312,6 +320,7 @@ function draw_road(loaded_svg) {
 }
 
 function drawVoronoi() {
+
     d3.select('#cell_overlay').remove();
 
     // Reset the clock
@@ -425,7 +434,7 @@ function drawVoronoi() {
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
 
-    console.log('voronoi_polygons', readyVoronoiPolygons)
+    //console.log('voronoi_polygons', readyVoronoiPolygons)
     pathGroup.selectAll("g")
         .data(readyVoronoiPolygons)
         .enter()
@@ -458,12 +467,14 @@ function drawVoronoi() {
             }
         })
         .on('click', function(d,i){
-           
-         //d3.select(this).transition().duration(300).style('fill','black');
-             show_node_information(d);
-             console.log("CLICKED",d, d.id)
-             
-            select(d.data.acp_id)
+            console.log("CLICKED",d, d.id)
+            selected_node=d;
+
+            document.getElementById("selected_cell").style.opacity =1;
+            document.getElementById("selected_cell").innerHTML =ICON_CLOSE_AND_DESELECT+"<br>"+"<h1>"+d.data.name+"</h1>";
+            
+            show_node_information(d);
+            select_cell(d.data.acp_id)
         })
 
         .on('mouseover', function (d) {
@@ -619,8 +630,11 @@ function drawVoronoi() {
 
     changeModes();
 
-}
 
+    if(selected_node!=undefined){
+        select_cell(selected_node.data.acp_id);
+    }
+}
 
 var cell_mouseover = (cell) => {
     d3.select(cell).transition()
@@ -655,18 +669,18 @@ var cell_regular = (cell) => {
 
 
 
-var show_node_information=(d)=>{
-    document.getElementById("selected_cell").innerHTML ="<h1>"+d.data.name+"</h1>";
+var show_node_information=(d, START, END)=>{
     document.getElementById("test_graph").style.opacity =1;
     document.getElementById("test_graph").innerHTML =ICON_LOADING;
 
     let NODE= d.data.id;
 
     let today = new Date();
-    let START = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
-    let END = '2020-08-22'
+    if(START==undefined){
+        START = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+    }
 
-    show_node_data(NODE, START)
+    show_node_data(NODE, START,END)      
     show_node_metadata(NODE)
 }
 
@@ -968,6 +982,8 @@ function changeModes() {
         }
         if (this.value === "polygons") {
             drawVoronoi();
+            generate_hull();
+
         }
     });
 }
@@ -1176,9 +1192,17 @@ function generate_hull() {
 
         });
 
+        let concavity_threshold;
+        if(map._zoom<=12){
+            concavity_threshold=85
+        }
+        else{
+            concavity_threshold=185;
 
-        let defaultHull = d3.concaveHull().distance(85);
-        let paddedHull = d3.concaveHull().distance(85).padding(5);
+        }
+
+        let defaultHull = d3.concaveHull().distance(concavity_threshold);
+        let paddedHull = d3.concaveHull().distance(concavity_threshold).padding(5);
 
         CELL_GROUPS[group_id]['default_hull'] = defaultHull(point_pairs);
         CELL_GROUPS[group_id]['padded_hull'] = paddedHull(point_pairs);

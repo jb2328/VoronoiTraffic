@@ -270,14 +270,14 @@ function get_zone_metadata(ZONE) {
 
             show_node_information(highlighted_cell)
 
-            select(highlighted_cell.data.acp_id)
+            select_cell(highlighted_cell.data.acp_id)
 
         })
 }
 
-function select(id) {
+function select_cell(id) {
 
-    deselectAll()
+    deselect_all()
     let cell = document.getElementById(id)
 
     cell_clicked(cell)
@@ -287,7 +287,7 @@ function select(id) {
 
 }
 
-function selectAll() {
+function select_all() {
     let cells = document.getElementsByClassName("cell")
     for (let i = 0; i < cells.length; i++) {
 
@@ -297,7 +297,7 @@ function selectAll() {
 }
 
 
-function deselectAll() {
+function deselect_all() {
     let cells = document.getElementsByClassName("cell")
 
     for (let i = 0; i < cells.length; i++) {

@@ -14,12 +14,12 @@
   <!-- Leaflet -->
 
   <script src="/static/js/libs/leaflet.js"
-      integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
-      crossorigin="">
-   </script>
-   <script type="text/javascript" src="/static/js/libs/d3-concaveHull.js"></script>
+    integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+    crossorigin="">
+  </script>
+  <script type="text/javascript" src="/static/js/libs/d3-concaveHull.js"></script>
 
-   <link rel="stylesheet" href="/static/css/libs/leaflet.css" />
+  <link rel="stylesheet" href="/static/css/libs/leaflet.css" />
 
 
 
@@ -60,14 +60,14 @@
 <script type="text/javascript" src="/static/js/dijkstra.js"></script>
 
 <script type="text/javascript" src="/static/js/visualise.js"></script>
-<script type="text/javascript" src="/static/js/cell_groups.js" ></script>
+<script type="text/javascript" src="/static/js/cell_groups.js"></script>
 
-<script type="text/javascript" src="/static/js/horizontal_bar_chart.js" ></script>
-<script type="text/javascript" src="/static/js/scatter_node.js" defer ></script>
+<script type="text/javascript" src="/static/js/horizontal_bar_chart.js"></script>
+<script type="text/javascript" src="/static/js/scatter_node.js" defer></script>
 
 
 <script type="text/javascript">
-// var space_floorplan = new SpaceFloorplan();
+  // var space_floorplan = new SpaceFloorplan();
 
   $(function () {
 
@@ -75,19 +75,28 @@
       "showDropdowns": true,
       "timePicker": true,
       "timePickerIncrement": 15,
-      "startDate": "02/18/2020",
-      "endDate": "02/24/2020",
+      "startDate": "09/01/2020",//change to current date
+      "endDate": "09/03/2020",
       "opens": "center"
     }, function (start, end, label) {
       //let URLhistoric_test_url='https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/history/'+link_id+'/?start_date='+start_date+'&end_date='+end_date
       console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') +
         ' (predefined range: ' + label + ')');
       console.log(start, start._d.getTime(), end, end._d.getTime()); //.getTime() / 1000
+      let start_date = start.format('YYYY-MM-DD');
+      let end_date = end.format('YYYY-MM-DD');
+      show_node_information(selected_node, start_date, end_date);
+
     });
 
 
     $('input[name="datefilter"]').on('apply.daterangepicker', function (ev, picker) {
-      $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+      $(this).val(picker.startDate.format('YYYY-MM-DD') + ' - ' + picker.endDate.format('YYYY-MM-DD'));
+      let start_date = picker.startDate.format('YYYY-MM-DD');
+      let end_date = picker.endDate.format('YYYY-MM-DD')
+      console.log('applied', start_date,end_date)
+      show_node_information(selected_node, start_date, end_date);
+
     });
 
     $('input[name="datefilter"]').on('cancel.daterangepicker', function (ev, picker) {
