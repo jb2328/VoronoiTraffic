@@ -79,9 +79,10 @@ async function show_node_data(site_id, date_start, date_end) {
     }
 
 
-    let restructured_route_data = restructure_to_sublists(hist_data)
 
     try {
+      let restructured_route_data = restructure_to_sublists(hist_data)
+
       show_line_plot(restructured_route_data, min_max, site_name, date_start, date_end);
     } catch (err) {
       console.log('Error message', err)
@@ -210,15 +211,15 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     return humanDateFormat;
   });
 
-
-  END = END == undefined ? '' : END;
+  console.log(START,END, 'startend')
+  END = (END == undefined) || (END == START) ? '' : END;
   svg.append("text")
     .attr("x", (width / 2))
     .attr("y", 0 - (margin.top / 2))
     .attr("text-anchor", "middle")
     .style("font-size", "12px")
     .style("text-decoration", "none") //underline  
-    .text("Travel time for " + site_name + " on " + START + ' ' + END);
+    .text(site_name + " on " + START + ' ' + END);
 
   // text label for the y axis
   svg.append("text")

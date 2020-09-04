@@ -55,7 +55,6 @@
 
 <script type="text/javascript" src="/static/js/async_functions.js"></script>
 
-<script type="text/javascript" src="/static/js/setup_env.js"></script>
 <script type="text/javascript" src="/static/js/boundarySites.js"></script>
 <script type="text/javascript" src="/static/js/dijkstra.js"></script>
 
@@ -68,16 +67,16 @@
 
 <script type="text/javascript">
   // var space_floorplan = new SpaceFloorplan();
-
+  let current_date = new Date().toISOString().slice(0, 10).split('-').join('/');
   $(function () {
 
     $('input[name="datefilter"]').daterangepicker({
-      "showDropdowns": true,
-      "timePicker": true,
-      "timePickerIncrement": 15,
-      "startDate": "09/01/2020",//change to current date
-      "endDate": "09/03/2020",
-      "opens": "center"
+      showDropdowns: true,
+      timePicker: true,
+      format: 'dd/mm/yy' ,
+      locale: { format: 'DD/MM/YYYY' },
+      timePickerIncrement: 15,
+      opens: "center"
     }, function (start, end, label) {
       //let URLhistoric_test_url='https://tfc-app1.cl.cam.ac.uk/api/v1/traffic/btjourney/history/'+link_id+'/?start_date='+start_date+'&end_date='+end_date
       console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') +
@@ -94,7 +93,7 @@
       $(this).val(picker.startDate.format('YYYY-MM-DD') + ' - ' + picker.endDate.format('YYYY-MM-DD'));
       let start_date = picker.startDate.format('YYYY-MM-DD');
       let end_date = picker.endDate.format('YYYY-MM-DD')
-      console.log('applied', start_date,end_date)
+      console.log('applied', start_date, end_date)
       show_node_information(selected_node, start_date, end_date);
 
     });

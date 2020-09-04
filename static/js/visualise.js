@@ -270,21 +270,15 @@ clock = get_clock().addTo(map)
 
 
     var line_graph_element=create_element('test_graph','bottomleft')
+    var datepicker_widget =create_element('datepicker','bottomleft',datepicker_text)
     var metadata_element=create_element('metadata_table','bottomleft')
-
 
     var selected_cell=create_element('selected_cell','topright','<h4>Select a Cell</h4>')
 
-
     var info_widget =create_element('info_bar','topright',info_viz_text)
-    var datepicker_widget =create_element('datepicker','topright',datepicker_text)
 
     var horizontal_chart=create_element('bar_chart','topright',ICON_LOADING)
     var zone_table=create_element('zone_table','bottomright')
-
-
-
-
 
     
 
@@ -472,6 +466,8 @@ function drawVoronoi() {
 
             document.getElementById("selected_cell").style.opacity =1;
             document.getElementById("selected_cell").innerHTML =ICON_CLOSE_AND_DESELECT+"<br>"+"<h1>"+d.data.name+"</h1>";
+            //document.getElementById("datepicker").style.opacity =1;
+            //document.getElementById("datepicker").innerHTML =datepicker_text;
             
             show_node_information(d);
             select_cell(d.data.acp_id)
@@ -675,9 +671,8 @@ var show_node_information=(d, START, END)=>{
 
     let NODE= d.data.id;
 
-    let today = new Date();
     if(START==undefined){
-        START = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+        START = new Date().toISOString().slice(0,10)
     }
 
     show_node_data(NODE, START,END)      
@@ -1192,6 +1187,7 @@ function generate_hull() {
 
         });
 
+        //perhaps 185 for all will just work as well
         let concavity_threshold;
         if(map._zoom<=12){
             concavity_threshold=85
@@ -1200,7 +1196,7 @@ function generate_hull() {
             concavity_threshold=185;
 
         }
-
+        
         let defaultHull = d3.concaveHull().distance(concavity_threshold);
         let paddedHull = d3.concaveHull().distance(concavity_threshold).padding(5);
 
@@ -1236,6 +1232,9 @@ function get_outline(zone_id) {
         .y(function (d, i) {
             return d.y;
         });
+        //.curve(d3.curveBasisClosed);
+        //.curve(d3.curveCatmullRomClosed.alpha(0.95)); //d3.curveCardinal.tension(0.1)//d3.curveNatural
+        
     if (zone_id != undefined) {
         cell_outlines.append("g")
             .append("path")
