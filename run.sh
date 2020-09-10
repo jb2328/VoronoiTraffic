@@ -1,6 +1,7 @@
 #!/bin/bash
 ls
 echo 'launching Voronoi Traffic'
-python3 -m http.server
+source venvonoi/bin/activate
+python3 app.py
 
 exec bash
