@@ -8,6 +8,11 @@
     
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
+    <!-- Page local script -->
+    <script type="text/javascript">
+    var url_node='{{NODE}}';
+    var url_date='{{DATE}}';
+    </script>
 
     <!-- D3 stuff -->
     <!-- <script src="https://d3js.org/d3.v5.min.js"></script> -->
@@ -29,12 +34,48 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='/css/libs/leaflet.css') }}">
 
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='/css/visualise.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='/css/date_picker_top.css') }}">
 
+ 
 </head>
 
 <body>
+    <div class="selection_wrapper">
+
+        <form  id="selection_form">
+            <div class="nav_date" id="back_1_week">&lt; Week</div>
+            <div class="nav_date" id="back_1_day">&lt; Day</div>
+            <div class="current_date">
+
+            <div id='date_now'></div>
+        </div>
+            <div class="nav_date" id="forward_1_day">Day &gt;</div>
+            <div class="nav_date" id="forward_1_week">Week &gt;</div>
+        </form>
+        
+        </div> <!-- end selection_wrapper -->
+
     <div id="map" style="height: 98vh; border: 1px solid black;"></div>
+
+    
 </body>
+
+       <!-- Page local script -->
+       <script type="text/javascript">
+        let date=new Date()
+        let month = date.toLocaleString('default', { month: 'long' });
+
+        //var API_READINGS = '{{ API_READINGS }}';
+        //var ACP_ID = '{{ ACP_ID }}';
+        //var SENSOR_REALTIME = '{{ SENSOR_REALTIME }}'; // URL for rtmonitor websocket
+        var YYYY = date.getFullYear();//'{{ YYYY }}';
+        var MM = date.getMonth()+1;//'{{ MM }}';
+        var DD = date.getDate();//'{{ DD }}';
+        var FEATURE = '';//'{{ FEATURE }}'; // e.g. 'temperature'
+
+        document.getElementById('date_now').innerHTML = "<h2>"+DD+" "+month+" "+YYYY+"</h2>"
+
+    </script>
 
 <!-- SECRETS -->
 <script type="text/javascript" src="{{ url_for('static',filename='/js/secrets.js') }}"></script>

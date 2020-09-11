@@ -46,8 +46,14 @@ async function historical_link(link_id, date1, date2) {
 ### Run
 
 ```
+git clone https://github.com/jb2328/VoronoiTraffic.git
 cd VoronoiTraffic
-python3 -m http.server
+python3 -m venv venvonoi
+source venvonoi/bin/activate
+python3 -m pip install pip --upgrade
+python3 -m pip install wheel
+python3 -m pip install -r requirements.txt
+bash run.sh
 ```
 
 

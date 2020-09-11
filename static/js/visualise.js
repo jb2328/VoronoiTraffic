@@ -55,6 +55,8 @@ var voronoi_cells;
 
 var bounds;
 
+var datepicker_text;
+
 const ICON_CLOSE_DIV="<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
 const ICON_CLOSE_AND_DESELECT="<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); selected_node=undefined; return false;'>x</span>"
 
@@ -264,13 +266,16 @@ clock = get_clock().addTo(map)
     "</form>" +
     "</div>";
 
-    let datepicker_text= '<h4>Pick time and Date</h4>' +
+    datepicker_text= '<h4>Pick time and Date</h4>' +
     '<br>' +
     '<input type="text" name="datefilter" id="datepicker" value="" />';
 
 
     var line_graph_element=create_element('test_graph','bottomleft')
-    var datepicker_widget =create_element('datepicker','bottomleft',datepicker_text)
+    var datepicker_widget =create_element('datepicker','bottomleft',datepicker_text)//datepicker_text
+    document.getElementById("datepicker").style.opacity=0;
+    set_nav_date_visible(0)
+
     var metadata_element=create_element('metadata_table','bottomleft')
 
     var selected_cell=create_element('selected_cell','topright','<h4>Select a Cell</h4>')
@@ -461,16 +466,18 @@ function drawVoronoi() {
             }
         })
         .on('click', function(d,i){
-            console.log("CLICKED",d, d.id)
+            console.log("CLICKED",d, d.data.acp_id)
             selected_node=d;
 
             document.getElementById("selected_cell").style.opacity =1;
             document.getElementById("selected_cell").innerHTML =ICON_CLOSE_AND_DESELECT+"<br>"+"<h1>"+d.data.name+"</h1>";
-            //document.getElementById("datepicker").style.opacity =1;
-            //document.getElementById("datepicker").innerHTML =datepicker_text;
+            document.getElementById("datepicker").style.opacity =1;
+            set_nav_date_visible(1);
             
             show_node_information(d);
             select_cell(d.data.acp_id)
+
+            update_url(d.data.acp_id, DD+"-"+MM+"-"+YYYY)
         })
 
         .on('mouseover', function (d) {
@@ -1269,4 +1276,77 @@ function get_outline(zone_id) {
         }
     }
 
+}
+function set_nav_date_visible(trigger){
+    let nav_date_list=document.getElementsByClassName('nav_date')
+            for(let i=0;i<nav_date_list.length;i++){
+                nav_date_list[i].style.opacity=trigger;
+            }
+}
+
+
+
+// ************************************************************************************
+// ************** Date forwards / backwards function             *********************
+// ************************************************************************************
+
+// move page to new date +n days from current date
+function date_shift(n, feature_id)
+{
+    let year, month, day;
+    console.log('date_shift()');
+    if (YYYY == '') {
+        year = plot_date.slice(0,4);
+        month = plot_date.slice(5,7);
+        day = plot_date.slice(8,10);
+    } else {
+        year = YYYY;
+        month = MM;
+        day = DD;
+    }
+
+    let new_date = new Date(year,month-1,day); // as loaded in page template config_ values;
+
+    new_date.setDate(new_date.getDate()+n);
+
+    let new_year = new_date.getFullYear();
+    let new_month = ("0" + (new_date.getMonth()+1)).slice(-2);
+    let new_day = ("0" + new_date.getDate()).slice(-2);
+
+    console.log(new_year+'-'+new_month+'-'+new_day);
+    window.location.href = '?date='+new_year+'-'+new_month+'-'+new_day+'&feature='+feature_id;
+}
+
+
+
+function update_url(node, date) {
+    if(date==undefined){
+        let new_date=new Date()
+        date=new_date.getDate()+"-"+new_date.getMonth()+1+"-"+new_date.getFullYear();
+    }
+    var searchParams = new URLSearchParams(window.location.search)
+    searchParams.set("node", node);
+    searchParams.set("date", date);
+    var newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
+    window.history.pushState(null, '', newRelativePathQuery);
+}
+
+
+function onchange_feature_select(e, readings, features) {
+    console.log("onchange_feature_select",window.location.href);
+    //let features = sensor_metadata["acp_type_info"]["features"];
+    let feature_id = feature_select_el.value;
+
+    set_date_onclicks(feature_id);
+    // Change the URL in the address bar
+    update_url(feature_id,plot_date);
+ //   draw_chart(readings, features[feature_id]);
+}
+
+function set_date_onclicks(node_id) {
+        // set up onclick calls for day/week forwards/back buttons
+        document.getElementById("back_1_week").onclick = function () { date_shift(-7, node_id) };
+        document.getElementById("back_1_day").onclick = function () { date_shift(-1, node_id) };
+        document.getElementById("forward_1_week").onclick = function () { date_shift(7, node_id) };
+        document.getElementById("forward_1_day").onclick = function () { date_shift(1, node_id) };
 }
