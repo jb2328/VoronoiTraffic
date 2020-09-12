@@ -477,7 +477,8 @@ function drawVoronoi() {
             show_node_information(d);
             select_cell(d.data.acp_id)
 
-            update_url(d.data.acp_id, DD+"-"+MM+"-"+YYYY)
+            onchange_feature_select(d.data.acp_id, DD+"-"+MM+"-"+YYYY)
+            //update_url(d.data.acp_id, DD+"-"+MM+"-"+YYYY)
         })
 
         .on('mouseover', function (d) {
@@ -1291,7 +1292,7 @@ function set_nav_date_visible(trigger){
 // ************************************************************************************
 
 // move page to new date +n days from current date
-function date_shift(n, feature_id)
+function date_shift(n, node_id)
 {
     let year, month, day;
     console.log('date_shift()');
@@ -1311,10 +1312,19 @@ function date_shift(n, feature_id)
 
     let new_year = new_date.getFullYear();
     let new_month = ("0" + (new_date.getMonth()+1)).slice(-2);
+    let new_month_long = new_date.toLocaleString('default', { month: 'long' });
+
     let new_day = ("0" + new_date.getDate()).slice(-2);
 
-    console.log(new_year+'-'+new_month+'-'+new_day);
-    window.location.href = '?date='+new_year+'-'+new_month+'-'+new_day+'&feature='+feature_id;
+    let query_date=new_day+"-"+new_month+"-"+new_year;
+    //window.location.href = '?date='+new_year+'-'+new_month+'-'+new_day+'&feature='+feature_id;
+    document.getElementById('date_now').innerHTML = "<h2>"+new_day+" "+new_month_long+" "+new_year+"</h2>"
+    //let node_element= SITE_DB.find(element=>element.acp_id==node_id)
+    console.log(node_element,node_id,new_year+'-'+new_month+'-'+new_day);
+    let node_element=d3.select('#'+node_id)
+    show_node_information(node_element, query_date);
+
+
 }
 
 
@@ -1332,14 +1342,13 @@ function update_url(node, date) {
 }
 
 
-function onchange_feature_select(e, readings, features) {
+function onchange_feature_select(node_id, date) {
     console.log("onchange_feature_select",window.location.href);
     //let features = sensor_metadata["acp_type_info"]["features"];
-    let feature_id = feature_select_el.value;
 
-    set_date_onclicks(feature_id);
+    set_date_onclicks(node_id);
     // Change the URL in the address bar
-    update_url(feature_id,plot_date);
+    update_url(node_id,date);
  //   draw_chart(readings, features[feature_id]);
 }
 
