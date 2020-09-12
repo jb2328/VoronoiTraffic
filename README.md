@@ -54,6 +54,7 @@ python3 -m pip install pip --upgrade
 python3 -m pip install wheel
 python3 -m pip install -r requirements.txt
 bash run.sh
+open localhost:6400
 ```
 
 
