@@ -228,8 +228,6 @@ function show_vertical_bar(data) {
 }
 
 
-
-// d3.select('#metadata_table')._groups[0][0].innerHTML = get_site_metadata(SITE)
 function get_zone_metadata(ZONE) {
     let zone_children = SITE_DB.filter(x => x.parent === ZONE);
     let child_info = "<b>Inner nodes for:</b> " + "<b style='color:" + CELL_GROUPS[ZONE].color + "'>" + ZONE + "</b>" + "<br>";
@@ -273,35 +271,4 @@ function get_zone_metadata(ZONE) {
             select_cell(highlighted_cell.data.acp_id)
 
         })
-}
-
-function select_cell(id) {
-
-    deselect_all()
-    let cell = document.getElementById(id)
-
-    cell_clicked(cell)
-
-
-    //    d3.select('#' + id).style('stroke-opacity', 1).style('stroke', 'black').style('stroke-width', 4)
-
-}
-
-function select_all() {
-    let cells = document.getElementsByClassName("cell")
-    for (let i = 0; i < cells.length; i++) {
-
-        cell_clicked(cells[i])
-    }
-
-}
-
-
-function deselect_all() {
-    let cells = document.getElementsByClassName("cell")
-
-    for (let i = 0; i < cells.length; i++) {
-
-        cell_regular(cells[i])
-    }
 }

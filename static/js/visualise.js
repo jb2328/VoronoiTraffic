@@ -619,7 +619,7 @@ var cell_mouseover = (cell) => {
         .style('stroke', 'black')
         //.style('stroke-width', 10)
         .style("stroke-opacity", 1)
-        .style("fill-opacity", 1);
+        .style("fill-opacity", 0.85);
 }
 var cell_mouseout = (cell) => {
     d3.select(cell).transition()
@@ -729,40 +729,37 @@ function animateSVGMovement(path, outboundLength, dur, dir) {
 
 }
 
-function drawLink(link, dur, col) {
-    //lineGroup.remove();
+function drawLink(link, dur) {
 
     lineGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
     let connected_sites = all_links.find(x => x.id === link).sites;
+
     let from = SITE_DB.find(x => x.id === connected_sites[0]);
     let to = SITE_DB.find(x => x.id === connected_sites[1]);
 
-    links_drawn.push(link);
-
-    let direction = links_drawn.includes(inverseLink(link)) ? "red" : "blue";
+    let direction = links_drawn.includes(inverseLink(link)) ? "in" : "out";
 
     let values = getMinMax();
-    let deviation = calculateDeviation(link)
-
-    //console.log(deviation);
+    let deviation = calculateDeviation(link) //negative slower, positive faster
 
     var scale = d3.scaleLinear()
         .domain([values.min, values.max])
-        .range([1, 5]);
-    let strokeWeight = scale(deviation);
-    let color = col == undefined ? setColor(strokeWeight) : col;
-    //let strokeWeight = '5px';
+        .range([values.min, values.max]);
+        
+    let color = setColor(scale(deviation));
+   // let color = col == undefined ? setColor(strokeWeight) : col;
+    let strokeWeight = 5;
 
-    //console.log(deviation, strokeWeight);
+    console.log('DEVIATION:',link,deviation, color);
 
-    let inbound = lineGroup_(from, to, direction, strokeWeight, color); //setColor(strokeWeight)
-    let lineLength = inbound.node().getTotalLength();
+    let link_line = generate_arc(from, to, direction, strokeWeight, color); //setColor(strokeWeight)
+    let line_length = link_line.node().getTotalLength();
 
+    links_drawn.push(link);
 
-    animateMovement(inbound, lineLength, dur);
-    //animateMovement(outbound, lineLength,350);
+    animateMovement(link_line, line_length, dur);
 
 }
 
@@ -780,11 +777,11 @@ function inverseLink(link) {
 
 
 
-function lineGroup_(A, B, direction, strokeWeight, stroke) {
+function generate_arc(A, B, direction, strokeWeight, stroke) {
 
     return lineGroup
         .append('path')
-        .attr('d', curvedLine(A.x, A.y, B.x, B.y, direction === "red" ? 1 : -1))
+        .attr('d', curvedLine(A.x, A.y, B.x, B.y, direction === "in" ? 1 : -1))
         .attr('class', 'arc_line')
         .style("fill", "none")
         .style("fill-opacity", 0)
@@ -1038,16 +1035,6 @@ function generateGraph(start, finish) {
     return graph;
 }
 
-// function find_old_link_from_sites(sites){
-//     var siteA=sites[0]
-//     var siteB=sites[1]
-//     old_links=old.json()["links"]
-//     for links in old_links:
-//         if links['sites'][0]==siteA and links['sites'][1]==siteB:
-//             return links
-//     return undefined
-// }
-
 function arraysEqual(a, b) {
     if (a === b) return true;
     if (a == null || b == null) return false;
@@ -1064,6 +1051,7 @@ function arraysEqual(a, b) {
     return true;
 }
 
+//calculates speed deviation for a given link
 function calculateDeviation(link) {
     let dist = all_links.find(x => x.id === link).length;
     let travelTime, normalTravelTime;
@@ -1073,33 +1061,25 @@ function calculateDeviation(link) {
     } catch {
         return undefined
     }
-    //TO FIX, MAKE IT NULL
+
     if (travelTime == null || travelTime == undefined) {
         travelTime = normalTravelTime;
     }
+
     let current = (dist / travelTime) * TO_MPH;
     let normal = (dist / normalTravelTime) * TO_MPH;
 
+    //negative speed is slower, positive speed is faster
     return current - normal;
 
 }
 
-function getNeighborObject(i) {
 
-    let obj = {};
-
-    neighbors.forEach((neighbor) => {
-        obj[neighbor.name] = neighbor.dist;
-
-    });
-
-    return obj;
-}
-
-
+//a general mapping function that takes a value and interpolates it
+//in a different range
 function map_values(value, start1, stop1, start2, stop2) {
     let result = start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
-    //console.log(result);
+
     if (result > start2) {
         result = start2;
     }
@@ -1109,36 +1089,48 @@ function map_values(value, start1, stop1, start2, stop2) {
     return result;
 }
 
-
+//creates a d3 color interpolator 
+//from the min/max values of the data
 function setColorRange() {
+    
     let values = getMinMax();
     let min = values.min;
     let max = values.max;
 
-
-    console.log("new min_max ", min, max);
-
-    return d3.scaleSequential().domain([min, max]) //min, max -5, 10
+    //create a d3 color interpolator
+    return d3.scaleSequential().domain([min, max])
         .interpolator(d3.interpolateRdYlGn);
 }
 
+//computs min and max values from the data
+//this lets us create appropriate color ranges
 function getMinMax() {
+    //finds min/max from the *selected* setting 
+    //(can be speed deviation, current speed, normal speed)
     let findMax = (ma, v) => Math.max(ma, v.selected)
     let findMin = (mi, v) => Math.min(mi, v.selected)
+
     let max = SITE_DB.reduce(findMax, -Infinity)
     let min = SITE_DB.reduce(findMin, Infinity)
+    
+    //we used placeholder value during development
+    //to privide higher color differences
+
     return {
         "min": min, //-5
         "max": max  //10
     };
 }
 
+//computes the slope on which we place the arc lines
+//indicate links between sites
 function slope(x, x1, y1, x2, y2) {
     let midX = (x1 + x2) / 2;
     let midY = (y1 + y2) / 2;
     let slope = (y2 - y1) / (x2 - x1);
     return (-1 / slope) * (x - midX) + midY;
 }
+
 function generate_hull() {
 
     //get a list of group ids  e.g (north, south, center etc)
@@ -1330,4 +1322,36 @@ function set_date_onclicks(node_id) {
         document.getElementById("back_1_day").onclick = function () { date_shift(-1, node_id) };
         document.getElementById("forward_1_week").onclick = function () { date_shift(7, node_id) };
         document.getElementById("forward_1_day").onclick = function () { date_shift(1, node_id) };
+}
+
+
+function select_cell(id) {
+
+    deselect_all()
+    let cell = document.getElementById(id)
+
+    cell_clicked(cell)
+
+
+    //    d3.select('#' + id).style('stroke-opacity', 1).style('stroke', 'black').style('stroke-width', 4)
+
+}
+
+function select_all() {
+    let cells = document.getElementsByClassName("cell")
+    for (let i = 0; i < cells.length; i++) {
+
+        cell_clicked(cells[i])
+    }
+
+}
+
+
+function deselect_all() {
+    let cells = document.getElementsByClassName("cell")
+
+    for (let i = 0; i < cells.length; i++) {
+
+        cell_regular(cells[i])
+    }
 }
