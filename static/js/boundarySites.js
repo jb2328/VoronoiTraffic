@@ -112,6 +112,7 @@ function getCircle() {
     let a = 0;
     let r = 700;
     let arr = [];
+    let newPts=[];
     for (let t = 0; t < 6.28; t += 0.05) {
         let x = a + r * Math.cos(t);
         let y = a + r * Math.sin(t);

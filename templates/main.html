@@ -28,6 +28,28 @@
     <script type="text/javascript" src="{{ url_for('static',filename='/js/libs/moment.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='/js/libs/daterangepicker.min.js') }}"></script>
 
+<!-- SECRETS -->
+<script type="text/javascript" src="{{ url_for('static',filename='/js/secrets.js') }}"></script>
+
+<!-- Our scripts -->
+<script type="text/javascript" src="{{ url_for('static',filename='/js/node_class.js') }}"></script>
+
+<script type="text/javascript" src="{{ url_for('static',filename='/js/data_building.js') }}"></script>
+
+<script type="text/javascript" src="{{ url_for('static',filename='/js/async_functions.js') }}"></script>
+
+<script type="text/javascript" src="{{ url_for('static',filename='/js/boundarySites.js') }}"></script>
+
+<script type="text/javascript" src="{{ url_for('static',filename='/js/dijkstra.js') }}"></script>
+
+
+<script type="text/javascript" src="{{ url_for('static',filename='/js/cell_groups.js') }}"></script>
+
+<script type="text/javascript" src="{{ url_for('static',filename='/js/horizontal_bar_chart.js') }}"></script>
+
+<script type="text/javascript" src="{{ url_for('static',filename='/js/scatter_node.js') }}" defer></script>
+
+
 
     <!-- Our style -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='/css/libs/daterangepicker.css') }}">
@@ -35,6 +57,9 @@
 
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='/css/visualise.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='/css/date_picker_top.css') }}">
+
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/date_picker.js') }}"></script>
+
 
  
 </head>
@@ -57,49 +82,26 @@
 
     <div id="map" style="height: 98vh; border: 1px solid black;"></div>
 
-    
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/visualise.js') }}"></script>
+<!-- Page local script -->
+<script type="text/javascript">
+    let date=new Date()
+    let month = date.toLocaleString('default', { month: 'long' });
+  
+    //var API_READINGS = '{{ API_READINGS }}';
+    //var ACP_ID = '{{ ACP_ID }}';
+    //var SENSOR_REALTIME = '{{ SENSOR_REALTIME }}'; // URL for rtmonitor websocket
+    var YYYY = date.getFullYear();//'{{ YYYY }}';
+    var MM = date.getMonth()+1;//'{{ MM }}';
+    var DD = date.getDate();//'{{ DD }}';
+    var FEATURE = '';//'{{ FEATURE }}'; // e.g. 'temperature'
+  
+    document.getElementById('date_now').innerHTML = "<h2>"+DD+" "+month+" "+YYYY+"</h2>"
+  
+  </script>
+  
 </body>
 
-       <!-- Page local script -->
-       <script type="text/javascript">
-        let date=new Date()
-        let month = date.toLocaleString('default', { month: 'long' });
-
-        //var API_READINGS = '{{ API_READINGS }}';
-        //var ACP_ID = '{{ ACP_ID }}';
-        //var SENSOR_REALTIME = '{{ SENSOR_REALTIME }}'; // URL for rtmonitor websocket
-        var YYYY = date.getFullYear();//'{{ YYYY }}';
-        var MM = date.getMonth()+1;//'{{ MM }}';
-        var DD = date.getDate();//'{{ DD }}';
-        var FEATURE = '';//'{{ FEATURE }}'; // e.g. 'temperature'
-
-        document.getElementById('date_now').innerHTML = "<h2>"+DD+" "+month+" "+YYYY+"</h2>"
-
-    </script>
-
-<!-- SECRETS -->
-<script type="text/javascript" src="{{ url_for('static',filename='/js/secrets.js') }}"></script>
-
-<!-- Our scripts -->
-<script type="text/javascript" src="{{ url_for('static',filename='/js/node_class.js') }}"></script>
-
-<script type="text/javascript" src="{{ url_for('static',filename='/js/data_building.js') }}"></script>
-
-<script type="text/javascript" src="{{ url_for('static',filename='/js/async_functions.js') }}"></script>
-
-<script type="text/javascript" src="{{ url_for('static',filename='/js/boundarySites.js') }}"></script>
-
-<script type="text/javascript" src="{{ url_for('static',filename='/js/dijkstra.js') }}"></script>
-
-<script type="text/javascript" src="{{ url_for('static',filename='/js/visualise.js') }}"></script>
-
-<script type="text/javascript" src="{{ url_for('static',filename='/js/cell_groups.js') }}"></script>
-
-<script type="text/javascript" src="{{ url_for('static',filename='/js/horizontal_bar_chart.js') }}"></script>
-
-<script type="text/javascript" src="{{ url_for('static',filename='/js/scatter_node.js') }}" defer></script>
-
-<script type="text/javascript" src="{{ url_for('static',filename='/js/date_picker.js') }}"></script>
 
 
 </html>

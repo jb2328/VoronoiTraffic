@@ -1,49 +1,24 @@
-//"use strict";
-
-// Javascript functions for displaying Bluetruth data
-
-/* eslint no-console: "off" */
-/*global $, L, LOCATIONS_URL, JOURNEYS_URL, MB_ACCESS_TOKEN, TF_API_KEY */
+"use strict";
 
 // m/sec to mph
-
 //const TO_MPH = 2.23694;
 
 
 // Script state globals
 var map, // The Leaflet map object itself
-    sites_layer, // layer containing the sensor sites
-    links_layer, // Layer containing the point to point links
-    compound_routes_layer, // Layer containing the compound routes
-    voronoi_layer,
-    layer_control, // The layer control
-    clock, // The clock control
-    hilighted_line, // The currently highlighted link or route
-    speed_display = 'actual', // Line colour mode - 'actual', 'normal' or 'relative'
-    line_map = {}; // Lookup link/route id to displayed polyline
+    clock; // The clock control
 
+var topLeft;
 
 var selected_node;
 
 var all_sites, all_links, all_journeys = [];
 
-var minmax, myColors;
-//var SITE_DB = [];
 var links_drawn = [];
 var links_drawn_SVG = [];
 
-var newPts = [];
-
 var BOUNDARY_DB = [];
 var boundaryPoints = [];
-
-var combined = [];
-
-var points = [];
-points = all_sites;
-
-
-var voronoi, adjustedSites, vertices;
 
 var pathGroup;
 var setColor;
@@ -52,10 +27,6 @@ var selectedSites = [];
 
 var lineGroup, cell_outlines, dijkstraGroup, road_group;
 var voronoi_cells;
-
-var bounds;
-
-var datepicker_text;
 
 const ICON_CLOSE_DIV="<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
 const ICON_CLOSE_AND_DESELECT="<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); selected_node=undefined; return false;'>x</span>"
@@ -266,7 +237,7 @@ clock = get_clock().addTo(map)
     "</form>" +
     "</div>";
 
-    datepicker_text= '<h4>Pick time and Date</h4>' +
+    var datepicker_text= '<h4>Pick time and Date</h4>' +
     '<br>' +
     '<input type="text" name="datefilter" id="datepicker" value="" />';
 
@@ -319,6 +290,7 @@ function draw_road(loaded_svg) {
 }
 
 function drawVoronoi() {
+    console.log('executing DRAW VORONOI')
 
     d3.select('#cell_overlay').remove();
 
@@ -326,12 +298,13 @@ function drawVoronoi() {
     clock.update();
 
 
-    bounds = map.getBounds(),
-        topLeft = map.latLngToLayerPoint(bounds.getNorthWest()),
-        bottomRight = map.latLngToLayerPoint(bounds.getSouthEast()),
-        drawLimit = bounds.pad(0.4);
+    var bounds = map.getBounds();
+    topLeft = map.latLngToLayerPoint(bounds.getNorthWest());
+    var bottomRight = map.latLngToLayerPoint(bounds.getSouthEast()),
+    drawLimit = bounds.pad(0.4);
 
-    filteredPoints = [];
+    console.log('topLeft', topLeft)
+    var filteredPoints = [];
 
     //voronoi center points - bluetooth sensor locations
     filteredPoints = all_sites.filter(function (d, i) {
@@ -759,7 +732,6 @@ function animateSVGMovement(path, outboundLength, dur, dir) {
 function drawLink(link, dur, col) {
     //lineGroup.remove();
 
-
     lineGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
@@ -928,7 +900,7 @@ function colorTransition(value) {
     SITE_DB.forEach((element) => {
         element.setVisualisation(value);
     });
-    setColor = setColorRange();
+    var setColor = setColorRange();
 
     pathGroup.selectAll(".cell")
         .transition()
@@ -1020,11 +992,9 @@ function drawRoutes() {
 }
 
 
-function generateGraph(s, f) {
+function generateGraph(start, finish) {
 
     var graph = {};
-    start = s; //.name;
-    finish = f; //.name;
 
     SITE_DB.forEach((element) => {
 
@@ -1316,12 +1286,14 @@ function date_shift(n, node_id)
 
     let new_day = ("0" + new_date.getDate()).slice(-2);
 
-    let query_date=new_day+"-"+new_month+"-"+new_year;
-    //window.location.href = '?date='+new_year+'-'+new_month+'-'+new_day+'&feature='+feature_id;
+    let query_date=new_year+"-"+new_month+"-"+new_day;
     document.getElementById('date_now').innerHTML = "<h2>"+new_day+" "+new_month_long+" "+new_year+"</h2>"
-    //let node_element= SITE_DB.find(element=>element.acp_id==node_id)
+    
+    let node_element={};
+    node_element['data']= SITE_DB.find(x => x.acp_id === node_id);
+
     console.log(node_element,node_id,new_year+'-'+new_month+'-'+new_day);
-    let node_element=d3.select('#'+node_id)
+
     show_node_information(node_element, query_date);
 
 
