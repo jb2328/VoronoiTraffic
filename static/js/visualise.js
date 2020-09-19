@@ -18,7 +18,7 @@ var links_drawn = [];
 var links_drawn_SVG = [];
 
 var BOUNDARY_DB = [];
-var boundaryPoints = [];
+var boundary_points = [];
 
 var pathGroup;
 var setColor;
@@ -28,10 +28,10 @@ var selectedSites = [];
 var lineGroup, cell_outlines, dijkstraGroup, road_group;
 var voronoi_cells;
 
-const ICON_CLOSE_DIV="<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
-const ICON_CLOSE_AND_DESELECT="<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); selected_node=undefined; return false;'>x</span>"
+const ICON_CLOSE_DIV = "<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
+const ICON_CLOSE_AND_DESELECT = "<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); selected_node=undefined; return false;'>x</span>"
 
-const ICON_LOADING='<img src="./static/images/loading_icon.gif "width="100px" height="100px" >';
+const ICON_LOADING = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >';
 
 class VoronoiViz {
 
@@ -42,65 +42,102 @@ class VoronoiViz {
         // this.viz_tools = new VizTools();
 
         // Transform parameters to scale SVG to screen
+        init_map();
 
     }
 
+    
 
     // init() called when page loaded
     init() {
-        init_map();
 
         load_api_data().then(() => {
 
             console.log('Creating Nodes');
-            initialise_nodes();
+            this.initialise_nodes();
             console.log('draw bar chart')
 
-           // show_horizontal_bar(get_zone_averages());
+            // show_horizontal_bar(get_zone_averages());
             show_vertical_bar(get_zone_averages());
 
             console.log('loading Voronoi');
-            drawVoronoi();
+            draw_voronoi();
             generate_hull();
 
         });
 
-        // load_road_svg().then((loaded_svg) => {
-
-        //     draw_road(loaded_svg);
-        // });
-
 
         //have a timeout function here
+        // Will execute myCallback every 1 second 
+        window.setInterval(this.update, 1000);
     }
 
     update() {
-        // The underlying API updates journey times every 5 minutes.
-        // Schedule an update 5 and-a-bit minutes from the last
-        // timestamp if that looks believable, and in a minute
-        // otherwise.
+        console.log('updated', Date.now())
+
+        //SOMEHOW DOESNT WORK
+        // initialise_nodes();
+        //draw_voronoi();
+
+
+        load_api_data().then(() => {
+
+            console.log('draw bar chart')
+
+            // show_horizontal_bar(get_zone_averages());
+            show_vertical_bar(get_zone_averages());
+
+            draw_voronoi();
+            // generate_hull();
+            console.log('loaded api data')
+            
+
+        });
+        //hi();
+        //this.update_nodes();
 
         // Display the data's timestamp on the clock
-        //  var timestamp = journey_response.ts * 1000;
-        //  clock.update(new Date(timestamp));
+        clock.update(Date.now());
 
-        //  console.log('loaded api data')
+       // this.hi();
 
-        var now = Date.now();
-        var delta = timestamp - now + (5.25 * 60000);
-        if (delta <= 0 || delta > 10 * 60000) {
-            delta = 60000;
+    }
+    hello(){
+        console.log('HI')
+    }
+     hi(){
+        this.hello();
+        console.log('HI')
+    }
+
+    initialise_nodes() {
+        SITE_DB = [];
+
+        for (let i = 0; i < all_sites.length; i++) {
+            SITE_DB.push(new Node(all_sites[i].id));
         }
-        console.log('Timestamp was ' + new Date(timestamp));
-        console.log('Delta is ' + delta);
-        console.log('Now is ' + new Date(now));
-        console.log('Next at ' + new Date(now + delta));
 
-        // fix the the timeout from spazing out
-        //setTimeout(self.redrawVoronoi(), delta);
+        for (let i = 0; i < SITE_DB.length; i++) {
+            SITE_DB[i].findNeighbors();
+            SITE_DB[i].computeTravelTime();
+            SITE_DB[i].computeTravelSpeed();
+            SITE_DB[i].setVisualisation(null); //speed deviation//travel speed
 
-        // Reset the clock
-        clock.update();
+        }
+
+        //acquire bluetooth sensor locations
+        all_sites.filter(function (d, i) {
+            SITE_DB[i].lat = d.location.lat;
+            SITE_DB[i].lng = d.location.lng;
+        });
+    }
+
+    update_nodes() {
+        console.log('updating nodes')
+        for (let i = 0; i < SITE_DB.length; i++) {
+            SITE_DB[i].computeTravelTime();
+            SITE_DB[i].computeTravelSpeed();
+        }
     }
 
     /*------------------------------------------------------*/
@@ -109,18 +146,8 @@ class VoronoiViz {
 
 }
 
-/*------------------------------------------------------*/
-/*----------------------MAIN LOOP-----------------------*/
-/*------------------------------------------------------*/
-
-console.log('lazy_script');
-var voronoi_visualisation = new VoronoiViz();
-voronoi_visualisation.init();
 
 //setTimeout(voronoi_visualisation.update(), delta);
-
-
-
 
 
 function path_to_poly(path_id) {
@@ -138,7 +165,8 @@ function path_to_poly(path_id) {
 
     return polygonPoints;
 }
- function create_element(element_id, position, inner_text){
+
+function create_element(element_id, position, inner_text) {
 
     //to be modified with https://stackoverflow.com/questions/33614912/how-to-locate-leaflet-zoom-control-in-a-desired-position
     let new_element = L.control({
@@ -153,14 +181,14 @@ function path_to_poly(path_id) {
     };
     new_element.update = function (e) {
         if (e === undefined) {
-            this.new_element.innerHTML =inner_text==undefined?'':ICON_CLOSE_DIV+inner_text;
-            this.new_element.style.opacity=inner_text==undefined?0:1;
+            this.new_element.innerHTML = inner_text == undefined ? '' : ICON_CLOSE_DIV + inner_text;
+            this.new_element.style.opacity = inner_text == undefined ? 0 : 1;
             return;
         }
 
     };
 
-   
+
     return new_element.addTo(map);
 
 }
@@ -212,55 +240,55 @@ function init_map() {
         doubleClickZoom: false,
     });
 
-    map.doubleClickZoom.disable(); 
+    map.doubleClickZoom.disable();
 
 
     // Clock
-clock = get_clock().addTo(map)
+    clock = get_clock().addTo(map)
 
-   let  info_viz_text= '<h4>Information</h4>' +
-    "<br>" +
-    "<div>" +
-    "<form id='routes'>" +
-    "<input type='radio' name='mode' value='routes'> Routes<br>" +
-    "<input type='radio' name='mode' value='polygons'checked='checked'> Polygons<br>" +
-   
-    "</form>" +
-    "<br>" +
-    "</div>" +
-    "<br>" +
-    "<div>" +
-    "<form id='modes'>" +
-    "<input type='radio' name='mode' value='current'> Current Speed<br>" +
-    "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
-    "<input type='radio' name='mode' value='deviation' checked='checked'> Deviation<br>" +
-    "</form>" +
-    "</div>";
+    const info_viz_text = '<h4>Information</h4>' +
+        "<br>" +
+        "<div>" +
+        "<form id='routes'>" +
+        "<input type='radio' name='mode' value='routes'> Routes<br>" +
+        "<input type='radio' name='mode' value='polygons'checked='checked'> Polygons<br>" +
 
-    var datepicker_text= '<h4>Pick time and Date</h4>' +
-    '<br>' +
-    '<input type="text" name="datefilter" id="datepicker" value="" />';
+        "</form>" +
+        "<br>" +
+        "</div>" +
+        "<br>" +
+        "<div>" +
+        "<form id='modes'>" +
+        "<input type='radio' name='mode' value='current'> Current Speed<br>" +
+        "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
+        "<input type='radio' name='mode' value='deviation' checked='checked'> Deviation<br>" +
+        "</form>" +
+        "</div>";
+
+    const datepicker_text = '<h4>Pick time and Date</h4>' +
+        '<br>' +
+        '<input type="text" name="datefilter" id="datepicker" value="" />';
 
 
-    var line_graph_element=create_element('test_graph','bottomleft')
-    var datepicker_widget =create_element('datepicker','bottomleft',datepicker_text)//datepicker_text
-    document.getElementById("datepicker").style.opacity=0;
+    let line_graph_element = create_element('test_graph', 'bottomleft')
+    let datepicker_widget = create_element('datepicker', 'bottomleft', datepicker_text) //datepicker_text
+    document.getElementById("datepicker").style.opacity = 0;
     set_nav_date_visible(0)
 
-    var metadata_element=create_element('metadata_table','bottomleft')
+    let metadata_element = create_element('metadata_table', 'bottomleft')
 
-    var selected_cell=create_element('selected_cell','topright','<h4>Select a Cell</h4>')
+    let selected_cell = create_element('selected_cell', 'topright', '<h4>Select a Cell</h4>')
 
-    var info_widget =create_element('info_bar','topright',info_viz_text)
+    let info_widget = create_element('info_bar', 'topright', info_viz_text)
 
-    var horizontal_chart=create_element('bar_chart','topright',ICON_LOADING)
-    var zone_table=create_element('zone_table','bottomright')
+    let horizontal_chart = create_element('bar_chart', 'topright', ICON_LOADING)
+    let zone_table = create_element('zone_table', 'bottomright')
 
-    
+
 
     //also change so that zones would not mess up position
     //change so the api would not be reset
-    map.on("viewreset moveend", drawVoronoi);
+    map.on("viewreset moveend", draw_voronoi);
     map.on("viewreset moveend", generate_hull);
 
 
@@ -289,25 +317,40 @@ function draw_road(loaded_svg) {
 
 }
 
-function drawVoronoi() {
-    console.log('executing DRAW VORONOI')
+function draw_voronoi() {
 
+    //remove old cell overlay and prepare to draw a new one
     d3.select('#cell_overlay').remove();
 
     // Reset the clock
     clock.update();
 
+    //create map bounds to know where to stop drawing
+    //as well topLeft && bottomRight values  
+    let bounds = map.getBounds(),
+        bottomRight = map.latLngToLayerPoint(bounds.getSouthEast()),
+        drawLimit = bounds.pad(0.4);
 
-    var bounds = map.getBounds();
+    //topLeft is a global since it's used outside the scope to position
+    //other objects in relation to the Voronoi diagram
     topLeft = map.latLngToLayerPoint(bounds.getNorthWest());
-    var bottomRight = map.latLngToLayerPoint(bounds.getSouthEast()),
-    drawLimit = bounds.pad(0.4);
 
-    console.log('topLeft', topLeft)
-    var filteredPoints = [];
+    /*
+     Lat/Lng to pixel conversion
+     
+     Here we use all_sites(Bluetooth sensor sites) and boundary_sites(imaginary sites that close off the Voronoi diagram)
+     Naming conventions: "sites" is refering to physical lat/lng location, whereas "points" are pixel values on screen,
+     hence the creation of variables like boundary_sites and boundary_points. 
 
-    //voronoi center points - bluetooth sensor locations
-    filteredPoints = all_sites.filter(function (d, i) {
+     */
+
+
+    //we filter out sites from all_sites that are within our drawing box
+    //e.g. when zoomed in, not all sites get drawn since they appear out of the screen
+    var filtered_points = [];
+
+    //filtered points are voronoi center points - bluetooth sensor locations
+    filtered_points = all_sites.filter(function (d, i) {
         let latlng = new L.latLng(d.location.lat, d.location.lng);
 
         //make sure not drawing out of bounds
@@ -316,40 +359,53 @@ function drawVoronoi() {
         };
 
         let point = map.latLngToLayerPoint(latlng);
+
+        //set coordinates values in all_sites for further use
         d.x = point.x;
         d.y = point.y;
 
-        SITE_DB[i].x = d.x;
-        SITE_DB[i].y = d.y;
+        //set coordinates values in SITE_DB for further use
+        SITE_DB[i].x = point.x;
+        SITE_DB[i].y = point.y;
 
         return true;
     });
 
-    //voronoi center points that limit the perimeter of the visible cells
-    boundaryPoints = boundarySites.filter(function (d, i) {
+    //boundary_points are voronoi center points that limit the perimeter of the visible cells.
+    //We created a list of invisible cells so that the Voronoi diagram does not triangulate
+    //itself to inifinity. The coordinates for these can be found in boundary_sites.js
+    boundary_points = boundary_sites.filter(function (d, i) {
         let latlng = new L.latLng(d.lat, d.lng);
         if (!drawLimit.contains(latlng)) {
             return false
         };
 
         let point = map.latLngToLayerPoint(latlng);
+
+        //set coordinates values in boundary_sites for further use
         d.x = point.x;
         d.y = point.y;
 
+        //set coordinates values in BOUNDARY_DB for further reuse
         BOUNDARY_DB.push({
             "lat": d.lat,
             "lng": d.lng,
-            "x": d.x,
-            "y": d.y
+            "x": point.x,
+            "y": point.y
         });
         return true;
     });
 
-    setColor = setColorRange();
-
     findLatLng();
 
-    var voronoi = d3.voronoi()
+    /*
+    Creating the voronoi triangulation, using the previously defined boundaries
+
+    This is integral to the visualisation, and d3.js provides some very nice
+    functions that do all the work for us.
+    */
+
+    let voronoi = d3.voronoi()
         .x(function (d) {
             return d.x;
         })
@@ -359,12 +415,12 @@ function drawVoronoi() {
         .extent([
             [topLeft.x, topLeft.y],
             [bottomRight.x, bottomRight.y]
-        ]); // To get all points included, change from previous version
+        ]);
 
 
     //tempfix
-    let a = filteredPoints;
-    let b = boundaryPoints;
+    let a = filtered_points;
+    let b = boundary_points;
     let c = getCircle();
     for (let i = 0; i < b.length; i++) {
         a.push(b[i]);
@@ -379,8 +435,7 @@ function drawVoronoi() {
         }
     }
 
-
-    d3.select('#cell_overlay').remove();
+    setColor = setColorRange();
 
     voronoi_cells = d3.select(map.getPanes().overlayPane).append("svg")
         .attr("id", "cell_overlay")
@@ -438,24 +493,24 @@ function drawVoronoi() {
                 return setColor(color)
             }
         })
-        .on('click', function(d,i){
-            console.log("CLICKED",d, d.data.acp_id)
-            selected_node=d;
+        .on('click', function (d, i) {
+            console.log("CLICKED", d, d.data.acp_id)
+            selected_node = d;
 
-            document.getElementById("selected_cell").style.opacity =1;
-            document.getElementById("selected_cell").innerHTML =ICON_CLOSE_AND_DESELECT+"<br>"+"<h1>"+d.data.name+"</h1>";
-            document.getElementById("datepicker").style.opacity =1;
+            document.getElementById("selected_cell").style.opacity = 1;
+            document.getElementById("selected_cell").innerHTML = ICON_CLOSE_AND_DESELECT + "<br>" + "<h1>" + d.data.name + "</h1>";
+            document.getElementById("datepicker").style.opacity = 1;
             set_nav_date_visible(1);
-            
+
             show_node_information(d);
             select_cell(d.data.acp_id)
 
-            onchange_feature_select(d.data.acp_id, DD+"-"+MM+"-"+YYYY)
+            onchange_feature_select(d.data.acp_id, DD + "-" + MM + "-" + YYYY)
             //update_url(d.data.acp_id, DD+"-"+MM+"-"+YYYY)
         })
 
         .on('mouseover', function (d) {
-         
+
 
             cell_mouseover(this);
 
@@ -584,7 +639,7 @@ function drawVoronoi() {
     });
 
     circleGroup.selectAll(".point")
-        .data(filteredPoints)
+        .data(filtered_points)
         .enter()
         .append("circle")
         .attr("class", function (d, i) {
@@ -603,15 +658,19 @@ function drawVoronoi() {
 
     console.log("next");
     //d3.select(map.getPanes().tooltipPane).append("title").text(function(d) { return d.data.name + "\n" + d.data.selected ; })
-    filteredPoints = [];
+    filtered_points = [];
 
     changeModes();
 
 
-    if(selected_node!=undefined){
+    if (selected_node != undefined) {
         select_cell(selected_node.data.acp_id);
     }
 }
+
+//-----------------------------------------------------//
+//-----------------END draw_voronoi()------------------//
+//-----------------------------------------------------//
 
 var cell_mouseover = (cell) => {
     d3.select(cell).transition()
@@ -625,38 +684,38 @@ var cell_mouseout = (cell) => {
     d3.select(cell).transition()
         .duration('300')
         .style('stroke', 'black')
-       // .style('stroke-width', 0.5)
+        // .style('stroke-width', 0.5)
         .style("stroke-opacity", 0.3)
         .style("fill-opacity", 0.3);
 }
 
 var cell_clicked = (cell) => {
     d3.select(cell)
-        .style('stroke-opacity',1).style('stroke','black').style('stroke-width',4);
+        .style('stroke-opacity', 1).style('stroke', 'black').style('stroke-width', 4);
 
 }
 var cell_regular = (cell) => {
     d3.select(cell)
-    .style('stroke', 'black')
-    .style('stroke-width', 0.5)
-    .style("stroke-opacity", 0.3)
-    .style("fill-opacity", 0.3);
+        .style('stroke', 'black')
+        .style('stroke-width', 0.5)
+        .style("stroke-opacity", 0.3)
+        .style("fill-opacity", 0.3);
 
 }
 
 
 
-var show_node_information=(d, START, END)=>{
-    document.getElementById("test_graph").style.opacity =1;
-    document.getElementById("test_graph").innerHTML =ICON_LOADING;
+var show_node_information = (d, START, END) => {
+    document.getElementById("test_graph").style.opacity = 1;
+    document.getElementById("test_graph").innerHTML = ICON_LOADING;
 
-    let NODE= d.data.id;
+    let NODE = d.data.id;
 
-    if(START==undefined){
-        START = new Date().toISOString().slice(0,10)
+    if (START == undefined) {
+        START = new Date().toISOString().slice(0, 10)
     }
 
-    show_node_data(NODE, START,END)      
+    show_node_data(NODE, START, END)
     show_node_metadata(NODE)
 }
 
@@ -729,7 +788,7 @@ function animateSVGMovement(path, outboundLength, dur, dir) {
 
 }
 
-function drawLink(link, dur,color) {
+function drawLink(link, dur, color) {
 
     lineGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
@@ -747,12 +806,12 @@ function drawLink(link, dur,color) {
     var scale = d3.scaleLinear()
         .domain([values.min, values.max])
         .range([values.min, values.max]);
-        
-    color = color==undefined?setColor(scale(deviation)):color;
+
+    color = color == undefined ? setColor(scale(deviation)) : color;
 
     let strokeWeight = 5;
 
-    console.log('DEVIATION:',link,deviation, color);
+    console.log('DEVIATION:', link, deviation, color);
 
     let link_line = generate_arc(from, to, direction, strokeWeight, color); //setColor(strokeWeight)
     let line_length = link_line.node().getTotalLength();
@@ -953,7 +1012,7 @@ function changeModes() {
             }
         }
         if (this.value === "polygons") {
-            drawVoronoi();
+            draw_voronoi();
             generate_hull();
 
         }
@@ -1067,7 +1126,7 @@ function calculateDeviation(link) {
     }
 
     let current = (dist / travelTime) * TO_MPH;
-    let normal = (dist / normalTravelTime) * TO_MPH;
+    let normal = (dist / normalTravelTime) * TO_MPH; //historic speed
 
     //negative speed is slower, positive speed is faster
     return current - normal;
@@ -1092,7 +1151,7 @@ function map_values(value, start1, stop1, start2, stop2) {
 //creates a d3 color interpolator 
 //from the min/max values of the data
 function setColorRange() {
-    
+
     let values = getMinMax();
     let min = values.min;
     let max = values.max;
@@ -1112,13 +1171,13 @@ function getMinMax() {
 
     let max = SITE_DB.reduce(findMax, -Infinity)
     let min = SITE_DB.reduce(findMin, Infinity)
-    
+
     //we used placeholder value during development
     //to privide higher color differences
 
     return {
         "min": min, //-5
-        "max": max  //10
+        "max": max //10
     };
 }
 
@@ -1159,14 +1218,13 @@ function generate_hull() {
 
         //perhaps 185 for all will just work as well
         let concavity_threshold;
-        if(map._zoom<=12){
-            concavity_threshold=85
-        }
-        else{
-            concavity_threshold=185;
+        if (map._zoom <= 12) {
+            concavity_threshold = 85
+        } else {
+            concavity_threshold = 185;
 
         }
-        
+
         let defaultHull = d3.concaveHull().distance(concavity_threshold);
         let paddedHull = d3.concaveHull().distance(concavity_threshold).padding(5);
 
@@ -1202,9 +1260,9 @@ function get_outline(zone_id) {
         .y(function (d, i) {
             return d.y;
         });
-        //.curve(d3.curveBasisClosed);
-        //.curve(d3.curveCatmullRomClosed.alpha(0.95)); //d3.curveCardinal.tension(0.1)//d3.curveNatural
-        
+    //.curve(d3.curveBasisClosed);
+    //.curve(d3.curveCatmullRomClosed.alpha(0.95)); //d3.curveCardinal.tension(0.1)//d3.curveNatural
+
     if (zone_id != undefined) {
         cell_outlines.append("g")
             .append("path")
@@ -1240,11 +1298,12 @@ function get_outline(zone_id) {
     }
 
 }
-function set_nav_date_visible(trigger){
-    let nav_date_list=document.getElementsByClassName('nav_date')
-            for(let i=0;i<nav_date_list.length;i++){
-                nav_date_list[i].style.opacity=trigger;
-            }
+
+function set_nav_date_visible(trigger) {
+    let nav_date_list = document.getElementsByClassName('nav_date')
+    for (let i = 0; i < nav_date_list.length; i++) {
+        nav_date_list[i].style.opacity = trigger;
+    }
 }
 
 
@@ -1254,99 +1313,100 @@ function set_nav_date_visible(trigger){
 // ************************************************************************************
 
 // move page to new date +n days from current date
-function date_shift(n, node_id)
-{
+function date_shift(n, node_id) {
     let year, month, day;
     console.log('date_shift()');
     if (YYYY == '') {
-        year = plot_date.slice(0,4);
-        month = plot_date.slice(5,7);
-        day = plot_date.slice(8,10);
+        year = plot_date.slice(0, 4);
+        month = plot_date.slice(5, 7);
+        day = plot_date.slice(8, 10);
     } else {
         year = YYYY;
         month = MM;
         day = DD;
     }
 
-    console.log(year,month,day)
-    let new_date = new Date(year,month-1,day); // as loaded in page template config_ values;
-    console.log('new_date',new_date)
+    console.log(year, month, day) //document.getElementById('date_now_header')
+    let new_date = new Date(document.getElementById('date_now_header').innerHTML); // as loaded in page template config_ values;
+    console.log('new_date', new_date)
 
-    new_date.setDate(new_date.getDate()+n);
-    console.log('new_new_date',new_date)
+    new_date.setDate(new_date.getDate() + n);
+    console.log('new_new_date', new_date)
 
     let new_year = new_date.getFullYear();
-    let new_month = ("0" + (new_date.getMonth()+1)).slice(-2);
-    let new_month_long = new_date.toLocaleString('default', { month: 'long' });
+    let new_month = ("0" + (new_date.getMonth() + 1)).slice(-2);
+    let new_month_long = new_date.toLocaleString('default', {
+        month: 'long'
+    });
 
     let new_day = ("0" + new_date.getDate()).slice(-2);
 
-    let query_date=new_year+"-"+new_month+"-"+new_day;
-    document.getElementById('date_now').innerHTML = "<h2>"+new_day+" "+new_month_long+" "+new_year+"</h2>"
-    
-    let node_element={};
-    node_element['data']= SITE_DB.find(x => x.acp_id === node_id);
+    let query_date = new_year + "-" + new_month + "-" + new_day;
+    document.getElementById('date_now_header').innerHTML = new_day + " " + new_month_long + " " + new_year
 
-    console.log(node_element,node_id,new_year+'-'+new_month+'-'+new_day);
+    let node_element = {};
+    node_element['data'] = SITE_DB.find(x => x.acp_id === node_id);
+
+    console.log(node_element, node_id, new_year + '-' + new_month + '-' + new_day);
 
     show_node_information(node_element, query_date);
 
-    YYYY=year;
-    MM=month;
-    DD=day;
-
+    let url_date = new_day + '-' + new_month + '-' + new_year;
+    update_url(node_id, url_date);
 }
 
 
 
 function update_url(node, date) {
-    if(date==undefined){
-        let new_date=new Date()
-        date=new_date.getDate()+"-"+new_date.getMonth()+1+"-"+new_date.getFullYear();
+    if (date == undefined) {
+        console.log('URL UNDEFINED')
+        let new_date = new Date()
+        date = new_date.getDate() + "-" + new_date.getMonth() + 1 + "-" + new_date.getFullYear();
     }
     var searchParams = new URLSearchParams(window.location.search)
     searchParams.set("node", node);
     searchParams.set("date", date);
     var newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
     window.history.pushState(null, '', newRelativePathQuery);
+    console.log('updated URL', node, date)
 }
 
 
 function onchange_feature_select(node_id, date) {
-    console.log("onchange_feature_select",window.location.href);
+    console.log("onchange_feature_select", window.location.href);
     //let features = sensor_metadata["acp_type_info"]["features"];
 
     set_date_onclicks(node_id);
     // Change the URL in the address bar
-    update_url(node_id,date);
- //   draw_chart(readings, features[feature_id]);
+    update_url(node_id, date);
 }
 
 function set_date_onclicks(node_id) {
-        // set up onclick calls for day/week forwards/back buttons
-        document.getElementById("back_1_week").onclick = function () { date_shift(-7, node_id) };
-        document.getElementById("back_1_day").onclick = function () { date_shift(-1, node_id) };
-        document.getElementById("forward_1_week").onclick = function () { date_shift(7, node_id) };
-        document.getElementById("forward_1_day").onclick = function () { date_shift(1, node_id) };
+    // set up onclick calls for day/week forwards/back buttons
+    document.getElementById("back_1_week").onclick = function () {
+        date_shift(-7, node_id)
+    };
+    document.getElementById("back_1_day").onclick = function () {
+        date_shift(-1, node_id)
+    };
+    document.getElementById("forward_1_week").onclick = function () {
+        date_shift(7, node_id)
+    };
+    document.getElementById("forward_1_day").onclick = function () {
+        date_shift(1, node_id)
+    };
 }
 
 
 function select_cell(id) {
-
     deselect_all()
     let cell = document.getElementById(id)
-
     cell_clicked(cell)
-
-
-    //    d3.select('#' + id).style('stroke-opacity', 1).style('stroke', 'black').style('stroke-width', 4)
-
 }
 
 function select_all() {
     let cells = document.getElementsByClassName("cell")
     for (let i = 0; i < cells.length; i++) {
-
         cell_clicked(cells[i])
     }
 
@@ -1355,9 +1415,7 @@ function select_all() {
 
 function deselect_all() {
     let cells = document.getElementsByClassName("cell")
-
     for (let i = 0; i < cells.length; i++) {
-
         cell_regular(cells[i])
     }
 }

@@ -1,3 +1,5 @@
+"use strict";
+
 function show_horizontal_bar(data) {
 
     document.getElementById('bar_chart').innerHTML = ICON_CLOSE_DIV;
@@ -140,7 +142,7 @@ function show_vertical_bar(data) {
         return d.zone;
     }));
     y.domain([0, d3.max(data, function (d) {
-        return d.value;
+        return d.value+5;
     })]);
 
     //append title

@@ -1,3 +1,5 @@
+"use strict";
+
 const CELLS_CENTER = [
     //CENTER
     'SITE_1E9F6DD4-07EB-4FE3-BCE3-ADB901B8B8CC',

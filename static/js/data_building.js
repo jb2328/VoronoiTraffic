@@ -11,8 +11,6 @@ var speedDeviation;
 
 var all_sites, all_links, all_journeys, all_routes = [];
 
-//generate_hull();
-
 /*------------------------------------------------------*/
 
 async function load_api_data() {
@@ -64,28 +62,6 @@ async function load_api_data() {
     //     console.log('API call failed - default reschedule');
     //     setTimeout(load_data, 60000);
     // });
-}
-
-function initialise_nodes() {
-    SITE_DB = [];
-
-    for (let i = 0; i < all_sites.length; i++) {
-        SITE_DB.push(new Node(all_sites[i].id));
-    }
-
-    for (let i = 0; i < SITE_DB.length; i++) {
-        SITE_DB[i].findNeighbors();
-        SITE_DB[i].computeTravelTime();
-        SITE_DB[i].computeTravelSpeed();
-        SITE_DB[i].setVisualisation(null); //speed deviation//travel speed
-
-    }
-
-    //acquire bluetooth sensor locations
-    all_sites.filter(function (d, i) {
-        SITE_DB[i].lat = d.location.lat;
-        SITE_DB[i].lng = d.location.lng;
-    });
 }
 
 const arrAvg = arr => arr.reduce((a, b) => a + b, 0) / arr.length

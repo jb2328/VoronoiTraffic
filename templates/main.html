@@ -5,13 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACP Map View</title>
-    
+
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
     <!-- Page local script -->
     <script type="text/javascript">
-    var url_node='{{NODE}}';
-    var url_date='{{DATE}}';
+        var url_node = '{{NODE}}';
+        var url_date = '{{DATE}}';
     </script>
 
     <!-- D3 stuff -->
@@ -28,28 +28,27 @@
     <script type="text/javascript" src="{{ url_for('static',filename='/js/libs/moment.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static',filename='/js/libs/daterangepicker.min.js') }}"></script>
 
-<!-- SECRETS -->
-<script type="text/javascript" src="{{ url_for('static',filename='/js/secrets.js') }}"></script>
+    <!-- SECRETS -->
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/secrets.js') }}"></script>
 
-<!-- Our scripts -->
-<script type="text/javascript" src="{{ url_for('static',filename='/js/Node_class.js') }}"></script>
+    <!-- Our scripts -->
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/Node_class.js') }}"></script>
 
-<script type="text/javascript" src="{{ url_for('static',filename='/js/data_building.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/data_building.js') }}"></script>
 
-<script type="text/javascript" src="{{ url_for('static',filename='/js/async_functions.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/async_functions.js') }}"></script>
 
-<script type="text/javascript" src="{{ url_for('static',filename='/js/boundary_nodes.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/boundary_sites.js') }}"></script>
 
-<script type="text/javascript" src="{{ url_for('static',filename='/js/dijkstra.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/dijkstra.js') }}"></script>
 
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/cell_groups.js') }}"></script>
 
-<script type="text/javascript" src="{{ url_for('static',filename='/js/cell_groups.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/bar_chart.js') }}"></script>
 
-<script type="text/javascript" src="{{ url_for('static',filename='/js/bar_chart.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/scatter_plot.js') }}" defer></script>
 
-<script type="text/javascript" src="{{ url_for('static',filename='/js/scatter_plot.js') }}" defer></script>
-
-
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/visualise.js') }}"></script>
 
     <!-- Our style -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='/css/libs/daterangepicker.css') }}">
@@ -61,45 +60,60 @@
     <script type="text/javascript" src="{{ url_for('static',filename='/js/date_picker.js') }}"></script>
 
 
- 
+
 </head>
 
 <body>
     <div class="selection_wrapper">
 
-        <form  id="selection_form">
+        <form id="selection_form">
             <div class="nav_date" id="back_1_week">&lt; Week</div>
             <div class="nav_date" id="back_1_day">&lt; Day</div>
             <div class="current_date">
 
-            <div id='date_now'></div>
-        </div>
+                <div id='date_now'></div>
+            </div>
             <div class="nav_date" id="forward_1_day">Day &gt;</div>
             <div class="nav_date" id="forward_1_week">Week &gt;</div>
         </form>
-        
-        </div> <!-- end selection_wrapper -->
+
+    </div> <!-- end selection_wrapper -->
 
     <div id="map" style="height: 98vh; border: 1px solid black;"></div>
 
-    <script type="text/javascript" src="{{ url_for('static',filename='/js/visualise.js') }}"></script>
-<!-- Page local script -->
-<script type="text/javascript">
-    let date=new Date()
-    let month = date.toLocaleString('default', { month: 'long' });
-  
-    //var API_READINGS = '{{ API_READINGS }}';
-    //var ACP_ID = '{{ ACP_ID }}';
-    //var SENSOR_REALTIME = '{{ SENSOR_REALTIME }}'; // URL for rtmonitor websocket
-    var YYYY = date.getFullYear();//'{{ YYYY }}';
-    var MM = date.getMonth()+1;//'{{ MM }}';
-    var DD = date.getDate();//'{{ DD }}';
-    var FEATURE = '';//'{{ FEATURE }}'; // e.g. 'temperature'
-  
-    document.getElementById('date_now').innerHTML = "<h2>"+DD+" "+month+" "+YYYY+"</h2>"
-  
-  </script>
-  
+    <script>
+        /*------------------------------------------------------*/
+        /*----------------------MAIN LOOP-----------------------*/
+        /*------------------------------------------------------*/
+
+        console.log('lazy_script');
+        var voronoi_visualisation = new VoronoiViz();
+        voronoi_visualisation.init();
+
+        /*------------------------------------------------------*/
+        /*------------------------------------------------------*/
+        /*------------------------------------------------------*/
+    </script>
+
+    <!-- Page local script -->
+    <script type="text/javascript">
+        let date = new Date()
+        let month = date.toLocaleString('default', {
+            month: 'long'
+        });
+
+        //var API_READINGS = '{{ API_READINGS }}';
+        //var ACP_ID = '{{ ACP_ID }}';
+        //var SENSOR_REALTIME = '{{ SENSOR_REALTIME }}'; // URL for rtmonitor websocket
+        var YYYY = date.getFullYear(); //'{{ YYYY }}';
+        var MM = date.getMonth() + 1; //'{{ MM }}';
+        var DD = date.getDate(); //'{{ DD }}';
+        var FEATURE = ''; //'{{ FEATURE }}'; // e.g. 'temperature'
+
+        document.getElementById('date_now').innerHTML = "<h2 id='date_now_header'>" + DD + " " + month + " " + YYYY +
+            "</h2>"
+    </script>
+
 </body>
 
 

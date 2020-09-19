@@ -80,7 +80,6 @@ async function show_node_data(site_id, date_start, date_end) {
 
     try {
       let restructured_route_data = restructure_to_sublists(hist_data)
-
       show_line_plot(restructured_route_data, min_max, site_name, date_start, date_end);
     } catch (err) {
       console.log('Error message', err)
@@ -209,7 +208,7 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     return humanDateFormat;
   });
 
-  console.log(START,END, 'startend')
+  console.log(START, END, 'startend')
   END = (END == undefined) || (END == START) ? '' : END;
   svg.append("text")
     .attr("x", (width / 2))
@@ -240,9 +239,9 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     });
 
   // Add Y axis
-  let y_padding = 10;
+  let y_padding = 20;
   y = d3.scaleLinear()
-    .domain([min_max.min_y - y_padding, min_max.max_y + y_padding])
+    .domain([0, min_max.max_y + y_padding]) //[min_max.min_y - y_padding, min_max.max_y + y_padding]
     .range([height, 0]);
 
   svg.append("g")
@@ -268,10 +267,9 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
 
   }
 
-  //append additional legend item for dashed lines
   legend_keys.push({
-    'name': 'historic dataa',
-    'color': 'gray'
+    'name': 'HISTORIC DATA',
+    'color': 'LightGrey'
   });
 
   // Add one dot in the legend for each name.
@@ -295,6 +293,14 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     .style("fill", function (d) {
       return d.color
     })
+    .style("stroke-dasharray", function (d) {
+      if (d.color == "LightGrey") return ("1,1") // make the stroke dashed
+
+    })
+    .style("stroke", function (d) {
+      if (d.color == "LightGrey") return 'black' // make the stroke dashed
+
+    })
     .attr("id", function (d, i) {
       return "LEGEND_CAMBRIDGE_JTMS_" + d.name
     }) //LG for line graph
@@ -303,17 +309,12 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
       let selected = 'CAMBRIDGE_JTMS_' + d.name
       console.log(d, i)
 
-
       // Use D3 to select element, change color and size
       d3.selectAll('.legend').transition().duration(250).style('opacity', 0.2)
       d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.2)
       d3.select('#LEGEND_' + selected).transition().duration(250).style('opacity', 1)
-
       d3.select('#LG_' + selected).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
       drawLink(selected, 350, LINE_GRAPH_COLORS[i]);
-
-
-
     })
     .on('mouseout', function (d) {
       let selected = 'CAMBRIDGE_JTMS_' + d.name
@@ -326,10 +327,14 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
       d3.selectAll('.dashed_scatter_line').remove()
     })
     .on('click', function (d, i) {
-
-      d3.select(this).transition().duration(50).style('fill', 'black').on('end', function (d) {
-        d3.select(this).transition().duration(100).style('fill', d.color)
-      })
+      d3.select(this).transition()
+        .duration(50)
+        .style('fill', 'black')
+        .on('end', function (d) {
+          d3.select(this).transition()
+            .duration(100)
+            .style('fill', d.color)
+        });
 
 
       let link_id = "CAMBRIDGE_JTMS%7C" + d.name
@@ -338,7 +343,6 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
       let week_ago = (Date.parse(START) / 1000) - WEEK
       let new_ts = new Date(week_ago * 1000)
       let new_date = new_ts.getFullYear() + "-" + (new_ts.getMonth() + 1) + "-" + new_ts.getDate()
-      console.log('NEW DATE', new_date, new_ts.toLocaleString())
 
       historical_link(link_id, new_date).then((data) => {
         console.log('received', data)
@@ -373,6 +377,9 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     .attr("text-anchor", "left")
     .style("alignment-baseline", "middle")
     .style("font-size", "10px");
+
+
+
 
 
   d3.selectAll('.connected_scatter_line')
@@ -442,27 +449,58 @@ function create_path(canvas, data, id, stroke, mode) {
 
 }
 
+//The fetched data has a problem that it does not differentiate different
+//links into different sublists, instead, we recieve all date in a single
+//list that makes creating separate line graphs difficult.
+//Therefore, we parse the fetched data and create unique sublists with 
+//each acp_id having its own list.
 function restructure_to_sublists(old_list) {
   let new_list = []
   let new_sublist = [];
 
+  //create a separate array for used acp_ids as 
+  //sometimes there are doubles that will create
+  //problems for the scatter plot.
+  //Doubles appear beacause some links have "-fixed"
+  //clones in the API, so we just avoid them.
+  let past_ids = [];
 
   let temp_id = old_list[0].acp_id;
 
+  //iterate over a list of fetched readings that have 
+  //all acp_id's in a single list
   for (let i = 0; i < old_list.length; i++) {
     let current_id = old_list[i].acp_id;
+  
+    //ignore the doubled link readings
+    if (past_ids.includes(current_id)) {
+      continue;
+    }
+
+    //new acp_id incoming, start a new list
     if (current_id != temp_id) {
+      //put the last value to past ids to ensure
+      //we don't have duplicates
+      past_ids.push(temp_id)
+
       temp_id = current_id;
-      new_list.push(new_sublist)
+
+      //sort the new sublist by ts
+      new_list.push(new_sublist.sort((a, b) => a.ts - b.ts))
+
       new_sublist = [];
     }
+
+    //push items with the same acp_id to a single list
     new_sublist.push(old_list[i]);
-    console.log(old_list[i].acp_id)
+    console.log(new_sublist.length)
   }
-  new_list.push(new_sublist)
 
-  console.log('new list', new_list)
+  //the last unique acp_id does not get pushed by itself
+  //since no new entry follows, so we do it here instead.
+  new_list.push(new_sublist.sort((a, b) => a.ts - b.ts))
 
+  //returns a list of lists containing unique acp_ids in each
   return new_list;
 }
 

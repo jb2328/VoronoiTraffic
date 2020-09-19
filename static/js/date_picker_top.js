@@ -1,3 +1,5 @@
+"use strict";
+
 // Called on page load
 function init() {
 
