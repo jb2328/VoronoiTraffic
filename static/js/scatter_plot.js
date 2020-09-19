@@ -1,7 +1,6 @@
 const WEEK = 86400 * 7;
 
 const LINE_GRAPH_COLORS = ['MidnightBlue', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
-//const colors=['#02AEE3','#ABE06A','#C002E3','#E37202','#65E68A','#E0C769','#0014E6','#E30202']
 
 async function historical_link(link_id, date1, date2) {
 
@@ -77,7 +76,6 @@ async function show_node_data(site_id, date_start, date_end) {
     if (min_max.max_x - min_max.min_x < 86399) { //86400
       min_max.max_x = min_max.min_x + 86400;
     }
-
 
 
     try {
@@ -270,6 +268,11 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
 
   }
 
+  //append additional legend item for dashed lines
+  legend_keys.push({
+    'name': 'historic dataa',
+    'color': 'gray'
+  });
 
   // Add one dot in the legend for each name.
   var size = 15

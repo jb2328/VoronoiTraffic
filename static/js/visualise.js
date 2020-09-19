@@ -729,7 +729,7 @@ function animateSVGMovement(path, outboundLength, dur, dir) {
 
 }
 
-function drawLink(link, dur) {
+function drawLink(link, dur,color) {
 
     lineGroup = voronoi_cells.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
@@ -748,8 +748,8 @@ function drawLink(link, dur) {
         .domain([values.min, values.max])
         .range([values.min, values.max]);
         
-    let color = setColor(scale(deviation));
-   // let color = col == undefined ? setColor(strokeWeight) : col;
+    color = color==undefined?setColor(scale(deviation)):color;
+
     let strokeWeight = 5;
 
     console.log('DEVIATION:',link,deviation, color);
@@ -1250,7 +1250,7 @@ function set_nav_date_visible(trigger){
 
 
 // ************************************************************************************
-// ************** Date forwards / backwards function             *********************
+// ************** Date forwards / backwards function **********************************
 // ************************************************************************************
 
 // move page to new date +n days from current date
@@ -1268,9 +1268,12 @@ function date_shift(n, node_id)
         day = DD;
     }
 
+    console.log(year,month,day)
     let new_date = new Date(year,month-1,day); // as loaded in page template config_ values;
+    console.log('new_date',new_date)
 
     new_date.setDate(new_date.getDate()+n);
+    console.log('new_new_date',new_date)
 
     let new_year = new_date.getFullYear();
     let new_month = ("0" + (new_date.getMonth()+1)).slice(-2);
@@ -1288,6 +1291,9 @@ function date_shift(n, node_id)
 
     show_node_information(node_element, query_date);
 
+    YYYY=year;
+    MM=month;
+    DD=day;
 
 }
 
