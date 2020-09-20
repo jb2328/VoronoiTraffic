@@ -15,18 +15,16 @@ var selected_node;
 var all_sites, all_links, all_journeys = [];
 
 var links_drawn = [];
-var links_drawn_SVG = [];
 
 var BOUNDARY_DB = [];
 var boundary_points = [];
 
-var pathGroup;
+var polygon_group;
 var setColor;
 
-var selectedSites = [];
 
-var lineGroup, cell_outlines, dijkstraGroup, road_group;
-var voronoi_cells;
+var link_group, zone_outlines, dijkstra_group, road_group;
+var svg_canvas;
 
 const ICON_CLOSE_DIV = "<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
 const ICON_CLOSE_AND_DESELECT = "<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); selected_node=undefined; return false;'>x</span>"
@@ -46,7 +44,7 @@ class VoronoiViz {
 
     }
 
-    
+
 
     // init() called when page loaded
     init() {
@@ -69,7 +67,7 @@ class VoronoiViz {
 
         //have a timeout function here
         // Will execute myCallback every 1 second 
-        window.setInterval(this.update, 1000);
+        window.setInterval(this.update, 30000);
     }
 
     update() {
@@ -90,7 +88,7 @@ class VoronoiViz {
             draw_voronoi();
             // generate_hull();
             console.log('loaded api data')
-            
+
 
         });
         //hi();
@@ -99,13 +97,13 @@ class VoronoiViz {
         // Display the data's timestamp on the clock
         clock.update(Date.now());
 
-       // this.hi();
+        // this.hi();
 
     }
-    hello(){
+    hello() {
         console.log('HI')
     }
-     hi(){
+    hi() {
         this.hello();
         console.log('HI')
     }
@@ -270,7 +268,7 @@ function init_map() {
         '<input type="text" name="datefilter" id="datepicker" value="" />';
 
 
-    let line_graph_element = create_element('test_graph', 'bottomleft')
+    let line_graph_element = create_element('line_graph', 'bottomleft')
     let datepicker_widget = create_element('datepicker', 'bottomleft', datepicker_text) //datepicker_text
     document.getElementById("datepicker").style.opacity = 0;
     set_nav_date_visible(0)
@@ -324,6 +322,10 @@ function draw_voronoi() {
 
     // Reset the clock
     clock.update();
+
+    //create a variable for the dbclick functionality
+    ///that finds the shortest path between two selected cites
+    let selected_sites = [];
 
     //create map bounds to know where to stop drawing
     //as well topLeft && bottomRight values  
@@ -396,7 +398,10 @@ function draw_voronoi() {
         return true;
     });
 
-    findLatLng();
+    //create color a range to be able to color in cells based on their values
+    setColor = setColorRange();
+
+    //findLatLng(); //optional function, provides lat/lng coordinates if clicked on the map
 
     /*
     Creating the voronoi triangulation, using the previously defined boundaries
@@ -418,26 +423,35 @@ function draw_voronoi() {
         ]);
 
 
-    //tempfix
-    let a = filtered_points;
-    let b = boundary_points;
-    let c = getCircle();
-    for (let i = 0; i < b.length; i++) {
-        a.push(b[i]);
-    }
-    var voronoiPolygons = voronoi.polygons(a); //filteredpoints
-    var readyVoronoiPolygons = [];
+    //the lines below might be a bit counterintuitive, but we have to create both
+    //visible and invisible polygons at once to ensure even triangulation.
 
-    for (let i = 0; i < voronoiPolygons.length; ++i) {
-        // console.log(i)
-        if (voronoiPolygons[i] !== undefined) {
-            readyVoronoiPolygons.push(voronoiPolygons[i]);
+    //combine boundary(invisible) nodes with the actual sensor node to make polygons
+    //that are evenly triangulated
+    for (let i = 0; i < boundary_points.length; i++) {
+        filtered_points.push(boundary_points[i]);
+    }
+
+    //create voronoi polygons from all the nodes.
+    //this wouldn't work if we did voronoi.polygons(boundary_points)
+    //and voronoi.polygons(filtered_points) separately
+    let voronoi_polygons = voronoi.polygons(filtered_points);
+
+    //list containing all visible polygons. Here we separate
+    //filetered_points from boundary_points again
+    let ready_voronoi_polygons = [];
+
+    //invisible polygons are undefined so we ignore them
+    for (let i = 0; i < voronoi_polygons.length; ++i) {
+        if (voronoi_polygons[i] !== undefined) {
+            ready_voronoi_polygons.push(voronoi_polygons[i]);
         }
     }
 
-    setColor = setColorRange();
-
-    voronoi_cells = d3.select(map.getPanes().overlayPane).append("svg")
+    //appending the d3.js SVG to the map.
+    //the svg_canvas variable will also contain all of the d3.generated proto objects
+    //like lines, outlines and the polygons (voronoi cells).
+    svg_canvas = d3.select(map.getPanes().overlayPane).append("svg")
         .attr("id", "cell_overlay")
         .attr("class", "leaflet-zoom-hide")
         .style("width", map.getSize().x + "px")
@@ -445,31 +459,52 @@ function draw_voronoi() {
         .style("margin-left", topLeft.x + "px")
         .style("margin-top", topLeft.y + "px");
 
-    //cell paths
-    pathGroup = voronoi_cells.append("g")
-        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
-    let circleGroup = voronoi_cells.append("g")
+    //append voronoi polygons to the canvas
+    polygon_group = svg_canvas.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
-    lineGroup = voronoi_cells.append("g")
+    //append zone outlines to the canvas
+    zone_outlines = svg_canvas.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
-    cell_outlines = voronoi_cells.append("g")
+    //append drawn links to the canvas
+    link_group = svg_canvas.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
-    dijkstraGroup = voronoi_cells.append("g")
+    //append dijkstra shortest path generated line to the canvas
+    dijkstra_group = svg_canvas.append("g")
+        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+
+    //append circles that illustrate sensors and polygons centers to the canvas.
+    //It's not a global so we just declare it here
+    let circle_group = svg_canvas.append("g")
         .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
 
-    //console.log('voronoi_polygons', readyVoronoiPolygons)
-    pathGroup.selectAll("g")
-        .data(readyVoronoiPolygons)
+    /*Drawing the Voronoi polygons on the map.
+
+    The code below will have all of the d3.js shenanigans for interactivity including 
+    what happens on:
+
+    -mouseover (highlight cell)
+    -mouseout (unhighlight cell)
+    -click (selects the cell as the *selected node* and draws all the graphs)
+    -doubleclick (selects cell #1 and #2 and draws the shortest path betwen them)
+    
+
+    Cells/Polygons are used interchangeably in the documentation, but generally speaking
+    polygons are the digital representation as just the numbers in a list, whereas
+    the cells are drawn objects on the screen, based on the polygon data.
+    */
+
+    //creates paths objects from the genetated polygon data 
+    //(polygons are drawn as paths FYI)
+    polygon_group.selectAll("g")
+        .data(ready_voronoi_polygons)
         .enter()
         .append("path")
-        //.attr("class","cell")//"cell"
         .attr('id', (d) => d.data.acp_id)
         .attr("class", function (d, i) {
-            //console.log(d.data.description);
             if (d.data.description !== undefined) {
                 return "cell"
             } else {
@@ -481,11 +516,18 @@ function draw_voronoi() {
             return "M" + d.join("L") + "Z"
         });
 
-    pathGroup.selectAll(".cell")
+    //-------------------------------------//
+    //----------D3.js interactivity--------//
+    //---------------START-----------------//
+
+    //add some visual properties to the drawn cells
+    polygon_group.selectAll(".cell")
         .attr('fill', function (d) {
+
             //color the cell based on the selected reading from the SITE_DB
             //the lookup is done based on the matching id values (from SVG and in Nodes)
             let color = SITE_DB.find(x => x.id === d.data.id).selected;
+
             //if undefined,set to gray
             if (color == null || color == undefined) {
                 return "rgb(50,50,50);"
@@ -493,75 +535,102 @@ function draw_voronoi() {
                 return setColor(color)
             }
         })
-        .on('click', function (d, i) {
-            console.log("CLICKED", d, d.data.acp_id)
-            selected_node = d;
 
-            document.getElementById("selected_cell").style.opacity = 1;
-            document.getElementById("selected_cell").innerHTML = ICON_CLOSE_AND_DESELECT + "<br>" + "<h1>" + d.data.name + "</h1>";
-            document.getElementById("datepicker").style.opacity = 1;
-            set_nav_date_visible(1);
-
-            show_node_information(d);
-            select_cell(d.data.acp_id)
-
-            onchange_feature_select(d.data.acp_id, DD + "-" + MM + "-" + YYYY)
-            //update_url(d.data.acp_id, DD+"-"+MM+"-"+YYYY)
-        })
+        //----------ON MOUSEOVER---------//
 
         .on('mouseover', function (d) {
 
-
+            //highlight the cell that is being hovered on
             cell_mouseover(this);
 
-
-            //I ASSUME THIS WILL FIX THE BUG WHERE UPON MOVING THE MAP COLORS CHANGE AS NOT ALL CELLS ARE LOADED.
-            //COLOR HAS TO BE LOADED BASED ON   d   RATHER THAN i
+            //get the id and the neighbors for the node that this cell represents
             let id = d.data.id;
             let neighbors = SITE_DB.find(x => x.id === id).neighbors;
 
-            console.log('list of links')
+            //remove old links that were drawn for the other nodes 
+            //that were hoverd in before
             d3.selectAll('.arc_line').remove()
+            link_group.remove();
 
-            lineGroup.remove();
+            //draw links for every neighbor that the node has
             for (let i = 0; i < neighbors.length; i++) {
+
                 let inbound = neighbors[i].links.in.id;
                 let outbound = neighbors[i].links.out.id;
 
                 drawLink(inbound, 350);
                 drawLink(outbound, 350);
-
-                // drawSVGLinks(inbound, 500);
-                // drawSVGLinks(outbound, 500);
             }
+        })
+        //----------ON MOUSEOUT---------//
 
+        .on('mouseout', function () {
 
+            //unhighlight the cell that was being hovered on
+            cell_mouseout(this);
+
+            //cleanup the links that were drawn
+            links_drawn = [];
+            link_group.remove();
+            d3.selectAll('.arc_line').remove()
 
         })
 
+        //----------ON CLICK---------//
 
+        .on('click', function (d, i) {
 
-        .on("dblclick", function (d) { //dblclick
-            let id = d.data.id;
-            console.log(id, " was clicked");
+            //set as the main global selection 
+            selected_node = d;
 
-            //removes old paths
+            //make HUD elements visible
+            document.getElementById("selected_cell").style.opacity = 1;
+            document.getElementById("selected_cell").innerHTML = ICON_CLOSE_AND_DESELECT + "<br>" + "<h1>" + d.data.name + "</h1>";
+            document.getElementById("datepicker").style.opacity = 1;
+
+            //make the date navigation buttons visible 
+            //(made invisible prior since without a cell selection, changing the date does not make sense)
+            set_nav_date_visible(1);
+
+            //load metadata for the node
+            show_node_information(d);
+
+            //add d3/css styling to the selected cell to make it pop
+            select_cell(d.data.acp_id)
+
+            //update url and add event listeners for date changes
+            onchange_feature_select(d.data.acp_id, DD + "-" + MM + "-" + YYYY)
+        })
+
+        //--------ON DOUBLE CLICK-------//
+
+        .on("dblclick", function (d) {
+
+            //remove old if there were any
             d3.select('#shortest_path').remove();
 
-            selectedSites.push(d.data);
-            if (selectedSites.length > 2) {
-                selectedSites = [];
-                console.log("selected sites cleaned");
+            //add the selected site to the list
+            selected_sites.push(d.data);
+
+            //make sure to only have a max of two sites
+            if (selected_sites.length > 2) {
+                selected_sites = [];
             }
-            if (selectedSites.length === 2) {
-                console.log("from ", selectedSites[0].name, " to ", selectedSites[1].name);
 
-                let problem = generateGraph(selectedSites[0].name, selectedSites[1].name);
-                let result = dijkstra(problem, selectedSites[0].name, selectedSites[1].name);
-                console.log(result);
+            //if the list is full, interpolate shortest path
+            if (selected_sites.length === 2) {
 
+                //create the problem graph with start and finish nodes
+                let problem = generate_graph(selected_sites[0].name, selected_sites[1].name);
+
+                //run the Dijkstra shortest path on the generated graph  
+                //[returns the names of the nodes in order of the shortest path]
+                let result = dijkstra(problem, selected_sites[0].name, selected_sites[1].name);
+
+                //this will contain the coordinates of the nodes that the shortest path passes through
                 let path = [];
-                //console.log(SITE_DB);
+
+                //fill the path variable with the shortest path data returned by the Dijkstra algorithm
                 for (let i = 0; i < result.path.length; i++) {
 
                     console.log(result.path[i]);
@@ -575,75 +644,63 @@ function draw_voronoi() {
                         });;
                     }
 
-
-
                 }
 
-                // 7. d3's line generator
-                var line = d3.line()
+                //d3's line interpolator/generator
+                let line = d3.line()
                     .x(function (d, ) {
                         return d.x;
                     }) // set the x values for the line generator
                     .y(function (d) {
                         return d.y;
                     }) // set the y values for the line generator 
-                    // apply smoothing to the line
-                    .curve(d3.curveCatmullRom.alpha(1)); //d3.curveCardinal.tension(0.1)//d3.curveNatural
+                    // apply smoothing to the line, I found curveCatmullRom works best
+                    .curve(d3.curveCatmullRom.alpha(1)); //or d3.curveCardinal.tension(0.1)//or d3.curveNatural
 
-                var lineGraph = dijkstraGroup.append("path")
+                //append the generated shortest path line to the dijkstra group on the global svg canvas
+                let shortest_path_line = dijkstra_group.append("path")
                     .attr("d", line(path))
                     .attr('id', 'shortest_path')
                     .attr("stroke", "green")
                     .attr("stroke-width", 5)
                     .attr("fill", "none");
 
-                var totalLength = lineGraph.node().getTotalLength();
+                //get the total length, so we can animate it
+                let total_line_length = shortest_path_line.node().getTotalLength();
 
-                lineGraph
-                    .attr("stroke-dasharray", totalLength + " " + totalLength)
-                    .attr("stroke-dashoffset", totalLength)
+                //do the animation and make the illusion of it being drawn
+                shortest_path_line
+                    .attr("stroke-dasharray", total_line_length + " " + total_line_length)
+                    .attr("stroke-dashoffset", total_line_length)
                     .transition()
                     .duration(500)
                     .ease(d3.easeLinear)
                     .attr("stroke-dashoffset", 0);
 
-                selectedSites = [];
+                //clear selected sites and prepare for the new selections
+                selected_sites = [];
             }
 
-
+            //the double clicked cells have special dashed outlines
+            //that differentiate them from the rest of the cells
             d3.select(this).attr("class", "selected");
-        })
-        .on('mouseout', function (d, i) {
-            d3.selectAll('.road').style('stroke-width', '0px')
-
-
-
-            links_drawn = [];
-            links_drawn_SVG = [];
-
-
-            cell_mouseout(this);
-
-
-
-            lineGroup.remove();
-            d3.selectAll('.arc_line').remove()
-
         });
 
+    //-------------------------------------//
+    //----------D3.js interactivity--------//
+    //----------------END------------------//
 
-
-
-    pathGroup.selectAll(".cell").append("title").text(function (d) {
+    //add the *title* so that the name of the node appears when the cell is being hovered on
+    polygon_group.selectAll(".cell").append("title").text(function (d) {
         return d.data.name;
     });
 
-    circleGroup.selectAll(".point")
+    //add nodes' locations on the map (they're also cell/polygon centers)
+    circle_group.selectAll(".point")
         .data(filtered_points)
         .enter()
         .append("circle")
-        .attr("class", function (d, i) {
-            //console.log(d.data.description);
+        .attr("class", function (d) {
             if (d.id !== undefined) {
                 return "point"
             } else {
@@ -656,13 +713,15 @@ function draw_voronoi() {
         .attr("r", 2.5);
 
 
-    console.log("next");
-    //d3.select(map.getPanes().tooltipPane).append("title").text(function(d) { return d.data.name + "\n" + d.data.selected ; })
-    filtered_points = [];
+    //filtered_points = [];
 
-    changeModes();
+    //change_modes adds the option of coloring in the cells based on:
+    // -current speed
+    // -historic(normal) speed
+    // -deviation in speed from the normal
+    change_modes();
 
-
+    //in case the selected node has been mislabeled:
     if (selected_node != undefined) {
         select_cell(selected_node.data.acp_id);
     }
@@ -672,42 +731,12 @@ function draw_voronoi() {
 //-----------------END draw_voronoi()------------------//
 //-----------------------------------------------------//
 
-var cell_mouseover = (cell) => {
-    d3.select(cell).transition()
-        .duration('300')
-        .style('stroke', 'black')
-        //.style('stroke-width', 10)
-        .style("stroke-opacity", 1)
-        .style("fill-opacity", 0.85);
-}
-var cell_mouseout = (cell) => {
-    d3.select(cell).transition()
-        .duration('300')
-        .style('stroke', 'black')
-        // .style('stroke-width', 0.5)
-        .style("stroke-opacity", 0.3)
-        .style("fill-opacity", 0.3);
-}
-
-var cell_clicked = (cell) => {
-    d3.select(cell)
-        .style('stroke-opacity', 1).style('stroke', 'black').style('stroke-width', 4);
-
-}
-var cell_regular = (cell) => {
-    d3.select(cell)
-        .style('stroke', 'black')
-        .style('stroke-width', 0.5)
-        .style("stroke-opacity", 0.3)
-        .style("fill-opacity", 0.3);
-
-}
 
 
 
 var show_node_information = (d, START, END) => {
-    document.getElementById("test_graph").style.opacity = 1;
-    document.getElementById("test_graph").innerHTML = ICON_LOADING;
+    document.getElementById("line_graph").style.opacity = 1;
+    document.getElementById("line_graph").innerHTML = ICON_LOADING;
 
     let NODE = d.data.id;
 
@@ -720,110 +749,55 @@ var show_node_information = (d, START, END) => {
 }
 
 
-function drawSVGLinks(link, dur) {
-    let connected_sites = all_links.find(x => x.id === link).sites;
-    let from = SITE_DB.find(x => x.id === connected_sites[0]);
-    let to = SITE_DB.find(x => x.id === connected_sites[1]);
-
-    links_drawn_SVG.push(link);
-
-    let color = links_drawn_SVG.includes(inverseLink(link)) ? "magenta" : "green";
-    console.log('SVG', color)
-    let dir = color === "green" ? 1 : -1;
-
-    let values = getMinMax();
-    let deviation = calculateDeviation(link)
-
-    var scale = d3.scaleLinear()
-        .domain([values.min, values.max])
-        .range([1, 4]);
-
-    //let strokeWeight = scale(deviation);
-    let strokeWeight = '3px';
-
-    let inbound = lineGroupSVG('#' + link, color, strokeWeight) //setColor(strokeWeight)
-    try {
-        console.log(d3.select('#' + link), d3.select('#' + link).node().children[0].getTotalLength())
-        let lineLength = inbound.node().children[0].getTotalLength()
-        animateSVGMovement(inbound, lineLength, dur, dir);
-
-    } catch {
-        console.log(link)
-        drawLink(link, 350);
-        console.log('EXCEPTION CAUGHT')
-
-    }
-
-
-}
-
-function lineGroupSVG(path_id, color, strokeWeight) {
-    // d3.selectAll('.road').style('stroke-width', strokeWeight)
-
-    let path = d3.select(path_id)
-        .style("fill", "none")
-        .style("fill-opacity", 0)
-        .attr("stroke", color)
-        .attr("stroke-opacity", 1)
-        .style("stroke-width", strokeWeight);
-
-    return path
-}
-
-function animateSVGMovement(path, outboundLength, dur, dir) {
-
-    return path
-        .attr("stroke-dasharray", outboundLength + " " + outboundLength)
-        .attr("stroke-dashoffset", dir * outboundLength)
-        .transition()
-        .duration(dur)
-        .ease(d3.easeLinear)
-        .attr("stroke-dashoffset", 0)
-        .on("end",
-            function (d, i) {
-
-            }
-
-        );
-
-}
-
+//draws a link between two sites
+//[*link* is link id, *dur* is the animation duration, *color* (optional) link's color when drawn]
 function drawLink(link, dur, color) {
 
-    lineGroup = voronoi_cells.append("g")
-        .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+    //add the link_group to the canvas again 
+    //(we detach it previously to make it invisible after mouseout is being performed)
+    link_group = svg_canvas.append("g")
+       .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
+    //find the sites that the link connects
     let connected_sites = all_links.find(x => x.id === link).sites;
 
     let from = SITE_DB.find(x => x.id === connected_sites[0]);
     let to = SITE_DB.find(x => x.id === connected_sites[1]);
 
+    //acquire the direction of the link by checking if it's opposite exists.
+    //If the opposite's drawn on screen, make arc's curvature inverse.
     let direction = links_drawn.includes(inverseLink(link)) ? "in" : "out";
 
+     //calculate the speed deviation for the link in question
+     let deviation = calculateDeviation(link) //negative slower, positive faster
+
+    //acquire the minmax values for the color scale.
+    //we create a new color scale, even though the old one exits
+    //because the drawn links always colored based on speed deviation, 
+    //whereas the general setColorScale can be changed to speed ranges etc.
     let values = getMinMax();
-    let deviation = calculateDeviation(link) //negative slower, positive faster
 
     var scale = d3.scaleLinear()
         .domain([values.min, values.max])
         .range([values.min, values.max]);
 
+    //if color's not defined, color the link based on speed deviation
     color = color == undefined ? setColor(scale(deviation)) : color;
 
     let strokeWeight = 5;
 
-    console.log('DEVIATION:', link, deviation, color);
-
-    let link_line = generate_arc(from, to, direction, strokeWeight, color); //setColor(strokeWeight)
+    //animate the line
+    let link_line = generate_arc(from, to, direction, strokeWeight, color);
     let line_length = link_line.node().getTotalLength();
-
-    links_drawn.push(link);
-
     animateMovement(link_line, line_length, dur);
 
+    //add to the drawn list so we know what the opposite link's
+    //direction is
+    links_drawn.push(link);
 }
 
-
-
+//find the opposite of the link by looking at the *to* and *from*
+//nodes and changing the directionality
 function inverseLink(link) {
     let connected_sites = all_links.find(x => x.id === link).sites;
     let from = SITE_DB.find(x => x.id === connected_sites[0]);
@@ -838,7 +812,7 @@ function inverseLink(link) {
 
 function generate_arc(A, B, direction, strokeWeight, stroke) {
 
-    return lineGroup
+    return link_group
         .append('path')
         .attr('d', curvedLine(A.x, A.y, B.x, B.y, direction === "in" ? 1 : -1))
         .attr('class', 'arc_line')
@@ -849,6 +823,29 @@ function generate_arc(A, B, direction, strokeWeight, stroke) {
         .style("stroke-width", strokeWeight);
 }
 
+function curvedLine(x, y, X, Y, dir) {
+
+    let start_X = x;
+    let start_Y = y;
+    let end_X = X;
+    let end_Y = Y;
+    let midX = (start_X + end_X) / 2;
+    let a = Math.abs(start_X - end_X);
+    let b = Math.abs(start_Y - end_Y);
+    let off = a > b ? b / 10 : 15;
+
+    let mid_X1 = midX - off * dir;
+
+    let mid_Y1 = slope(mid_X1, start_X, start_Y, end_X, end_Y);
+    return ['M', start_X, start_Y, // the arc starts at the coordinate x=start, y=height-30 (where the starting node is)
+            'C', // This means we're gonna build an elliptical arc
+            start_X, ",", start_Y, ",",
+            mid_X1, mid_Y1,
+            // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
+            end_X, ',', end_Y
+        ] // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
+        .join(' ');
+}
 function animateMovement(line, outboundLength, dur) {
 
     return line
@@ -868,12 +865,8 @@ function animateMovement(line, outboundLength, dur) {
 }
 
 function drawLinks(x, y, X, Y, dur, fill) {
-    // Add the links
-    //x_coord,y_coord,d.data.x,d.data.y
-
-
-
-    var blue = lineGroup
+  
+    var blue = link_group
         .append('path')
         .attr('d', curvedLine(x, y, X, Y, 1))
         .style("fill", fill)
@@ -883,7 +876,7 @@ function drawLinks(x, y, X, Y, dur, fill) {
         .style("stroke-width", 2);
 
     //d.data.x,d.data.y,x_coord,y_coord
-    var red = lineGroup
+    var red = link_group
         .append('path')
         .attr('d', curvedLine(X, Y, x, y, -1))
         .style("fill", fill)
@@ -928,29 +921,7 @@ function drawLinks(x, y, X, Y, dur, fill) {
         );
 }
 
-function curvedLine(x, y, X, Y, dir) {
 
-    let start_X = x;
-    let start_Y = y;
-    let end_X = X;
-    let end_Y = Y;
-    let midX = (start_X + end_X) / 2;
-    let a = Math.abs(start_X - end_X);
-    let b = Math.abs(start_Y - end_Y);
-    let off = a > b ? b / 10 : 15;
-
-    let mid_X1 = midX - off * dir;
-
-    let mid_Y1 = slope(mid_X1, start_X, start_Y, end_X, end_Y);
-    return ['M', start_X, start_Y, // the arc starts at the coordinate x=start, y=height-30 (where the starting node is)
-            'C', // This means we're gonna build an elliptical arc
-            start_X, ",", start_Y, ",",
-            mid_X1, mid_Y1,
-            // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
-            end_X, ',', end_Y
-        ] // We always want the arc on top. So if end is before start, putting 0 here turn the arc upside down.
-        .join(' ');
-}
 
 function colorTransition(value) {
     SITE_DB.forEach((element) => {
@@ -958,7 +929,7 @@ function colorTransition(value) {
     });
     var setColor = setColorRange();
 
-    pathGroup.selectAll(".cell")
+    polygon_group.selectAll(".cell")
         .transition()
         .duration('1000')
         .attr('fill', function (d, i) {
@@ -973,7 +944,7 @@ function colorTransition(value) {
 
 }
 
-function changeModes() {
+function change_modes() {
     d3.selectAll("input").on("change", function () {
         //console.log(d);
 
@@ -989,7 +960,7 @@ function changeModes() {
         }
         if (this.value === "routes") {
             console.log("routes");
-            pathGroup.remove();
+            polygon_group.remove();
             for (let j = 0; j < SITE_DB.length; j++) {
 
                 let id = SITE_DB[j].id;
@@ -1002,11 +973,11 @@ function changeModes() {
                     let inbound = neighbors[i].links.in.id;
                     let outbound = neighbors[i].links.out.id;
 
-                    // drawLink(inbound, 1000);
-                    // drawLink(outbound, 1000);
+                    drawLink(inbound, 1000);
+                    drawLink(outbound, 1000);
 
-                    drawSVGLinks(inbound, 1500);
-                    drawSVGLinks(outbound, 1500);
+                    // drawSVGLinks(inbound, 1500);
+                    // drawSVGLinks(outbound, 1500);
 
                 }
             }
@@ -1048,49 +1019,48 @@ function drawRoutes() {
 }
 
 
-function generateGraph(start, finish) {
+//Generate a graph that is used by the Dijkstra algorithm.
+//Find all the weights for node edges between the *start* and *finish* nodes
+function generate_graph(start, finish) {
 
-    var graph = {};
+    let graph = {};
 
+    //iterate over the SITE_DB to find the start/finish nodes
+    //and all the other nodes in between
     SITE_DB.forEach((element) => {
 
         let neighbors = element.neighbors;
 
         let obj = {};
 
+        //each neighbour is a node. Computes the weighted graph:
         neighbors.forEach((neighbor) => {
 
-            //console.log({"current":neighbor.site, "S": start, "F":finish});
+            //and the travel time between the nodes is the edge weight
             if (neighbor.site == start) {
-                obj["S"] = neighbor.travelTime; //dist;
-                //neighbor.site="S";    
+                obj["S"] = neighbor.travelTime; //or dist;
             }
 
             if (neighbor.site == finish) {
-                obj["F"] = neighbor.travelTime; //dist;
-                //neighbor.site="F";
+                obj["F"] = neighbor.travelTime; //or dist;
             } else {
                 obj[neighbor.site] = neighbor.travelTime;
-            } //dist;}
-
-
-
+            }
         });
+
         if (element.name == start) {
             graph["S"] = obj;
-            //element.name="S";    
         }
 
         if (element.name == finish) {
             graph["F"] = obj;
-            //element.name="F";
+
         } else {
             graph[element.name] = obj;
         }
 
     });
 
-    //console.log(graph);
     return graph;
 }
 
@@ -1211,9 +1181,6 @@ function generate_hull() {
                 point_list.push(element.getPointAtLength(u))
             }
 
-
-
-
         });
 
         //perhaps 185 for all will just work as well
@@ -1232,14 +1199,14 @@ function generate_hull() {
         CELL_GROUPS[group_id]['padded_hull'] = paddedHull(point_pairs);
 
 
-        let padded_cell_outline = paddedHull(point_pairs)[0]
+        let padded_zone_outline = paddedHull(point_pairs)[0]
 
         let points = []
 
-        for (let j = 0; j < padded_cell_outline.length; j++) {
+        for (let j = 0; j < padded_zone_outline.length; j++) {
             points.push({
-                'x': padded_cell_outline[j][0],
-                'y': padded_cell_outline[j][1]
+                'x': padded_zone_outline[j][0],
+                'y': padded_zone_outline[j][1]
             })
         }
 
@@ -1264,9 +1231,9 @@ function get_outline(zone_id) {
     //.curve(d3.curveCatmullRomClosed.alpha(0.95)); //d3.curveCardinal.tension(0.1)//d3.curveNatural
 
     if (zone_id != undefined) {
-        cell_outlines.append("g")
+        zone_outlines.append("g")
             .append("path")
-            .attr('class', 'cell_outline')
+            .attr('class', 'zone_outline')
             .attr("d", lineFunction(CELL_GROUPS[zone_id]['points']))
             .style("stroke-width", 5)
             .style("stroke", CELL_GROUPS[zone_id]['color'])
@@ -1280,9 +1247,9 @@ function get_outline(zone_id) {
             .on("end", function (d, i) {});
     } else {
         for (let j = 0; j < cell_group_list.length; j++) {
-            cell_outlines.append("g")
+            zone_outlines.append("g")
                 .append("path")
-                .attr('class', 'cell_outline')
+                .attr('class', 'zone_outline')
                 .attr("d", lineFunction(CELL_GROUPS[cell_group_list[j]]['points']))
                 .style("stroke-width", 5)
                 .style("stroke", CELL_GROUPS[cell_group_list[j]]['color'])
@@ -1418,4 +1385,36 @@ function deselect_all() {
     for (let i = 0; i < cells.length; i++) {
         cell_regular(cells[i])
     }
+}
+
+
+//cell manipulation + interactivity
+var cell_mouseover = (cell) => {
+    d3.select(cell).transition()
+        .duration('300')
+        .style('stroke', 'black')
+        //.style('stroke-width', 10)
+        .style("stroke-opacity", 1)
+        .style("fill-opacity", 0.85);
+}
+var cell_mouseout = (cell) => {
+    d3.select(cell).transition()
+        .duration('300')
+        .style('stroke', 'black')
+        // .style('stroke-width', 0.5)
+        .style("stroke-opacity", 0.3)
+        .style("fill-opacity", 0.3);
+}
+
+var cell_clicked = (cell) => {
+    d3.select(cell)
+        .style('stroke-opacity', 1).style('stroke', 'black').style('stroke-width', 4);
+
+}
+var cell_regular = (cell) => {
+    d3.select(cell)
+        .style('stroke', 'black')
+        .style('stroke-width', 0.5)
+        .style("stroke-opacity", 0.3)
+        .style("fill-opacity", 0.3);
 }

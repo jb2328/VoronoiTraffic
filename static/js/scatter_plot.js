@@ -83,8 +83,8 @@ async function show_node_data(site_id, date_start, date_end) {
       show_line_plot(restructured_route_data, min_max, site_name, date_start, date_end);
     } catch (err) {
       console.log('Error message', err)
-      document.getElementById('test_graph').innerHTML = "No data received";
-      document.getElementById('test_graph').style.opacity = 1;
+      document.getElementById('line_graph').innerHTML = "No data received";
+      document.getElementById('line_graph').style.opacity = 1;
     }
   })
 }
@@ -176,11 +176,11 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
     height = 300 - margin.top - margin.bottom;
 
   //MAKE SURE THE DIV IS EMPTY and visible
-  document.getElementById('test_graph').innerHTML = ICON_CLOSE_DIV;
-  document.getElementById('test_graph').style.opacity = 1;
+  document.getElementById('line_graph').innerHTML = ICON_CLOSE_DIV;
+  document.getElementById('line_graph').style.opacity = 1;
 
   // append the svg object to the body of the page
-  var svg = d3.select("#test_graph")
+  var svg = d3.select("#line_graph")
     .append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
@@ -322,7 +322,7 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
       d3.selectAll('.legend').transition().duration(250).style('opacity', 1)
       d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 1)
       d3.select('#LG_' + selected).attr("stroke-width", 2.5);
-      lineGroup.remove();
+      link_group.remove();
       d3.selectAll('.arc_line').remove()
       d3.selectAll('.dashed_scatter_line').remove()
     })
@@ -394,7 +394,7 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
       // Use D3 to select element, change color and size
       d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 1)
       d3.select(this).attr("stroke-width", 2.5);
-      lineGroup.remove();
+      link_group.remove();
       d3.selectAll('.arc_line').remove()
     });
 

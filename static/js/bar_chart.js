@@ -95,7 +95,7 @@ function show_horizontal_bar(data) {
         })
         .on('mouseout', function (d, i) {
 
-            d3.selectAll('.cell_outline').remove();
+            d3.selectAll('.zone_outline').remove();
             d3.selectAll('.bar').transition().duration(250).style('opacity', 1)
 
         });
@@ -222,7 +222,7 @@ function show_vertical_bar(data) {
         })
         .on('mouseout', function (d, i) {
 
-            d3.selectAll('.cell_outline').remove();
+            d3.selectAll('.zone_outline').remove();
             d3.selectAll('.bar').transition().duration(250).style('opacity', 1)
 
         });
