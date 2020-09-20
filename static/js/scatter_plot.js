@@ -162,7 +162,7 @@ async function waitForCondition(conditionObj) {
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 }
-var x, y;
+var x_scale, y_scale;
 
 function show_line_plot(route_data, min_max, site_name, START, END) {
   // set the dimensions and margins of the graph
@@ -190,11 +190,11 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
 
   // console.log('domains', min_x, max_x, min_y, max_y);
 
-  x = d3.scaleLinear()
+  x_scale = d3.scaleLinear()
     .domain([min_max.min_x, min_max.max_x])
     .range([0, width]);
 
-  var x_axis = d3.axisBottom(x).ticks(27).tickFormat(function (d, i) {
+  var x_axis = d3.axisBottom(x_scale).ticks(27).tickFormat(function (d, i) {
     let event = new Date(d * 1000);
 
     let options = {
@@ -240,12 +240,12 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
 
   // Add Y axis
   let y_padding = 20;
-  y = d3.scaleLinear()
+  y_scale = d3.scaleLinear()
     .domain([0, min_max.max_y + y_padding]) //[min_max.min_y - y_padding, min_max.max_y + y_padding]
     .range([height, 0]);
 
   svg.append("g")
-    .call(d3.axisLeft(y));
+    .call(d3.axisLeft(y_scale));
 
   let legend_keys = []
   for (let u = 0; u < route_data.length; u++) {
@@ -414,11 +414,11 @@ function create_path(canvas, data, id, stroke, mode) {
     .attr("d", d3.line()
       .x(function (d) {
         let time_parameter = mode == 'historical' ? d.ts + WEEK : d.ts;
-        return x(time_parameter)
+        return x_scale(time_parameter)
       })
       .y(function (d) {
         let speed_parameter = mode == 'historical' ? d.normal_speed : d.speed;
-        return y(speed_parameter)
+        return y_scale(speed_parameter)
       })
     );
 
