@@ -19,7 +19,7 @@ class Node {
 
         this.travelTime = null;
         this.travelSpeed = null;
-        this.historicSpeed = null;
+        this.historicalSpeed = null;
         this.speedDeviation = null;
 
         //selected variable output - tt,ts,hs or sd
@@ -54,8 +54,8 @@ class Node {
     setVisualisation(vis) {
         this.selectedName = vis;
         switch (vis) {
-            case "historic speed":
-                this.selected = this.historicSpeed;
+            case "historical speed":
+                this.selected = this.historicalSpeed;
                 break;
             case "travel speed":
                 this.selected = this.travelSpeed;
@@ -137,7 +137,7 @@ class Node {
 
     computeTravelSpeed() {
         let currentAverage = [];
-        let historicAverage = [];
+        let historicalAverage = [];
 
         for (let i = 0; i < this.neighbors.length; i++) {
             let link = this.neighbors[i].links.out.id;
@@ -146,26 +146,26 @@ class Node {
             for (let u = 0; u < all_journeys.length; u++) {
                 if (link == all_journeys[u].id) {
                     let travelTime = all_journeys[u].travelTime;
-                    let historicTime = all_journeys[u].normalTravelTime;
-                    // console.log(historicTime);
+                    let historicalTime = all_journeys[u].normalTravelTime;
+                    // console.log(historicalTime);
 
                     let currentSpeed = (dist / travelTime) * TO_MPH;
-                    let historicSpeed = (dist / historicTime) * TO_MPH;
+                    let historicalSpeed = (dist / historicalTime) * TO_MPH;
 
-                    if (currentSpeed == Infinity || historicSpeed == Infinity) {
+                    if (currentSpeed == Infinity || historicalSpeed == Infinity) {
                         break;
                     }
 
-                    historicAverage.push(historicSpeed);
+                    historicalAverage.push(historicalSpeed);
                     currentAverage.push(currentSpeed);
                 }
             }
-            //console.log(historicAverage);
+            //console.log(historicalAverage);
 
         }
-        if (historicAverage.length > 0) {
-            let historicSum = historicAverage.reduce((previous, current) => current += previous);
-            this.historicSpeed = historicSum / historicAverage.length;
+        if (historicalAverage.length > 0) {
+            let historicalSum = historicalAverage.reduce((previous, current) => current += previous);
+            this.historicalSpeed = historicalSum / historicalAverage.length;
         }
 
         if (currentAverage.length > 0) {
@@ -174,7 +174,7 @@ class Node {
         }
 
         //double check
-        this.speedDeviation = this.travelSpeed - this.historicSpeed;
+        this.speedDeviation = this.travelSpeed - this.historicalSpeed;
 
     }
 }

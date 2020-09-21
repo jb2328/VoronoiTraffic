@@ -25,12 +25,14 @@ var setColor;
 var link_group, zone_outlines, dijkstra_group, road_group;
 var svg_canvas;
 
+var YYYY,MM,DD;
 const ICON_CLOSE_DIV = "<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
 const ICON_CLOSE_AND_DESELECT = "<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); this.SELECTED_SITE=undefined; return false;'>x</span>"
 
 const ICON_LOADING = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >';
 
-
+const HALF_TAB = '&emsp;&emsp;'
+const TAB = '&emsp;&emsp;&emsp;&emsp;'
 
 //----------------------------------//
 //---------Drawing Links------------//
@@ -245,8 +247,8 @@ function change_modes() {
 
             colorTransition("speed deviation");
         }
-        if (this.value === "historic") {
-            colorTransition("historic speed");
+        if (this.value === "historical") {
+            colorTransition("historical speed");
         }
         if (this.value === "routes") {
             console.log("routes");
@@ -367,28 +369,10 @@ function arraysEqual(a, b) {
     return true;
 }
 
-//calculates speed deviation for a given link
-function calculateDeviation(link) {
-    let dist = all_links.find(x => x.id === link).length;
-    let travelTime, normalTravelTime;
-    try {
-        travelTime = all_journeys.find(x => x.id === link).travelTime;
-        normalTravelTime = all_journeys.find(x => x.id === link).normalTravelTime;
-    } catch {
-        return undefined
-    }
-
-    if (travelTime == null || travelTime == undefined) {
-        travelTime = normalTravelTime;
-    }
-
-    let current = (dist / travelTime) * TO_MPH;
-    let normal = (dist / normalTravelTime) * TO_MPH; //historic speed
-
-    //negative speed is slower, positive speed is faster
-    return current - normal;
-
-}
+function toTimestamp(strDate) {
+    var datum = Date.parse(strDate);
+    return datum / 1000;
+  }
 
 
 //a general mapping function that takes a value and interpolates it
@@ -437,6 +421,30 @@ function getMinMax() {
         "max": max //10
     };
 }
+
+//calculates speed deviation for a given link
+function calculateDeviation(link) {
+    let dist = all_links.find(x => x.id === link).length;
+    let travelTime, normalTravelTime;
+    try {
+        travelTime = all_journeys.find(x => x.id === link).travelTime;
+        normalTravelTime = all_journeys.find(x => x.id === link).normalTravelTime;
+    } catch {
+        return undefined
+    }
+
+    if (travelTime == null || travelTime == undefined) {
+        travelTime = normalTravelTime;
+    }
+
+    let current = (dist / travelTime) * TO_MPH;
+    let normal = (dist / normalTravelTime) * TO_MPH; //historical speed
+
+    //negative speed is slower, positive speed is faster
+    return current - normal;
+
+}
+
 
 
 function generate_hull() {
@@ -562,14 +570,14 @@ function set_nav_date_visible(trigger) {
 function date_shift(n, node_id) {
     let year, month, day;
     console.log('date_shift()');
-    if (this.YYYY == '') {
+    if (YYYY == '') {
         year = plot_date.slice(0, 4);
         month = plot_date.slice(5, 7);
         day = plot_date.slice(8, 10);
     } else {
-        year = this.YYYY;
-        month = this.MM;
-        day = this.DD;
+        year = YYYY;
+        month = MM;
+        day = DD;
     }
 
     console.log(year, month, day) //document.getElementById('date_now_header')
@@ -599,15 +607,21 @@ function date_shift(n, node_id) {
 
 
 function update_url(node, date) {
-    console.log('UPDATING URL', date)
-    if (date == undefined || date== 'undefined') {
-        console.log('URL UNDEFINED')
+    // console.log('UPDATING URL', date)
+    // if (date == undefined || date== 'undefined') {
         let new_date = new Date()
-        date = new_date.getDate() + "-" + new_date.getMonth() + 1 + "-" + new_date.getFullYear();
-    }
+        let today = new_date.getDate() + "-" + (new_date.getMonth() + 1) + "-" + new_date.getFullYear();
+    // }
+
     var searchParams = new URLSearchParams(window.location.search)
+
     searchParams.set("node", node);
-    searchParams.set("date", date);
+
+    console.log('DATES',today, date,today==date)
+    if(today!=date){
+        searchParams.set("date", date);
+
+    }
     var newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
     window.history.pushState(null, '', newRelativePathQuery);
     console.log('updated URL', node, date)

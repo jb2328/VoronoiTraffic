@@ -1,0 +1,17 @@
+problem with date_shift() since it uses this.YEAR, this.MM, this.DD and hence is undefined
+
+makien it a n object method is silly
+
+hence the need make it DD/MM/YEAR globals
+
+
+also perhaps it makes sense to have sctatterplot and other graphs as part of HUD object?
+would have methods as HUD.toggle_line_grap(1)
+
+problem with setting url as always sets to current day rather than 'today' -> makes it impossible to bookmark
+
+I assume SITE_DB should stay global because it's used by differnt data grpahs but is it really? 
+
+e.g drawLink is part of varonoi svg - accesses it to add arc lines
+
+but drawLink is also used by scatter plot, so I can't use drawLink without with this.svg_canvas without also adding scatterPlot as a part voronoiViz

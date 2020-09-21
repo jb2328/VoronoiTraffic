@@ -12,9 +12,7 @@ class VoronoiViz {
         this.init_map();
 
         this.SELECTED_SITE = '';
-        this.YYYY;
-        this.MM;
-        this.DD;
+       
 
 
     }
@@ -44,6 +42,7 @@ class VoronoiViz {
                 this.SELECTED_SITE = SITE_DB.find(x => x.acp_id === URL_NODE);
                 console.log('URL NODE', URL_NODE, this.SELECTED_SITE)
 
+                let selected_date=YYYY+"-"+"0"+MM+"-"+DD
 
                 //make HUD elements visible
                 document.getElementById("selected_cell").style.opacity = 1;
@@ -55,13 +54,13 @@ class VoronoiViz {
                 set_nav_date_visible(1);
 
                 //load metadata for the node
-                show_node_information(this.SELECTED_SITE.acp_id);
+                show_node_information(this.SELECTED_SITE.acp_id,selected_date );
 
                 //add d3/css styling to the selected cell to make it pop
                 select_cell(this.SELECTED_SITE.acp_id)
 
                 //update url and add event listeners for date changes
-                onchange_feature_select(this.SELECTED_SITE.acp_id, this.DD + "-" + this.MM + "-" + this.YYYY)
+                onchange_feature_select(this.SELECTED_SITE.acp_id, DD + "-" + MM + "-" + YYYY)
 
             }
 
@@ -71,13 +70,7 @@ class VoronoiViz {
             generate_hull();
 
 
-
-
-
         });
-
-
-
 
 
         //attach map event listeners
@@ -91,6 +84,9 @@ class VoronoiViz {
     }
 
     update() {
+
+
+        console.log(this.SELECTED_SITE);
 
         load_api_data().then(() => {
 
@@ -165,17 +161,18 @@ class VoronoiViz {
         }
 
 
-        this.YYYY = date.getFullYear(); //'{{ YYYY }}';
-        this.MM = date.getMonth() + 1; //'{{ MM }}';
-        this.DD = date.getDate(); //'{{ DD }}';
+        YYYY = date.getFullYear(); //'{{ YYYY }}';
+        MM = date.getMonth() + 1; //'{{ MM }}';
+        DD = date.getDate(); //'{{ DD }}';
 
-        document.getElementById('date_now').innerHTML = "<h2 id='date_now_header'>" + this.DD + " " +
-            month_long + " " + this.YYYY +
+        document.getElementById('date_now').innerHTML = "<h2 id='date_now_header'>" + DD + " " +
+            month_long + " " + YYYY +
             "</h2>"
     }
 
     draw_voronoi() {
 
+        console.log('selected_site',this.SELECTED_SITE)
         //remove old cell overlay and prepare to draw a new one
         d3.select('#cell_overlay').remove();
 
@@ -441,7 +438,8 @@ class VoronoiViz {
 
                 //set as the main global selection 
                 this.SELECTED_SITE = SITE_DB.find(x => x.acp_id === d.data.acp_id);
-
+                
+                let selected_date=YYYY+"-"+MM+"-"+DD
                 //make HUD elements visible
                 document.getElementById("selected_cell").style.opacity = 1;
                 document.getElementById("selected_cell").innerHTML = ICON_CLOSE_AND_DESELECT + "<br>" + "<h1>" + this.SELECTED_SITE.name + "</h1>";
@@ -452,13 +450,13 @@ class VoronoiViz {
                 set_nav_date_visible(1);
 
                 //load metadata for the node
-                show_node_information(this.SELECTED_SITE.acp_id);
+                show_node_information(this.SELECTED_SITE.acp_id,selected_date);
 
                 //add d3/css styling to the selected cell to make it pop
                 select_cell(this.SELECTED_SITE.acp_id)
 
                 //update url and add event listeners for date changes
-                onchange_feature_select(this.SELECTED_SITE.acp_id, this.DD + "-" + this.MM + "-" + this.YYYY)
+                onchange_feature_select(this.SELECTED_SITE.acp_id, DD + "-" + MM + "-" + YYYY)
             })
 
             //--------ON DOUBLE CLICK-------//
@@ -576,12 +574,13 @@ class VoronoiViz {
 
         //change_modes adds the option of coloring in the cells based on:
         // -current speed
-        // -historic(normal) speed
+        // -historical(normal) speed
         // -deviation in speed from the normal
         change_modes();
 
+        console.log(this.SELECTED_SITE)
         //in case the selected node has been mislabeled:
-        if (this.SELECTED_SITE != undefined && this.SELECTED_SITE != '*') {
+        if (this.SELECTED_SITE != undefined) {
             select_cell(this.SELECTED_SITE.acp_id);
         }
 
@@ -596,14 +595,14 @@ class VoronoiViz {
     date_shift(n, node_id) {
         let year, month, day;
         console.log('date_shift()');
-        if (this.YYYY == '') {
+        if (YYYY == '') {
             year = plot_date.slice(0, 4);
             month = plot_date.slice(5, 7);
             day = plot_date.slice(8, 10);
         } else {
-            year = this.YYYY;
-            month = this.MM;
-            day = this.DD;
+            year = YYYY;
+            month = MM;
+            day = DD;
         }
 
         console.log(year, month, day) //document.getElementById('date_now_header')
@@ -671,7 +670,7 @@ class VoronoiViz {
             "<div>" +
             "<form id='modes'>" +
             "<input type='radio' name='mode' value='current'> Current Speed<br>" +
-            "<input type='radio' name='mode' value='historic'> Normal Speed<br>" +
+            "<input type='radio' name='mode' value='historical'> Normal Speed<br>" +
             "<input type='radio' name='mode' value='deviation' checked='checked'> Deviation<br>" +
             "</form>" +
             "</div>";

@@ -6,7 +6,7 @@ var SITE_DB;
 
 var travelTimes;
 var travelSpeed;
-var historicSpeed;
+var historicalSpeed;
 var speedDeviation;
 
 var all_sites, all_links, all_journeys, all_routes = [];

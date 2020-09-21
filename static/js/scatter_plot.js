@@ -36,17 +36,15 @@ async function show_node_data(site_id, date_start, date_end) {
   let site = SITE_DB.find(x => x.acp_id == site_id);
   let site_name = site.name;
 
-  console.log('site', site, site.neighbors)
-  console.log('date', date_start, date_end)
-
   //lookup neighbours
   let all_lists = []
   for (let i = 0; i < site.neighbors.length; i++) {
 
+    //we have two directions for every node, so that is how e quey data for it
+
     //replace the vertical bars so we have a valid string we can use to query
     let id_out = site.neighbors[i].links.in.acp_id.replace('|', '%7C');
     let id_in = site.neighbors[i].links.out.acp_id.replace('|', '%7C');
-    console.log(id_out, id_in)
 
     historical_link(id_out, date_start, date_end).then((data) => {
       all_lists.push(data)
@@ -87,11 +85,6 @@ async function show_node_data(site_id, date_start, date_end) {
       document.getElementById('line_graph').style.opacity = 1;
     }
   })
-}
-
-function toTimestamp(strDate) {
-  var datum = Date.parse(strDate);
-  return datum / 1000;
 }
 
 function restructure_hist_data(unstr_fetched_data) {
@@ -258,7 +251,7 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
 
     d3.select('#META_' + route_acp_id).style('color', LINE_GRAPH_COLORS[u])
 
-    //27 is th lenght of a rout id, whreas 12 martks the star of the unique string in "CAMBRIDGE_JTMS_9800Z0SUAHN1"
+    //27 is th lenght of a route id, whreas 12 martks the star of the unique string in "CAMBRIDGE_JTMS_9800Z0SUAHN1"
 
     legend_keys.push({
       'name': route_acp_id.substr(27 - 12, 27),
@@ -268,7 +261,7 @@ function show_line_plot(route_data, min_max, site_name, START, END) {
   }
 
   legend_keys.push({
-    'name': 'HISTORIC DATA',
+    'name': 'HISTORICAL DATA',
     'color': 'LightGrey'
   });
 
@@ -424,7 +417,7 @@ function create_path(canvas, data, id, stroke, mode) {
 
 
   let totalLength = path.node().getTotalLength();
-  if (mode) {
+  if (mode) {//in js undefined returns a false boolean
     let dash_step = 3;
     path
       .attr("class", "dashed_scatter_line")
@@ -471,7 +464,7 @@ function restructure_to_sublists(old_list) {
   //all acp_id's in a single list
   for (let i = 0; i < old_list.length; i++) {
     let current_id = old_list[i].acp_id;
-  
+
     //ignore the doubled link readings
     if (past_ids.includes(current_id)) {
       continue;
@@ -508,11 +501,11 @@ function restructure_to_sublists(old_list) {
 //unused to function to calculate travelTime (tt) for
 //a given site from the SITE_DB
 function show_node_metadata(site_id) {
-  console.log('showing', site_id)
-  //find the requested site_id in the SITE_DB
-  let SITE = SITE_DB.find(x => x.acp_id == site_id);
 
-  get_site_metadata(SITE)
+  //find the requested site_id in the SITE_DB
+  let site = SITE_DB.find(x => x.acp_id == site_id);
+
+  get_site_metadata(site)
 }
 
 function get_site_metadata(SITE) {
@@ -543,27 +536,23 @@ function get_site_metadata(SITE) {
         console.log('tt our failed', link_out)
       } else {
         tt_out = link_out.travelTime;
-
       }
 
       let speed_out = parseInt((neighbour.links.out.length / tt_out) * TO_MPH);
-
-      console.log('journey iD:', neighbour.links.out, tt_out, speed_out)
-
-      const HALF_TAB = '&emsp;&emsp;'
-      const TAB = '&emsp;&emsp;&emsp;&emsp;'
-
 
       let to = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + TAB + "<b>To:</b> " + "Current Speed: " + speed_in + "MPH" + "</div>";
       let from = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + TAB + "<b>From:</b> " + "Current Speed: " + speed_out + "MPH" + "</div>";
 
       neighbour_info += "<br>" + "<i>" + neighbour.site + "</i>" + to + from;
-    } catch {}
+    } catch (err) {
+      console.log("metadata_error", err.message)
+    }
   }
 
   let full_metadata = "<b>" + SITE.name + "</b>" + '<br>' +
     "Average Travel Speed: " + parseInt(SITE.travelSpeed) + "MPH" + '<br>' +
     "Speed Deviation from Regular: " + parseInt(SITE.speedDeviation) + "MPH" + '<br><br>' + neighbour_info;
+
   document.getElementById('metadata_table').innerHTML = ICON_CLOSE_DIV + full_metadata;
   document.getElementById('metadata_table').style.opacity = 1;
 }
