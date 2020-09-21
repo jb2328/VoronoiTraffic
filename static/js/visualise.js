@@ -10,7 +10,6 @@ var map, // The Leaflet map object itself
 
 var topLeft;
 
-var selected_node;
 
 var all_sites, all_links, all_journeys = [];
 
@@ -27,24 +26,9 @@ var link_group, zone_outlines, dijkstra_group, road_group;
 var svg_canvas;
 
 const ICON_CLOSE_DIV = "<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
-const ICON_CLOSE_AND_DESELECT = "<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); selected_node=undefined; return false;'>x</span>"
+const ICON_CLOSE_AND_DESELECT = "<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); this.SELECTED_SITE=undefined; return false;'>x</span>"
 
 const ICON_LOADING = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >';
-
-
-var show_node_information = (d, START, END) => {
-    document.getElementById("line_graph").style.opacity = 1;
-    document.getElementById("line_graph").innerHTML = ICON_LOADING;
-
-    let NODE = d.data.id;
-
-    if (START == undefined) {
-        START = new Date().toISOString().slice(0, 10)
-    }
-
-    show_node_data(NODE, START, END)
-    show_node_metadata(NODE)
-}
 
 
 
@@ -578,14 +562,14 @@ function set_nav_date_visible(trigger) {
 function date_shift(n, node_id) {
     let year, month, day;
     console.log('date_shift()');
-    if (YYYY == '') {
+    if (this.YYYY == '') {
         year = plot_date.slice(0, 4);
         month = plot_date.slice(5, 7);
         day = plot_date.slice(8, 10);
     } else {
-        year = YYYY;
-        month = MM;
-        day = DD;
+        year = this.YYYY;
+        month = this.MM;
+        day = this.DD;
     }
 
     console.log(year, month, day) //document.getElementById('date_now_header')
@@ -606,12 +590,7 @@ function date_shift(n, node_id) {
     let query_date = new_year + "-" + new_month + "-" + new_day;
     document.getElementById('date_now_header').innerHTML = new_day + " " + new_month_long + " " + new_year
 
-    let node_element = {};
-    node_element['data'] = SITE_DB.find(x => x.acp_id === node_id);
-
-    console.log(node_element, node_id, new_year + '-' + new_month + '-' + new_day);
-
-    show_node_information(node_element, query_date);
+    show_node_information(node_id, query_date);
 
     let url_date = new_day + '-' + new_month + '-' + new_year;
     update_url(node_id, url_date);
@@ -620,7 +599,8 @@ function date_shift(n, node_id) {
 
 
 function update_url(node, date) {
-    if (date == undefined) {
+    console.log('UPDATING URL', date)
+    if (date == undefined || date== 'undefined') {
         console.log('URL UNDEFINED')
         let new_date = new Date()
         date = new_date.getDate() + "-" + new_date.getMonth() + 1 + "-" + new_date.getFullYear();

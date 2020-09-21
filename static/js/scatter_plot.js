@@ -33,7 +33,7 @@ async function historical_link(link_id, date1, date2) {
 async function show_node_data(site_id, date_start, date_end) {
 
   //find the requested site_id in the SITE_DB
-  let site = SITE_DB.find(x => x.id == site_id);
+  let site = SITE_DB.find(x => x.acp_id == site_id);
   let site_name = site.name;
 
   console.log('site', site, site.neighbors)
@@ -493,7 +493,6 @@ function restructure_to_sublists(old_list) {
 
     //push items with the same acp_id to a single list
     new_sublist.push(old_list[i]);
-    console.log(new_sublist.length)
   }
 
   //the last unique acp_id does not get pushed by itself
@@ -511,7 +510,7 @@ function restructure_to_sublists(old_list) {
 function show_node_metadata(site_id) {
   console.log('showing', site_id)
   //find the requested site_id in the SITE_DB
-  let SITE = SITE_DB.find(x => x.id == site_id);
+  let SITE = SITE_DB.find(x => x.acp_id == site_id);
 
   get_site_metadata(SITE)
 }
