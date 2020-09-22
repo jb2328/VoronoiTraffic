@@ -76,7 +76,7 @@ function get_zone_averages() {
             'zone': zones[i],
             'value': arrAvg(zone_temp)
         })
-
+    
     }
     return zone_readings
 }

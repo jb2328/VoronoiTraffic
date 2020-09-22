@@ -119,8 +119,8 @@ function getCircle() {
         let x = a + r * Math.cos(t);
         let y = a + r * Math.sin(t);
 
-        let lng = map_values(x, -500, 500, 0.03, 0.2);
-        let lat = map_values(y, -500, 500, 52.15, 52.246)
+        let lng = VizTools.map_values(x, -500, 500, 0.03, 0.2);
+        let lat = VizTools.map_values(y, -500, 500, 52.15, 52.246)
 
         newPts.push({
             "x": x,

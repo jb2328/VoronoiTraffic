@@ -4,17 +4,21 @@ class VoronoiViz {
 
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
     constructor(site_db) {
+        var that = this;
 
-        // Instantiate a jb2328 utility class e.g. for getBoundingBox()
-        // this.viz_tools = new VizTools();
+
+        that.svg_canvas=null;
+
+        this.hud = new Hud(this);
+        console.log('HELLO',this.hud, this)
 
         // Transform parameters to scale SVG to screen
         this.init_map();
 
-      //  this.hud=new Hud(this); 
+        
 
         this.SELECTED_SITE = '';
-       
+
 
     }
 
@@ -37,40 +41,21 @@ class VoronoiViz {
             console.log('draw bar chart')
 
             // show_horizontal_bar(get_zone_averages());
-            show_vertical_bar(get_zone_averages());
+            this.hud.show_vertical_bar(get_zone_averages());
 
             if (URL_NODE != '*') {
                 this.SELECTED_SITE = SITE_DB.find(x => x.node_acp_id === URL_NODE);
                 console.log('URL NODE', URL_NODE, this.SELECTED_SITE)
 
-                //------------------------HUD---------------------------//
-                let selected_date=YYYY+"-"+"0"+MM+"-"+DD
+                this.hud.show_all(this.SELECTED_SITE);
 
-                //make HUD elements visible
-                document.getElementById("selected_cell").style.opacity = 1;
-                document.getElementById("selected_cell").innerHTML = ICON_CLOSE_AND_DESELECT + "<br>" + "<h1>" + this.SELECTED_SITE.name + "</h1>";
-                document.getElementById("datepicker").style.opacity = 1;
-
-                //make the date navigation buttons visible 
-                //(made invisible prior since without a cell selection, changing the date does not make sense)
-                set_nav_date_visible(1);
-
-                //load metadata for the node
-                show_node_information(this.SELECTED_SITE.node_acp_id,selected_date );
-
-                //add d3/css styling to the selected cell to make it pop
-                select_cell(this.SELECTED_SITE.node_acp_id)
-
-                //update url and add event listeners for date changes
-                onchange_feature_select(this.SELECTED_SITE.node_acp_id, DD + "-" + MM + "-" + YYYY)
-               //------------------------/HUD---------------------------//
 
             }
 
 
             console.log('loading Voronoi');
             this.draw_voronoi();
-            generate_hull();
+            this.generate_hull();
 
 
         });
@@ -78,7 +63,7 @@ class VoronoiViz {
 
         //attach map event listeners
         map.on("viewreset moveend", this.draw_voronoi);
-        map.on("viewreset moveend", generate_hull);
+        map.on("viewreset moveend", this.generate_hull);
 
         //Will execute myCallback every X seconds 
         //the use of .bind(this) is critical otherwise we can't call other class methods
@@ -175,7 +160,7 @@ class VoronoiViz {
 
     draw_voronoi() {
 
-        console.log('selected_site',this.SELECTED_SITE)
+        console.log('selected_site', this.SELECTED_SITE)
         //remove old cell overlay and prepare to draw a new one
         d3.select('#cell_overlay').remove();
 
@@ -310,7 +295,7 @@ class VoronoiViz {
         //appending the d3.js SVG to the map.
         //the svg_canvas variable will also contain all of the d3.generated proto objects
         //like lines, outlines and the polygons (voronoi cells).
-        svg_canvas = d3.select(map.getPanes().overlayPane).append("svg")
+        this.svg_canvas = d3.select(map.getPanes().overlayPane).append("svg")
             .attr("id", "cell_overlay")
             .attr("class", "leaflet-zoom-hide")
             .style("width", map.getSize().x + "px")
@@ -319,24 +304,24 @@ class VoronoiViz {
             .style("margin-top", topLeft.y + "px");
 
         //append voronoi polygons to the canvas
-        polygon_group = svg_canvas.append("g")
+        polygon_group = this.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append zone outlines to the canvas
-        zone_outlines = svg_canvas.append("g")
+        zone_outlines = this.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append drawn links to the canvas
-        link_group = svg_canvas.append("g")
+        link_group = this.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append dijkstra shortest path generated line to the canvas
-        dijkstra_group = svg_canvas.append("g")
+        dijkstra_group = this.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append circles that illustrate sensors and polygons centers to the canvas.
         //It's not a global so we just declare it here
-        let circle_group = svg_canvas.append("g")
+        let circle_group = this.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
 
@@ -398,9 +383,9 @@ class VoronoiViz {
             //----------ON MOUSEOVER---------//
 
             .on('mouseover', function (d) {
-
+               
                 //highlight the cell that is being hovered on
-                cell_mouseover(this);
+                that.cell_mouseover(this);
 
                 //get the id and the neighbors for the node that this cell represents
                 let id = d.data.id;
@@ -417,8 +402,8 @@ class VoronoiViz {
                     let inbound = neighbors[i].links.in.id;
                     let outbound = neighbors[i].links.out.id;
 
-                    drawLink(inbound, 350);
-                    drawLink(outbound, 350);
+                    this.draw_link(inbound, 350);
+                    this.draw_link(outbound, 350);
                 }
             })
             //----------ON MOUSEOUT---------//
@@ -426,7 +411,7 @@ class VoronoiViz {
             .on('mouseout', function () {
 
                 //unhighlight the cell that was being hovered on
-                cell_mouseout(this);
+                that.cell_mouseout(this);
 
                 //cleanup the links that were drawn
                 links_drawn = [];
@@ -441,24 +426,8 @@ class VoronoiViz {
 
                 //set as the main global selection 
                 this.SELECTED_SITE = SITE_DB.find(x => x.node_acp_id === d.data.acp_id);
-                let selected_date=YYYY+"-"+MM+"-"+DD
-                //make HUD elements visible
-                document.getElementById("selected_cell").style.opacity = 1;
-                document.getElementById("selected_cell").innerHTML = ICON_CLOSE_AND_DESELECT + "<br>" + "<h1>" + this.SELECTED_SITE.name + "</h1>";
-                document.getElementById("datepicker").style.opacity = 1;
+                that.hud.show_all(this.SELECTED_SITE);
 
-                //make the date navigation buttons visible 
-                //(made invisible prior since without a cell selection, changing the date does not make sense)
-                set_nav_date_visible(1);
-
-                //load metadata for the node
-                show_node_information(this.SELECTED_SITE.node_acp_id,selected_date);
-
-                //add d3/css styling to the selected cell to make it pop
-                select_cell(this.SELECTED_SITE.node_acp_id)
-
-                //update url and add event listeners for date changes
-                onchange_feature_select(this.SELECTED_SITE.node_acp_id, DD + "-" + MM + "-" + YYYY)
             })
 
             //--------ON DOUBLE CLICK-------//
@@ -494,7 +463,7 @@ class VoronoiViz {
 
                         console.log(result.path[i]);
 
-                        var found = SITE_DB.find(x => x.name == result.path[i]);
+                        let found = SITE_DB.find(x => x.name == result.path[i]);
 
                         if (found.x != null || found.x != undefined) {
                             path.push({
@@ -578,12 +547,12 @@ class VoronoiViz {
         // -current speed
         // -historical(normal) speed
         // -deviation in speed from the normal
-        change_modes();
+        this.change_modes();
 
         console.log(this.SELECTED_SITE)
         //in case the selected node has been mislabeled:
         if (this.SELECTED_SITE != undefined) {
-            select_cell(this.SELECTED_SITE.node_acp_id);
+            this.select_cell(this.SELECTED_SITE.node_acp_id);
         }
 
 
@@ -625,13 +594,13 @@ class VoronoiViz {
         let query_date = new_year + "-" + new_month + "-" + new_day;
         document.getElementById('date_now_header').innerHTML = new_day + " " + new_month_long + " " + new_year
 
-        show_node_information(node_id, query_date);
+        this.hud.show_node_information(node_id, query_date);
 
         let url_date = new_day + '-' + new_month + '-' + new_year;
         update_url(node_id, url_date);
     }
 
-    
+
     init_map() {
 
         let stamenToner = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}.png', {
@@ -657,6 +626,8 @@ class VoronoiViz {
 
         // Clock
         clock = get_clock().addTo(map)
+
+        //THE FOLLOWING ARE VERY MUCH MISPLACED HERE, SHOULD BE A PART OF Hud CLASS
 
         const info_viz_text = '<h4>Information</h4>' +
             "<br>" +
@@ -685,7 +656,9 @@ class VoronoiViz {
         let line_graph_element = create_element('line_graph', 'bottomleft')
         let datepicker_widget = create_element('datepicker', 'bottomleft', datepicker_text) //datepicker_text
         document.getElementById("datepicker").style.opacity = 0;
-        set_nav_date_visible(0)
+
+        //probably should make a different function in Hud to hide everything
+        this.hud.set_nav_date_visible(0)
 
         let metadata_element = create_element('metadata_table', 'bottomleft')
 
@@ -693,30 +666,514 @@ class VoronoiViz {
 
         let info_widget = create_element('info_bar', 'topright', info_viz_text)
 
-        let horizontal_chart = create_element('bar_chart', 'topright', ICON_LOADING)
+        let horizontal_chart = create_element('bar_chart', 'topright', viz_tools.ICON_LOADING)
         let zone_table = create_element('zone_table', 'bottomright')
     }
 
+    //----------------------------------//
+    //---------Drawing Links------------//
+    //----------------------------------//
 
-    /*------------------------------------------------------*/
-    /*--------------------HELPER FUNCT----------------------*/
-    /*------------------------------------------------------*/
+    //draws a link between two sites
+    //[*link* is link id, *dur* is the animation duration, *color* (optional) link's color when drawn]
+    draw_link(link, dur, color) {
 
-}
+        //add the link_group to the canvas again 
+        //(we detach it previously to make it invisible after mouseout is being performed)
+        link_group = this.svg_canvas.append("g")
+            .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
+        //find the sites that the link connects
+        let connected_sites = all_links.find(x => x.id === link).sites;
 
+        let from = SITE_DB.find(x => x.node_id === connected_sites[0]);
+        let to = SITE_DB.find(x => x.node_id === connected_sites[1]);
 
-var show_node_information = (acp_id, START, END) => {
-    document.getElementById("line_graph").style.opacity = 1;
-    document.getElementById("line_graph").innerHTML = ICON_LOADING;
+        //acquire the direction of the link by checking if it's opposite exists.
+        //If the opposite's drawn on screen, make arc's curvature inverse.
+        let direction = links_drawn.includes(this.inverse_link(link)) ? "in" : "out";
 
-    if (START == undefined) {
-        START = new Date().toISOString().slice(0, 10)
+        //calculate the speed deviation for the link in question
+        let deviation = this.calculate_deviation(link) //negative slower, positive faster
+
+        //acquire the minmax values for the color scale.
+        //we create a new color scale, even though the old one exits
+        //because the drawn links always colored based on speed deviation, 
+        //whereas the general setColorScale can be changed to speed ranges etc.
+        let values = getMinMax();
+
+        var scale = d3.scaleLinear()
+            .domain([values.min, values.max])
+            .range([values.min, values.max]);
+
+        //if color's not defined, color the link based on speed deviation
+        color = color == undefined ? setColor(scale(deviation)) : color;
+
+        let strokeWeight = 5;
+
+        //animate the line
+        let link_line = this.generate_arc(from, to, direction, strokeWeight, color);
+        let line_length = link_line.node().getTotalLength();
+        this.animateMovement(link_line, line_length, dur);
+
+        //add to the drawn list so we know what the opposite link's
+        //direction is
+        links_drawn.push(link);
     }
-    console.log('show_node_info', acp_id)
-    show_node_metadata(acp_id)
-    show_node_data(acp_id, START, END)
+
+    //find the opposite of the link by looking at the *to* and *from*
+    //nodes and changing the directionality
+    inverse_link(link) {
+        let connected_sites = all_links.find(x => x.id === link).sites;
+        let from = SITE_DB.find(x => x.node_id === connected_sites[0]);
+        let to = SITE_DB.find(x => x.node_id === connected_sites[1]);
+
+        let links = findLinks(from.node_id, to.node_id);
+        return link === links.in.id ? links.out.id : links.in.id;
+
+    }
+
+    //----------Generating and Drawing Arcs--------//
+
+    generate_arc(A, B, direction, strokeWeight, stroke) {
+
+        return link_group
+            .append('path')
+            .attr('d', this.curved_line(A.x, A.y, B.x, B.y, direction === "in" ? 1 : -1))
+            .attr('class', 'arc_line')
+            .style("fill", "none")
+            .style("fill-opacity", 0)
+            .attr("stroke", stroke)
+            .attr("stroke-opacity", 1)
+            .style("stroke-width", strokeWeight);
+    }
+
+    //compute the arc points given start/end coordinates
+    //[start/end coordinates, dir stands for direction]
+    curved_line(start_x, start_y, end_x, end_y, dir) {
+
+        //find the middle location of where the curvature is 0
+        let mid_x = (start_x + end_x) / 2;
+
+        let a = Math.abs(start_x - end_x);
+        let b = Math.abs(start_y - end_y);
+
+        //curvature height/or how curved the line is
+        //[y offset in other words]
+        let off = a > b ? b / 10 : 15;
+
+        let mid_x1 = mid_x - off * dir;
+
+        //calculate the slope of the arc line
+        let mid_y1 = this.slope(mid_x1, start_x, start_y, end_x, end_y);
+
+        return ['M', start_x, start_y, // the arc start coordinates (where the starting node is)
+                'C', // This means we're gonna build an elliptical arc
+                start_x, ",", start_y, ",",
+                mid_x1, mid_y1,
+                end_x, ',', end_y
+            ]
+            .join(' ');
+    }
+
+    //computes the slope on which we place the arc lines
+    //indicate links between sites
+    slope(x, x1, y1, x2, y2) {
+        let midX = (x1 + x2) / 2;
+        let midY = (y1 + y2) / 2;
+        let slope = (y2 - y1) / (x2 - x1);
+        return (-1 / slope) * (x - midX) + midY;
+    }
+
+    animateMovement(line, outboundLength, dur) {
+
+        return line
+            .attr("stroke-dasharray", outboundLength + " " + outboundLength)
+            .attr("stroke-dashoffset", outboundLength)
+            .transition()
+            .duration(dur)
+            .ease(d3.easeLinear)
+            .attr("stroke-dashoffset", 0)
+            .on("end",
+                function (d, i) {
+                    // d3.select(this).remove()
+                }
+            );
+    }
+
+
+    //STILL NOT SURE IF THIS ACTUALLY BELONGS HERE
+    //calculates speed deviation for a given link
+    calculate_deviation(link) {
+        let dist = all_links.find(x => x.id === link).length;
+        let travelTime, normalTravelTime;
+        try {
+            travelTime = all_journeys.find(x => x.id === link).travelTime;
+            normalTravelTime = all_journeys.find(x => x.id === link).normalTravelTime;
+        } catch {
+            return undefined
+        }
+
+        if (travelTime == null || travelTime == undefined) {
+            travelTime = normalTravelTime;
+        }
+
+        let current = (dist / travelTime) * TO_MPH;
+        let normal = (dist / normalTravelTime) * TO_MPH; //historical speed
+
+        //negative speed is slower, positive speed is faster
+        return current - normal;
+
+    }
+
+    colorTransition(value) {
+        SITE_DB.forEach((element) => {
+            element.setVisualisation(value);
+        });
+        var setColor = setColorRange();
+
+        polygon_group.selectAll(".cell")
+            .transition()
+            .duration('1000')
+            .attr('fill', function (d, i) {
+
+                let color = SITE_DB[i].selected;
+                if (color == null || color == undefined) {
+                    return "rgb(50,50,50);"
+                } else {
+                    return setColor(color) //c10[i % 10]
+                }
+            })
+
+    }
+
+
+
+    //Generate a graph that is used by the Dijkstra algorithm.
+    //Find all the weights for node edges between the *start* and *finish* nodes
+    generate_graph(start, finish) {
+
+        let graph = {};
+
+        //iterate over the SITE_DB to find the start/finish nodes
+        //and all the other nodes in between
+        SITE_DB.forEach((element) => {
+
+            let neighbors = element.neighbors;
+
+            let obj = {};
+
+            //each neighbour is a node. Computes the weighted graph:
+            neighbors.forEach((neighbor) => {
+
+                //and the travel time between the nodes is the edge weight
+                if (neighbor.site == start) {
+                    obj["S"] = neighbor.travelTime; //or dist;
+                }
+
+                if (neighbor.site == finish) {
+                    obj["F"] = neighbor.travelTime; //or dist;
+                } else {
+                    obj[neighbor.site] = neighbor.travelTime;
+                }
+            });
+
+            if (element.name == start) {
+                graph["S"] = obj;
+            }
+
+            if (element.name == finish) {
+                graph["F"] = obj;
+
+            } else {
+                graph[element.name] = obj;
+            }
+
+        });
+
+        return graph;
+    }
+
+
+    drawLinks(start_x, start_y, end_x, end_y, dur, fill) {
+
+        let link_in = link_group
+            .append('path')
+            .attr('d', this.curved_line(start_x, start_y, end_x, end_y, 1))
+            .style("fill", fill)
+            .style("fill-opacity", 0)
+            .attr("stroke", "blue")
+            .attr("stroke-opacity", 0.5)
+            .style("stroke-width", 2);
+
+        let link_out = link_group
+            .append('path')
+            .attr('d', this.curved_line(end_x, end_y, start_x, start_y, -1))
+            .style("fill", fill)
+            .style("fill-opacity", 0)
+            .attr("stroke", "red")
+            .attr("stroke-opacity", 0.5)
+            .style("stroke-width", 2)
+
+        //we only calcuate the lenght once since it's the same for both directions
+        let outboundLength = link_out.node().getTotalLength();
+
+
+        //Drawing animation
+        link_in
+            .attr("stroke-dasharray", outboundLength + " " + outboundLength)
+            .attr("stroke-dashoffset", outboundLength)
+            .transition()
+            .duration(dur)
+            .ease(d3.easeLinear)
+            .attr("stroke-dashoffset", 0)
+            .on("end",
+                function () {}
+            );
+
+        link_out
+            .attr("stroke-dasharray", outboundLength + " " + outboundLength)
+            .attr("stroke-dashoffset", outboundLength)
+            .transition()
+            .duration(dur)
+            .ease(d3.easeLinear)
+            .attr("stroke-dashoffset", 0)
+            .on("end",
+                function () {}
+            );
+    }
+
+    drawRoutes() {
+
+        for (let d = 0; d < SITE_DB.length; d++) {
+
+            let id = SITE_DB[d].id;
+
+            let neighbors = SITE_DB.find(x => x.node_id === id).neighbors;
+
+            for (let i = 0; i < neighbors.length; i++) {
+
+                let x_coord = SITE_DB.find(x => x.node_id === neighbors[i].id).x;
+                let y_coord = SITE_DB.find(x => x.node_id === neighbors[i].id).y;
+            }
+        }
+    }
+
+    change_modes() {
+        d3.selectAll("input").on("change", function () {
+            //console.log(d);
+
+            if (this.value === "current") {
+                this.colorTransition("travel speed");
+            }
+            if (this.value === "deviation") {
+
+                this.colorTransition("speed deviation");
+            }
+            if (this.value === "historical") {
+                this.colorTransition("historical speed");
+            }
+            if (this.value === "routes") {
+                console.log("routes");
+                polygon_group.remove();
+                for (let j = 0; j < SITE_DB.length; j++) {
+
+                    let id = SITE_DB[j].id;
+
+                    let neighbors = SITE_DB.find(x => x.node_id === id).neighbors;
+
+                    //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;  
+                    for (let i = 0; i < neighbors.length; i++) {
+                        //console.log(i);
+                        let inbound = neighbors[i].links.in.id;
+                        let outbound = neighbors[i].links.out.id;
+
+                        that.draw_link(inbound, 1000);
+                        that.draw_link(outbound, 1000);
+
+                    }
+                }
+            }
+            if (this.value === "polygons") {
+                this.draw_voronoi();
+                this.generate_hull();
+
+            }
+        });
+    }
+    /*------------------------------------------------------*/
+    /*-----------------HULL MANAGEMENT FUNCT----------------*/
+    /*------------------------------------------------------*/
+
+    generate_hull() {
+
+        //get a list of group ids  e.g (north, south, center etc)
+        ZONES.forEach((group_id) => {
+
+            let site_id_list = CELL_GROUPS[group_id]['acp_ids']
+            let point_list = []
+            let point_pairs = []
+            //get a list of site IDs inside a group e.g ('SITE_CA31BF74-167C-469D-A2BF-63F9C2CE919A',... etc)
+            site_id_list.forEach((site_acp_id) => {
+                // let site_id='{'+site_acp_id.replace(SITE_PREFIX,'')+'}';
+                // console.log('SITE',site_acp_id, site_id)
+
+                let element = d3.select('#' + site_acp_id).node();
+                let total_len = parseInt(element.getTotalLength());
+
+                for (let u = 0; u < total_len; u += 2) {
+                    point_pairs.push([element.getPointAtLength(u).x, element.getPointAtLength(u).y])
+                    point_list.push(element.getPointAtLength(u))
+                }
+
+            });
+
+            //perhaps 185 for all will just work as well
+            let concavity_threshold;
+            if (map._zoom <= 12) {
+                concavity_threshold = 85
+            } else {
+                concavity_threshold = 185;
+
+            }
+
+            let defaultHull = d3.concaveHull().distance(concavity_threshold);
+            let paddedHull = d3.concaveHull().distance(concavity_threshold).padding(5);
+
+            CELL_GROUPS[group_id]['default_hull'] = defaultHull(point_pairs);
+            CELL_GROUPS[group_id]['padded_hull'] = paddedHull(point_pairs);
+
+
+            let padded_zone_outline = paddedHull(point_pairs)[0]
+
+            let points = []
+
+            for (let j = 0; j < padded_zone_outline.length; j++) {
+                points.push({
+                    'x': padded_zone_outline[j][0],
+                    'y': padded_zone_outline[j][1]
+                })
+            }
+
+            CELL_GROUPS[group_id]['points'] = points;
+
+        })
+    }
+
+    get_outline(zone_id) {
+        //generate_hull(); // perhaps should initiate somewhere else
+
+        let cell_group_list = Object.keys(CELL_GROUPS);
+
+        var lineFunction = d3.line()
+            .x(function (d, i) {
+                return d.x;
+            })
+            .y(function (d, i) {
+                return d.y;
+            });
+        //.curve(d3.curveBasisClosed);
+        //.curve(d3.curveCatmullRomClosed.alpha(0.95)); //d3.curveCardinal.tension(0.1)//d3.curveNatural
+
+        if (zone_id != undefined) {
+            zone_outlines.append("g")
+                .append("path")
+                .attr('class', 'zone_outline')
+                .attr("d", lineFunction(CELL_GROUPS[zone_id]['points']))
+                .style("stroke-width", 5)
+                .style("stroke", CELL_GROUPS[zone_id]['color'])
+                .style("fill", "none")
+                .style("opacity", 0)
+                .transition()
+                .duration(500)
+                .ease(d3.easeLinear)
+                .style("opacity", 1)
+
+                .on("end", function (d, i) {});
+        } else {
+            for (let j = 0; j < cell_group_list.length; j++) {
+                zone_outlines.append("g")
+                    .append("path")
+                    .attr('class', 'zone_outline')
+                    .attr("d", lineFunction(CELL_GROUPS[cell_group_list[j]]['points']))
+                    .style("stroke-width", 5)
+                    .style("stroke", CELL_GROUPS[cell_group_list[j]]['color'])
+                    .style("fill", "none")
+                    .style("opacity", 0)
+                    .transition()
+                    .duration(500)
+                    .ease(d3.easeLinear)
+                    .style("opacity", 1)
+
+                    .on("end", function (d, i) {});
+            }
+        }
+
+    }
+
+
+    /*------------------------------------------------------*/
+    /*-----------------SELECTION FUNCT----------------------*/
+    /*------------------------------------------------------*/
+
+    select_cell(id) {
+        this.deselect_all()
+        let cell = document.getElementById(id)
+        this.cell_clicked(cell)
+    };
+
+    select_all() {
+        let cells = document.getElementsByClassName("cell")
+        for (let i = 0; i < cells.length; i++) {
+            this.cell_clicked(cells[i])
+        }
+
+    };
+
+
+    deselect_all() {
+        let cells = document.getElementsByClassName("cell")
+        for (let i = 0; i < cells.length; i++) {
+            this.cell_regular(cells[i])
+        }
+    };
+
+    //cell manipulation + interactivity
+    cell_mouseover(cell) {
+        d3.select(cell).transition()
+            .duration('300')
+            .style('stroke', 'black')
+            //.style('stroke-width', 10)
+            .style("stroke-opacity", 1)
+            .style("fill-opacity", 0.85);
+    };
+    cell_mouseout(cell) {
+        d3.select(cell).transition()
+            .duration('300')
+            .style('stroke', 'black')
+            // .style('stroke-width', 0.5)
+            .style("stroke-opacity", 0.3)
+            .style("fill-opacity", 0.3);
+    };
+
+    cell_clicked(cell) {
+        d3.select(cell)
+            .style('stroke-opacity', 1)
+            .style('stroke', 'black')
+            .style('stroke-width', 4);
+    };
+
+    cell_regular(cell) {
+        d3.select(cell)
+            .style('stroke', 'black')
+            .style('stroke-width', 0.5)
+            .style("stroke-opacity", 0.3)
+            .style("fill-opacity", 0.3);
+    };
+
 }
+
+
 
 
 
@@ -755,7 +1212,7 @@ function create_element(element_id, position, inner_text) {
     };
     new_element.update = function (e) {
         if (e === undefined) {
-            this.new_element.innerHTML = inner_text == undefined ? '' : ICON_CLOSE_DIV + inner_text;
+            this.new_element.innerHTML = inner_text == undefined ? '' : viz_tools.ICON_CLOSE_DIV + inner_text; //voronoi_viz.viz_tools.ICON_CLOSE_DIV + inner_text
             this.new_element.style.opacity = inner_text == undefined ? 0 : 1;
             return;
         }
