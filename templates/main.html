@@ -44,9 +44,18 @@
 
     <script type="text/javascript" src="{{ url_for('static',filename='/js/visualise.js') }}"></script>
 
-    <script type="text/javascript" src="{{ url_for('static',filename='/js/Node_class.js') }}"></script>
+    <!-- Objects -->
 
-    <script type="text/javascript" src="{{ url_for('static',filename='/js/VoronoiViz_class.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/Node.js') }}"></script>
+
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/VoronoiViz.js') }}"></script>
+
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/SiteDB.js') }}"></script>
+
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/VizTools.js') }}"></script>
+
+    <script type="text/javascript" src="{{ url_for('static',filename='/js/Hud.js') }}"></script>
+
 
     <!-- Our style -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='/css/libs/daterangepicker.css') }}">
@@ -61,7 +70,7 @@
 
 </head>
 
-<body onload='run()'>
+<body onload='voronoi_visualisation.init()'>
     <div class="selection_wrapper">
 
         <form id="selection_form">
@@ -82,21 +91,7 @@
     <script>
         var URL_NODE = '{{NODE}}';
         var URL_DATE = '{{DATE}}';
-
-        function run() {
-            /*------------------------------------------------------*/
-            /*----------------------MAIN LOOP-----------------------*/
-            /*------------------------------------------------------*/
-
-            console.log('lazy_script');
-            var voronoi_visualisation = new VoronoiViz();
-            voronoi_visualisation.init();
-
-            /*------------------------------------------------------*/
-            /*------------------------------------------------------*/
-            /*------------------------------------------------------*/
-
-        }
+        var voronoi_visualisation = new VoronoiViz(); //(SITE_DB)
     </script>
 
 </body>

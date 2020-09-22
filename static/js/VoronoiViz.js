@@ -3,7 +3,7 @@
 class VoronoiViz {
 
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
-    constructor() {
+    constructor(site_db) {
 
         // Instantiate a jb2328 utility class e.g. for getBoundingBox()
         // this.viz_tools = new VizTools();
@@ -11,9 +11,10 @@ class VoronoiViz {
         // Transform parameters to scale SVG to screen
         this.init_map();
 
+      //  this.hud=new Hud(this); 
+
         this.SELECTED_SITE = '';
        
-
 
     }
 
@@ -39,9 +40,10 @@ class VoronoiViz {
             show_vertical_bar(get_zone_averages());
 
             if (URL_NODE != '*') {
-                this.SELECTED_SITE = SITE_DB.find(x => x.acp_id === URL_NODE);
+                this.SELECTED_SITE = SITE_DB.find(x => x.node_acp_id === URL_NODE);
                 console.log('URL NODE', URL_NODE, this.SELECTED_SITE)
 
+                //------------------------HUD---------------------------//
                 let selected_date=YYYY+"-"+"0"+MM+"-"+DD
 
                 //make HUD elements visible
@@ -54,13 +56,14 @@ class VoronoiViz {
                 set_nav_date_visible(1);
 
                 //load metadata for the node
-                show_node_information(this.SELECTED_SITE.acp_id,selected_date );
+                show_node_information(this.SELECTED_SITE.node_acp_id,selected_date );
 
                 //add d3/css styling to the selected cell to make it pop
-                select_cell(this.SELECTED_SITE.acp_id)
+                select_cell(this.SELECTED_SITE.node_acp_id)
 
                 //update url and add event listeners for date changes
-                onchange_feature_select(this.SELECTED_SITE.acp_id, DD + "-" + MM + "-" + YYYY)
+                onchange_feature_select(this.SELECTED_SITE.node_acp_id, DD + "-" + MM + "-" + YYYY)
+               //------------------------/HUD---------------------------//
 
             }
 
@@ -382,7 +385,7 @@ class VoronoiViz {
 
                 //color the cell based on the selected reading from the SITE_DB
                 //the lookup is done based on the matching id values (from SVG and in Nodes)
-                let color = SITE_DB.find(x => x.id === d.data.id).selected;
+                let color = SITE_DB.find(x => x.node_id === d.data.id).selected;
 
                 //if undefined,set to gray
                 if (color == null || color == undefined) {
@@ -401,7 +404,7 @@ class VoronoiViz {
 
                 //get the id and the neighbors for the node that this cell represents
                 let id = d.data.id;
-                let neighbors = SITE_DB.find(x => x.id === id).neighbors;
+                let neighbors = SITE_DB.find(x => x.node_id === id).neighbors;
 
                 //remove old links that were drawn for the other nodes 
                 //that were hoverd in before
@@ -437,8 +440,7 @@ class VoronoiViz {
             .on('click', function (d, i) {
 
                 //set as the main global selection 
-                this.SELECTED_SITE = SITE_DB.find(x => x.acp_id === d.data.acp_id);
-                
+                this.SELECTED_SITE = SITE_DB.find(x => x.node_acp_id === d.data.acp_id);
                 let selected_date=YYYY+"-"+MM+"-"+DD
                 //make HUD elements visible
                 document.getElementById("selected_cell").style.opacity = 1;
@@ -450,13 +452,13 @@ class VoronoiViz {
                 set_nav_date_visible(1);
 
                 //load metadata for the node
-                show_node_information(this.SELECTED_SITE.acp_id,selected_date);
+                show_node_information(this.SELECTED_SITE.node_acp_id,selected_date);
 
                 //add d3/css styling to the selected cell to make it pop
-                select_cell(this.SELECTED_SITE.acp_id)
+                select_cell(this.SELECTED_SITE.node_acp_id)
 
                 //update url and add event listeners for date changes
-                onchange_feature_select(this.SELECTED_SITE.acp_id, DD + "-" + MM + "-" + YYYY)
+                onchange_feature_select(this.SELECTED_SITE.node_acp_id, DD + "-" + MM + "-" + YYYY)
             })
 
             //--------ON DOUBLE CLICK-------//
@@ -581,7 +583,7 @@ class VoronoiViz {
         console.log(this.SELECTED_SITE)
         //in case the selected node has been mislabeled:
         if (this.SELECTED_SITE != undefined) {
-            select_cell(this.SELECTED_SITE.acp_id);
+            select_cell(this.SELECTED_SITE.node_acp_id);
         }
 
 
@@ -711,7 +713,7 @@ var show_node_information = (acp_id, START, END) => {
     if (START == undefined) {
         START = new Date().toISOString().slice(0, 10)
     }
-
+    console.log('show_node_info', acp_id)
     show_node_metadata(acp_id)
     show_node_data(acp_id, START, END)
 }

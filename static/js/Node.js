@@ -3,10 +3,10 @@
 const SITE_PREFIX = 'SITE_';
 
 class Node {
-    constructor(id) {
+    constructor(node_id) {
 
-        this.id = id;
-        this.acp_id = SITE_PREFIX + this.id.replace('{', '').replace('}', '');
+        this.node_id = node_id;//node_id
+        this.node_acp_id = SITE_PREFIX + this.node_id.replace('{', '').replace('}', '');
 
         this.name = null;
 
@@ -36,14 +36,14 @@ class Node {
         let groups = Object.keys(CELL_GROUPS);
         for (let i = 0; i < groups.length; i++) {
             let group_id = groups[i];
-            if (CELL_GROUPS[group_id]['acp_ids'].includes(this.acp_id)) {
+            if (CELL_GROUPS[group_id]['acp_ids'].includes(this.node_acp_id)) {
                 return group_id;
             }
         }
     }
 
     getName() {
-        return all_sites.find(x => x.id === this.id).name;
+        return all_sites.find(x => x.id === this.node_id).name;
 
 
     }
@@ -73,7 +73,7 @@ class Node {
     getLocation() {
         let data = all_sites; //"this.sites;
         for (let i = 0; i < data.length; i++) {
-            if (this.id == data[i].id) {
+            if (this.node_id == data[i].id) {
                 return {
                     "x": data[i].x,
                     "y": data[i].y
@@ -86,8 +86,8 @@ class Node {
         this.neighbors = [];
         let tt, ntt, travelTime;
         for (let i = 0; i < all_links.length; i++) {
-            if (this.id == all_links[i].sites[0]) { //from this id
-                //console.log('journeysB',journeys[i].id, this.id,data[i])
+            if (this.node_id == all_links[i].sites[0]) { //from this id
+                //console.log('journeysB',journeys[i].id, this.node_id,data[i])
                 //console.log(data.length, journeys.length,i);
                 try {
                     tt = all_journeys.find(x => x.id === all_links[i].id).travelTime;
@@ -99,7 +99,7 @@ class Node {
                 }
 
                 //console.log(tt, travelTime);
-                let link = findLinks(this.id, all_links[i].sites[1]);
+                let link = findLinks(this.node_id, all_links[i].sites[1]);
                 this.neighbors.push({
                     "links": {
                         "out": link.out,

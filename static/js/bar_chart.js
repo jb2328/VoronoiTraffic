@@ -242,7 +242,7 @@ function get_zone_metadata(ZONE) {
 
         let child_speed = HALF_TAB + TAB + "Current Speed: " + parseInt(child.travelSpeed) + "MPH";
 
-        child_info += "<br>" + "<div class='metadata_zone' id='META_ZONE_" + child.acp_id + "'>" + "<i>" + child.name + "</i>" + "</div>" + child_speed;
+        child_info += "<br>" + "<div class='metadata_zone' id='META_ZONE_" + child.node_acp_id + "'>" + "<i>" + child.name + "</i>" + "</div>" + child_speed;
 
     }
     document.getElementById('zone_table').innerHTML = ICON_CLOSE_DIV + child_info;
@@ -264,13 +264,14 @@ function get_zone_metadata(ZONE) {
 
     d3.selectAll('.metadata_zone')
         .on('click', function (d, i) {
-            let highlighted_cell = {
-                'data': SITE_DB.find(x => x.acp_id == this.id.replace('META_ZONE_', ''))
-            }
 
-            show_node_information(highlighted_cell)
+            let highlighted_cell =  SITE_DB.find(x => x.node_acp_id == this.id.replace('META_ZONE_', ''))
+            console.log('clicku', d, this.id,this.id.replace('META_ZONE_', ''), highlighted_cell)
 
-            select_cell(highlighted_cell.data.acp_id)
+            select_cell(highlighted_cell.node_acp_id)
+
+            show_node_information(highlighted_cell.node_acp_id)
+
 
         })
 }

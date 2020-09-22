@@ -15,3 +15,14 @@ I assume SITE_DB should stay global because it's used by differnt data grpahs bu
 e.g drawLink is part of varonoi svg - accesses it to add arc lines
 
 but drawLink is also used by scatter plot, so I can't use drawLink without with this.svg_canvas without also adding scatterPlot as a part voronoiViz
+
+
+
+scatter plot is instantiated by the sacatter plot, and is referneced iteself as an argument
+
+instantiate hud as a
+
+separate objevt for ccontastant and make it static
+
+same for globals like zell zones etc
+

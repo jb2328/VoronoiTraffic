@@ -25,7 +25,7 @@ var setColor;
 var link_group, zone_outlines, dijkstra_group, road_group;
 var svg_canvas;
 
-var YYYY,MM,DD;
+var YYYY, MM, DD;
 const ICON_CLOSE_DIV = "<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
 const ICON_CLOSE_AND_DESELECT = "<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); this.SELECTED_SITE=undefined; return false;'>x</span>"
 
@@ -50,8 +50,8 @@ function drawLink(link, dur, color) {
     //find the sites that the link connects
     let connected_sites = all_links.find(x => x.id === link).sites;
 
-    let from = SITE_DB.find(x => x.id === connected_sites[0]);
-    let to = SITE_DB.find(x => x.id === connected_sites[1]);
+    let from = SITE_DB.find(x => x.node_id === connected_sites[0]);
+    let to = SITE_DB.find(x => x.node_id === connected_sites[1]);
 
     //acquire the direction of the link by checking if it's opposite exists.
     //If the opposite's drawn on screen, make arc's curvature inverse.
@@ -89,10 +89,10 @@ function drawLink(link, dur, color) {
 //nodes and changing the directionality
 function inverseLink(link) {
     let connected_sites = all_links.find(x => x.id === link).sites;
-    let from = SITE_DB.find(x => x.id === connected_sites[0]);
-    let to = SITE_DB.find(x => x.id === connected_sites[1]);
+    let from = SITE_DB.find(x => x.node_id === connected_sites[0]);
+    let to = SITE_DB.find(x => x.node_id === connected_sites[1]);
 
-    let links = findLinks(from.id, to.id);
+    let links = findLinks(from.node_id, to.node_id);
     return link === links.in.id ? links.out.id : links.in.id;
 
 }
@@ -257,7 +257,7 @@ function change_modes() {
 
                 let id = SITE_DB[j].id;
 
-                let neighbors = SITE_DB.find(x => x.id === id).neighbors;
+                let neighbors = SITE_DB.find(x => x.node_id === id).neighbors;
 
                 //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;  
                 for (let i = 0; i < neighbors.length; i++) {
@@ -297,12 +297,12 @@ function drawRoutes() {
 
         let id = SITE_DB[d].id;
 
-        let neighbors = SITE_DB.find(x => x.id === id).neighbors;
+        let neighbors = SITE_DB.find(x => x.node_id === id).neighbors;
 
         for (let i = 0; i < neighbors.length; i++) {
 
-            let x_coord = SITE_DB.find(x => x.id === neighbors[i].id).x;
-            let y_coord = SITE_DB.find(x => x.id === neighbors[i].id).y;
+            let x_coord = SITE_DB.find(x => x.node_id === neighbors[i].id).x;
+            let y_coord = SITE_DB.find(x => x.node_id === neighbors[i].id).y;
         }
     }
 }
@@ -372,7 +372,7 @@ function arraysEqual(a, b) {
 function toTimestamp(strDate) {
     var datum = Date.parse(strDate);
     return datum / 1000;
-  }
+}
 
 
 //a general mapping function that takes a value and interpolates it
@@ -609,16 +609,16 @@ function date_shift(n, node_id) {
 function update_url(node, date) {
     // console.log('UPDATING URL', date)
     // if (date == undefined || date== 'undefined') {
-        let new_date = new Date()
-        let today = new_date.getDate() + "-" + (new_date.getMonth() + 1) + "-" + new_date.getFullYear();
+    let new_date = new Date()
+    let today = new_date.getDate() + "-" + (new_date.getMonth() + 1) + "-" + new_date.getFullYear();
     // }
 
     var searchParams = new URLSearchParams(window.location.search)
 
     searchParams.set("node", node);
 
-    console.log('DATES',today, date,today==date)
-    if(today!=date){
+    console.log('DATES', today, date, today == date)
+    if (today != date) {
         searchParams.set("date", date);
 
     }
@@ -698,8 +698,8 @@ var cell_mouseout = (cell) => {
 var cell_clicked = (cell) => {
     d3.select(cell)
         .style('stroke-opacity', 1).style('stroke', 'black').style('stroke-width', 4);
-
 }
+
 var cell_regular = (cell) => {
     d3.select(cell)
         .style('stroke', 'black')

@@ -33,7 +33,7 @@ async function historical_link(link_id, date1, date2) {
 async function show_node_data(site_id, date_start, date_end) {
 
   //find the requested site_id in the SITE_DB
-  let site = SITE_DB.find(x => x.acp_id == site_id);
+  let site = SITE_DB.find(x => x.node_acp_id == site_id);
   let site_name = site.name;
 
   //lookup neighbours
@@ -155,6 +155,7 @@ async function waitForCondition(conditionObj) {
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 }
+
 var x_scale, y_scale;
 
 function show_line_plot(route_data, min_max, site_name, START, END) {
@@ -503,8 +504,8 @@ function restructure_to_sublists(old_list) {
 function show_node_metadata(site_id) {
 
   //find the requested site_id in the SITE_DB
-  let site = SITE_DB.find(x => x.acp_id == site_id);
-
+  let site = SITE_DB.find(x => x.node_acp_id == site_id);
+console.log('site_data',site)
   get_site_metadata(site)
 }
 
