@@ -30,42 +30,6 @@ var YYYY, MM, DD;
 
 
 
-//creates a d3 color interpolator 
-//from the min/max values of the data
-function setColorRange() {
-
-    let values = getMinMax();
-    let min = values.min;
-    let max = values.max;
-
-    //create a d3 color interpolator
-    return d3.scaleSequential().domain([min, max])
-        .interpolator(d3.interpolateRdYlGn);
-}
-
-//MAKE A FUNCTION OF SITE_DB
-//computs min and max values from the data
-//this lets us create appropriate color ranges
-function getMinMax() {
-    //finds min/max from the *selected* setting 
-    //(can be speed deviation, current speed, normal speed)
-    let findMax = (ma, v) => Math.max(ma, v.selected)
-    let findMin = (mi, v) => Math.min(mi, v.selected)
-
-    let max = SITE_DB.reduce(findMax, -Infinity)
-    let min = SITE_DB.reduce(findMin, Infinity)
-
-    //we used placeholder value during development
-    //to privide higher color differences
-
-    return {
-        "min": min, //-5
-        "max": max //10
-    };
-}
-
-
-
 
 // ************************************************************************************
 // ************** Date forwards / backwards function **********************************

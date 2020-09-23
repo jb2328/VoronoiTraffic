@@ -2,8 +2,6 @@
 
 const TO_MPH = 2.23694;
 
-var SITE_DB;
-
 var travelTimes;
 var travelSpeed;
 var historicalSpeed;
@@ -65,21 +63,6 @@ async function load_api_data() {
 }
 
 const arrAvg = arr => arr.reduce((a, b) => a + b, 0) / arr.length
-
-function get_zone_averages() {
-    let zones = Object.keys(CELL_GROUPS);
-    let zone_readings = [];
-    for (let i = 0; i < zones.length; i++) {
-        let zone_temp = []
-        SITE_DB.filter(node => node.parent == zones[i]).forEach(zone_node => zone_temp.push(zone_node.travelSpeed))
-        zone_readings.push({
-            'zone': zones[i],
-            'value': arrAvg(zone_temp)
-        })
-    
-    }
-    return zone_readings
-}
 
 function findLinks(id1, id2) {
     //id1 from (outbound)

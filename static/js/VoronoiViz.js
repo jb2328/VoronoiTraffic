@@ -1,25 +1,18 @@
 "use strict";
-
 class VoronoiViz {
 
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
     constructor(site_db) {
-        var that = this;
+        //        var this = this;
+        this.svg_canvas = null;
 
-
-        that.svg_canvas=null;
-
-        this.hud = new Hud(this);
-        console.log('HELLO',this.hud, this)
+        this.site_db = new SiteDB();
+        this.hud = new Hud(this, this.site_db);
 
         // Transform parameters to scale SVG to screen
         this.init_map();
 
-        
-
         this.SELECTED_SITE = '';
-
-
     }
 
 
@@ -37,21 +30,18 @@ class VoronoiViz {
         load_api_data().then(() => {
 
             console.log('Creating Nodes');
-            this.initialise_nodes();
-            console.log('draw bar chart')
+            this.site_db.initialise_nodes();
 
-            // show_horizontal_bar(get_zone_averages());
-            this.hud.show_vertical_bar(get_zone_averages());
+            console.log('draw bar chart')
+            this.hud.show_vertical_bar(this.site_db.get_zone_averages());
 
             if (URL_NODE != '*') {
-                this.SELECTED_SITE = SITE_DB.find(x => x.node_acp_id === URL_NODE);
-                console.log('URL NODE', URL_NODE, this.SELECTED_SITE)
+                //merge:
+                this.SELECTED_SITE = this.site_db.get_acp_id(URL_NODE);
+                this.site_db.selected_site=this.SELECTED_SITE;
 
                 this.hud.show_all(this.SELECTED_SITE);
-
-
             }
-
 
             console.log('loading Voronoi');
             this.draw_voronoi();
@@ -78,11 +68,11 @@ class VoronoiViz {
 
         load_api_data().then(() => {
 
-            this.update_nodes();
+            this.site_db.update_nodes();
             console.log('draw bar chart')
 
             // show_horizontal_bar(get_zone_averages());
-            show_vertical_bar(get_zone_averages());
+            this.hud.show_vertical_bar(this.site_db.get_zone_averages());
 
             this.draw_voronoi();
 
@@ -95,35 +85,6 @@ class VoronoiViz {
         clock.update(Date.now());
     }
 
-    initialise_nodes() {
-        SITE_DB = [];
-
-        for (let i = 0; i < all_sites.length; i++) {
-            SITE_DB.push(new Node(all_sites[i].id));
-        }
-
-        for (let i = 0; i < SITE_DB.length; i++) {
-            SITE_DB[i].findNeighbors();
-            SITE_DB[i].computeTravelTime();
-            SITE_DB[i].computeTravelSpeed();
-            SITE_DB[i].setVisualisation(null); //speed deviation//travel speed
-
-        }
-
-        //acquire bluetooth sensor locations
-        all_sites.filter(function (d, i) {
-            SITE_DB[i].lat = d.location.lat;
-            SITE_DB[i].lng = d.location.lng;
-        });
-    }
-
-    update_nodes() {
-        console.log('updating nodes')
-        for (let i = 0; i < SITE_DB.length; i++) {
-            SITE_DB[i].computeTravelTime();
-            SITE_DB[i].computeTravelSpeed();
-        }
-    }
 
     get_url_date() {
         let date, month_long;
@@ -211,8 +172,8 @@ class VoronoiViz {
             d.y = point.y;
 
             //set coordinates values in SITE_DB for further use
-            SITE_DB[i].x = point.x;
-            SITE_DB[i].y = point.y;
+            voronoi_viz.site_db.all[i].x = point.x;
+            voronoi_viz.site_db.all[i].y = point.y;
 
             return true;
         });
@@ -243,7 +204,7 @@ class VoronoiViz {
         });
 
         //create color a range to be able to color in cells based on their values
-        setColor = setColorRange();
+        setColor = this.set_color_range();
 
         //findLatLng(); //optional function, provides lat/lng coordinates if clicked on the map
 
@@ -370,7 +331,8 @@ class VoronoiViz {
 
                 //color the cell based on the selected reading from the SITE_DB
                 //the lookup is done based on the matching id values (from SVG and in Nodes)
-                let color = SITE_DB.find(x => x.node_id === d.data.id).selected;
+                
+                let color = voronoi_viz.site_db.get_id(d.data.id).selected;
 
                 //if undefined,set to gray
                 if (color == null || color == undefined) {
@@ -383,13 +345,13 @@ class VoronoiViz {
             //----------ON MOUSEOVER---------//
 
             .on('mouseover', function (d) {
-               
+
                 //highlight the cell that is being hovered on
-                that.cell_mouseover(this);
+                voronoi_viz.cell_mouseover(this);
 
                 //get the id and the neighbors for the node that this cell represents
-                let id = d.data.id;
-                let neighbors = SITE_DB.find(x => x.node_id === id).neighbors;
+                let node_id = d.data.id;
+                let neighbors = voronoi_viz.site_db.get_id(node_id).neighbors;
 
                 //remove old links that were drawn for the other nodes 
                 //that were hoverd in before
@@ -402,8 +364,8 @@ class VoronoiViz {
                     let inbound = neighbors[i].links.in.id;
                     let outbound = neighbors[i].links.out.id;
 
-                    this.draw_link(inbound, 350);
-                    this.draw_link(outbound, 350);
+                    voronoi_viz.draw_link(inbound, 350);
+                    voronoi_viz.draw_link(outbound, 350);
                 }
             })
             //----------ON MOUSEOUT---------//
@@ -411,7 +373,7 @@ class VoronoiViz {
             .on('mouseout', function () {
 
                 //unhighlight the cell that was being hovered on
-                that.cell_mouseout(this);
+                voronoi_viz.cell_mouseout(this);
 
                 //cleanup the links that were drawn
                 links_drawn = [];
@@ -425,8 +387,10 @@ class VoronoiViz {
             .on('click', function (d, i) {
 
                 //set as the main global selection 
-                this.SELECTED_SITE = SITE_DB.find(x => x.node_acp_id === d.data.acp_id);
-                that.hud.show_all(this.SELECTED_SITE);
+                voronoi_viz.SELECTED_SITE =voronoi_viz.site_db.get_acp_id(d.data.acp_id)
+                voronoi_viz.site_db.selected_site=voronoi_viz.SELECTED_SITE;
+
+                voronoi_viz.hud.show_all(voronoi_viz.SELECTED_SITE);
 
             })
 
@@ -462,8 +426,8 @@ class VoronoiViz {
                     for (let i = 0; i < result.path.length; i++) {
 
                         console.log(result.path[i]);
-
-                        let found = SITE_DB.find(x => x.name == result.path[i]);
+                        
+                        let found = this.site_db.get_name(result.path[i]);
 
                         if (found.x != null || found.x != undefined) {
                             path.push({
@@ -556,6 +520,22 @@ class VoronoiViz {
         }
 
 
+    }
+
+
+
+
+    //creates a d3 color interpolator 
+    //from the min/max values of the data
+    set_color_range() {
+
+        let values = this.site_db.get_min_max();
+        let min = values.min;
+        let max = values.max;
+
+        //create a d3 color interpolator
+        return d3.scaleSequential().domain([min, max])
+            .interpolator(d3.interpolateRdYlGn);
     }
 
     //-----------------------------------------------------//
@@ -686,8 +666,8 @@ class VoronoiViz {
         //find the sites that the link connects
         let connected_sites = all_links.find(x => x.id === link).sites;
 
-        let from = SITE_DB.find(x => x.node_id === connected_sites[0]);
-        let to = SITE_DB.find(x => x.node_id === connected_sites[1]);
+        let from = this.site_db.get_id(connected_sites[0]);
+        let to = this.site_db.get_id(connected_sites[1]);
 
         //acquire the direction of the link by checking if it's opposite exists.
         //If the opposite's drawn on screen, make arc's curvature inverse.
@@ -700,7 +680,7 @@ class VoronoiViz {
         //we create a new color scale, even though the old one exits
         //because the drawn links always colored based on speed deviation, 
         //whereas the general setColorScale can be changed to speed ranges etc.
-        let values = getMinMax();
+        let values = this.site_db.get_min_max();
 
         var scale = d3.scaleLinear()
             .domain([values.min, values.max])
@@ -714,7 +694,7 @@ class VoronoiViz {
         //animate the line
         let link_line = this.generate_arc(from, to, direction, strokeWeight, color);
         let line_length = link_line.node().getTotalLength();
-        this.animateMovement(link_line, line_length, dur);
+        this.animate_movement(link_line, line_length, dur);
 
         //add to the drawn list so we know what the opposite link's
         //direction is
@@ -725,8 +705,9 @@ class VoronoiViz {
     //nodes and changing the directionality
     inverse_link(link) {
         let connected_sites = all_links.find(x => x.id === link).sites;
-        let from = SITE_DB.find(x => x.node_id === connected_sites[0]);
-        let to = SITE_DB.find(x => x.node_id === connected_sites[1]);
+        
+        let from = this.site_db.get_id(connected_sites[0]);
+        let to = this.site_db.get_id(connected_sites[1]);
 
         let links = findLinks(from.node_id, to.node_id);
         return link === links.in.id ? links.out.id : links.in.id;
@@ -785,7 +766,9 @@ class VoronoiViz {
         return (-1 / slope) * (x - midX) + midY;
     }
 
-    animateMovement(line, outboundLength, dur) {
+    //animates lines being rendered as if they move through the map.
+    //It's how we create a sense of directionality from links
+    animate_movement(line, outboundLength, dur) {
 
         return line
             .attr("stroke-dasharray", outboundLength + " " + outboundLength)
@@ -827,17 +810,17 @@ class VoronoiViz {
     }
 
     colorTransition(value) {
-        SITE_DB.forEach((element) => {
+        this.site_db.all.forEach((element) => {
             element.setVisualisation(value);
         });
-        var setColor = setColorRange();
+        var setColor = this.set_color_range();
 
         polygon_group.selectAll(".cell")
             .transition()
             .duration('1000')
             .attr('fill', function (d, i) {
 
-                let color = SITE_DB[i].selected;
+                let color = this.site_db.all[i].selected;
                 if (color == null || color == undefined) {
                     return "rgb(50,50,50);"
                 } else {
@@ -857,7 +840,7 @@ class VoronoiViz {
 
         //iterate over the SITE_DB to find the start/finish nodes
         //and all the other nodes in between
-        SITE_DB.forEach((element) => {
+        this.site_db.all.forEach((element) => {
 
             let neighbors = element.neighbors;
 
@@ -945,16 +928,16 @@ class VoronoiViz {
 
     drawRoutes() {
 
-        for (let d = 0; d < SITE_DB.length; d++) {
+        for (let d = 0; d < this.site_db.all.length; d++) {
 
-            let id = SITE_DB[d].id;
-
-            let neighbors = SITE_DB.find(x => x.node_id === id).neighbors;
+            let node_id = this.site_db.all[d].id;
+            
+            let neighbors = this.site_db.get_id(node_id).neighbors;
 
             for (let i = 0; i < neighbors.length; i++) {
-
-                let x_coord = SITE_DB.find(x => x.node_id === neighbors[i].id).x;
-                let y_coord = SITE_DB.find(x => x.node_id === neighbors[i].id).y;
+                
+                let x_coord = this.site_db.get_id(neighbors[i].id).x;
+                let y_coord = this.site_db.get_id(neighbors[i].id).y;
             }
         }
     }
@@ -976,11 +959,11 @@ class VoronoiViz {
             if (this.value === "routes") {
                 console.log("routes");
                 polygon_group.remove();
-                for (let j = 0; j < SITE_DB.length; j++) {
+                for (let j = 0; j < voronoi_viz.site_db.get_length(); j++) {
 
-                    let id = SITE_DB[j].id;
+                    let node_id = voronoi_viz.site_db.all[j].id;
 
-                    let neighbors = SITE_DB.find(x => x.node_id === id).neighbors;
+                    let neighbors = voronoi_viz.site_db.get_id(node_id).neighbors;
 
                     //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;  
                     for (let i = 0; i < neighbors.length; i++) {
@@ -988,8 +971,8 @@ class VoronoiViz {
                         let inbound = neighbors[i].links.in.id;
                         let outbound = neighbors[i].links.out.id;
 
-                        that.draw_link(inbound, 1000);
-                        that.draw_link(outbound, 1000);
+                        voronoi_viz.draw_link(inbound, 1000);
+                        voronoi_viz.draw_link(outbound, 1000);
 
                     }
                 }
@@ -1172,14 +1155,6 @@ class VoronoiViz {
     };
 
 }
-
-
-
-
-
-
-//setTimeout(voronoi_visualisation.update(), delta);
-
 
 function path_to_poly(path_id) {
     var numPoints = 8;

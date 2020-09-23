@@ -5,21 +5,22 @@ const WEEK = 86400 * 7;
 const LINE_GRAPH_COLORS = ['MidnightBlue', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
 var x_scale, y_scale;
 
+var this_hud;
+
 class Hud {
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
-    
-    constructor(desktop_viz) {
-        var _this = this;
 
-        _this.desktop = desktop_viz;
+    constructor(desktop_viz, site_db) {
 
-        console.log('HI', _this, _this.desktop)
+        this_hud = this;
+
+        this.site_db = site_db;
+        this.desktop = desktop_viz;
 
         this.svg_bar_chart = null;
         this.svg_line_graph = null;
 
         this.hud = null;
-
 
     }
 
@@ -30,7 +31,7 @@ class Hud {
 
     show_vertical_bar(data) {
 
-        console.log('this. that',  this.desktop)
+        console.log('this. that', this.desktop)
 
         document.getElementById('bar_chart').innerHTML = ICON_CLOSE_DIV;
         document.getElementById('bar_chart').style.opacity = 1;
@@ -119,8 +120,8 @@ class Hud {
             })
             .on('mouseover', function (d, i) {
 
-                console.log('parent', self.desktop)
-                self.desktop.get_outline(d.zone);
+                console.log('parent', voronoi_viz.desktop)
+                voronoi_viz.get_outline(d.zone);
 
                 for (let u = 0; u < ZONES.length; u++) {
                     if (d.zone != ZONES[u]) {
@@ -131,9 +132,9 @@ class Hud {
 
             })
             .on('click', function (d, i) {
-                self.desktop.get_outline(d.zone);
+                voronoi_viz.get_outline(d.zone);
 
-                self.get_zone_metadata(d.zone)
+                this_hud.get_zone_metadata(d.zone)
 
             })
             .on('dblclick', function (d, i) {
@@ -222,7 +223,7 @@ class Hud {
                 return CELL_GROUPS[d.zone]['color']
             })
             .on('mouseover', function (d, i) {
-                self.desktop.get_outline(d.zone);
+                voronoi_viz.get_outline(d.zone);
 
                 for (let u = 0; u < ZONES.length; u++) {
                     if (d.zone != ZONES[u]) {
@@ -234,9 +235,9 @@ class Hud {
 
             })
             .on('click', function (d, i) {
-                self.desktop.get_outline(d.zone);
+                voronoi_vizget_outline(d.zone);
 
-                self.get_zone_metadata(d.zone)
+                this_hud.get_zone_metadata(d.zone)
 
             })
             .on('dblclick', function (d, i) {
@@ -266,7 +267,7 @@ class Hud {
     //---------------------------------------------------//
 
     get_zone_metadata(ZONE) {
-        let zone_children = SITE_DB.filter(x => x.parent === ZONE);
+        let zone_children = this.site_db.all.filter(x => x.parent === ZONE);
         let child_info = "<b>Inner nodes for:</b> " + "<b style='color:" + CELL_GROUPS[ZONE].color + "'>" + ZONE + "</b>" + "<br>";
         for (let u = 0; u < zone_children.length; u++) {
             let child = zone_children[u];
@@ -287,25 +288,24 @@ class Hud {
             .on('mouseover', function (d, i) {
                 d3.select(this).style('color', CELL_GROUPS[ZONE].color).style('font-weight', 'bold')
                 let cell = document.getElementById(this.id.replace('META_ZONE_', ''))
-                cell_mouseover(cell)
+                voronoi_viz.cell_mouseover(cell)
             })
 
-        d3.selectAll('.metadata_zone').
-        on('mouseout', function (d, i) {
-            d3.select(this).style('color', 'black').style('font-weight', 'normal')
-            let cell = document.getElementById(this.id.replace('META_ZONE_', ''))
-            cell_mouseout(cell)
-        })
+        d3.selectAll('.metadata_zone')
+            .on('mouseout', function (d, i) {
+                d3.select(this).style('color', 'black').style('font-weight', 'normal')
+                let cell = document.getElementById(this.id.replace('META_ZONE_', ''))
+                voronoi_viz.cell_mouseout(cell)
+            })
 
         d3.selectAll('.metadata_zone')
             .on('click', function (d, i) {
 
-                let highlighted_cell = SITE_DB.find(x => x.node_acp_id == this.id.replace('META_ZONE_', ''))
-                console.log('clicku', d, this.id, this.id.replace('META_ZONE_', ''), highlighted_cell)
+                let highlighted_cell = this_hud.site_db.get_acp_id(this.id.replace('META_ZONE_', ''));
 
-                self.desktop.select_cell(highlighted_cell.node_acp_id)
+                voronoi_viz.select_cell(highlighted_cell.node_acp_id)
 
-                this.show_node_information(highlighted_cell.node_acp_id)
+                this_hud.show_node_information(highlighted_cell.node_acp_id)
 
 
             })
@@ -367,7 +367,7 @@ class Hud {
     show_node_metadata(site_id) {
 
         //find the requested site_id in the SITE_DB
-        let site = SITE_DB.find(x => x.node_acp_id == site_id);
+        let site = this.site_db.all.find(x => x.node_acp_id == site_id);
         console.log('site_data', site)
         this.get_site_metadata(site)
     }
@@ -539,8 +539,26 @@ class Hud {
         let x_sizing = 360
 
         let normal_speed_line;
+        // Add one dot in the legend for each name.
+        this.svg_line_graph.selectAll("mylabels")
+            .data(legend_keys)
+            .enter()
+            .append("text")
+            .attr("x", x_sizing + size * 1.2)
+            .attr("y", function (d, i) {
+                return y_sizing + i * (size + 5) + (size / 2)
+            }) // 100 is where the first dot appears. 25 is the distance between dots
+            .style("fill", function (d) {
+                return d.color
+            })
+            .text(function (d) {
+                return d.name
+            })
+            .attr("text-anchor", "left")
+            .style("alignment-baseline", "middle")
+            .style("font-size", "10px")
+            .attr("class", "legend_text");
 
-        console.log('legend_keys', legend_keys)
         this.svg_line_graph.selectAll("mydots")
             .data(legend_keys)
             .enter()
@@ -565,17 +583,18 @@ class Hud {
             .attr("id", function (d, i) {
                 return "LEGEND_CAMBRIDGE_JTMS_" + d.name
             }) //LG for line graph
-            .attr("class", "legend")
+            .attr("class", "legend");
+
+        this.svg_line_graph.selectAll(".legend_text, .legend")
             .on('mouseover', function (d, i) {
                 let selected = 'CAMBRIDGE_JTMS_' + d.name
-                console.log(d, i)
 
                 // Use D3 to select element, change color and size
                 d3.selectAll('.legend').transition().duration(250).style('opacity', 0.2)
                 d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.2)
                 d3.select('#LEGEND_' + selected).transition().duration(250).style('opacity', 1)
                 d3.select('#LG_' + selected).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
-                self.desktop.draw_link(selected, 350, LINE_GRAPH_COLORS[i]);
+                voronoi_viz.draw_link(selected, 350, LINE_GRAPH_COLORS[i]);
             })
             .on('mouseout', function (d) {
                 let selected = 'CAMBRIDGE_JTMS_' + d.name
@@ -605,39 +624,22 @@ class Hud {
                 let new_ts = new Date(week_ago * 1000)
                 let new_date = new_ts.getFullYear() + "-" + (new_ts.getMonth() + 1) + "-" + new_ts.getDate()
 
-                self.historical_link(link_id, new_date).then((data) => {
+                this_hud.historical_link(link_id, new_date).then((data) => {
                     console.log('received', data)
 
-                    let hist_data = this.restructure_hist_data([data]); //  WHY DO I NEED TWO RESTRUCTURINGS
+                    let hist_data = this_hud.restructure_hist_data([data]); //  WHY DO I NEED TWO RESTRUCTURINGS
                     console.log('HIST data', hist_data);
 
                     let route_acp_id = 'DASH_' + hist_data[0].acp_id;
 
                     // Add the line
-                    normal_speed_line = this.create_path(this.svg_line_graph, hist_data, route_acp_id, 'black', 'historical')
+                    normal_speed_line = this_hud.create_path(this_hud.svg_line_graph, hist_data, route_acp_id, 'black', 'historical')
                     console.log(normal_speed_line)
                 });
 
             });
 
-        // Add one dot in the legend for each name.
-        this.svg_line_graph.selectAll("mylabels")
-            .data(legend_keys)
-            .enter()
-            .append("text")
-            .attr("x", x_sizing + size * 1.2)
-            .attr("y", function (d, i) {
-                return y_sizing + i * (size + 5) + (size / 2)
-            }) // 100 is where the first dot appears. 25 is the distance between dots
-            .style("fill", function (d) {
-                return d.color
-            })
-            .text(function (d) {
-                return d.name
-            })
-            .attr("text-anchor", "left")
-            .style("alignment-baseline", "middle")
-            .style("font-size", "10px");
+
 
         d3.selectAll('.connected_scatter_line')
             .on('mouseover', function (d, i) {
@@ -645,7 +647,7 @@ class Hud {
                 // Use D3 to select element, change color and size
                 d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.2)
                 d3.select(this).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
-                self.desktop.draw_link(d[0].acp_id, 350, LINE_GRAPH_COLORS[i]);
+                voronoi_viz.draw_link(d[0].acp_id, 350, LINE_GRAPH_COLORS[i]);
             })
             .on('mouseout', function () {
                 // Use D3 to select element, change color and size
@@ -761,7 +763,7 @@ class Hud {
 
 
 
-  
+
     //---------------------------------------------------//
     //--------------------/LINE GRAPH--------------------//
     //---------------------------------------------------//
@@ -802,7 +804,7 @@ class Hud {
     async get_node_data(site_id, date_start, date_end) {
 
         //find the requested site_id in the SITE_DB
-        let site = SITE_DB.find(x => x.node_acp_id == site_id);
+        let site = this.site_db.all.find(x => x.node_acp_id == site_id);
         let site_name = site.name;
 
         //lookup neighbours
