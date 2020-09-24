@@ -1,12 +1,10 @@
 "use strict";
 
-const SITE_PREFIX = 'SITE_';
-
 class Node {
     constructor(node_id) {
 
         this.node_id = node_id;//node_id
-        this.node_acp_id = SITE_PREFIX + this.node_id.replace('{', '').replace('}', '');
+        this.node_acp_id = 'SITE_' + this.node_id.replace('{', '').replace('}', '');
 
         this.name = null;
 

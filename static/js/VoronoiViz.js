@@ -9,10 +9,13 @@ class VoronoiViz {
         this.site_db = new SiteDB();
         this.hud = new Hud(this, this.site_db);
 
+        this.tools = new VizTools();
+
         // Transform parameters to scale SVG to screen
         this.init_map();
 
         this.SELECTED_SITE = '';
+        this.boundary_db=[];
     }
 
 
@@ -37,8 +40,11 @@ class VoronoiViz {
 
             if (URL_NODE != '*') {
                 //merge:
-                this.SELECTED_SITE = this.site_db.get_acp_id(URL_NODE);
-                this.site_db.selected_site=this.SELECTED_SITE;
+                let node = this.site_db.get_acp_id(URL_NODE);
+                this.SELECTED_SITE = node
+                this.site_db.set_selected_node(node);
+
+                this.select_cell(node.node_acp_id)
 
                 this.hud.show_all(this.SELECTED_SITE);
             }
@@ -194,7 +200,7 @@ class VoronoiViz {
             d.y = point.y;
 
             //set coordinates values in BOUNDARY_DB for further reuse
-            BOUNDARY_DB.push({
+            voronoi_viz.boundary_db.push({
                 "lat": d.lat,
                 "lng": d.lng,
                 "x": point.x,
@@ -204,7 +210,7 @@ class VoronoiViz {
         });
 
         //create color a range to be able to color in cells based on their values
-        setColor = this.set_color_range();
+        setColor = voronoi_viz.set_color_range();
 
         //findLatLng(); //optional function, provides lat/lng coordinates if clicked on the map
 
@@ -331,7 +337,7 @@ class VoronoiViz {
 
                 //color the cell based on the selected reading from the SITE_DB
                 //the lookup is done based on the matching id values (from SVG and in Nodes)
-                
+
                 let color = voronoi_viz.site_db.get_id(d.data.id).selected;
 
                 //if undefined,set to gray
@@ -387,8 +393,9 @@ class VoronoiViz {
             .on('click', function (d, i) {
 
                 //set as the main global selection 
-                voronoi_viz.SELECTED_SITE =voronoi_viz.site_db.get_acp_id(d.data.acp_id)
-                voronoi_viz.site_db.selected_site=voronoi_viz.SELECTED_SITE;
+                voronoi_viz.SELECTED_SITE = voronoi_viz.site_db.get_acp_id(d.data.acp_id)
+                voronoi_viz.site_db.selected_site = voronoi_viz.SELECTED_SITE;
+                voronoi_viz.select_cell(voronoi_viz.site_db.selected_site.node_acp_id)
 
                 voronoi_viz.hud.show_all(voronoi_viz.SELECTED_SITE);
 
@@ -413,7 +420,7 @@ class VoronoiViz {
                 if (selected_sites.length === 2) {
 
                     //create the problem graph with start and finish nodes
-                    let problem = generate_graph(selected_sites[0].name, selected_sites[1].name);
+                    let problem = voronoi_viz.generate_graph(selected_sites[0].name, selected_sites[1].name);
 
                     //run the Dijkstra shortest path on the generated graph  
                     //[returns the names of the nodes in order of the shortest path]
@@ -426,8 +433,8 @@ class VoronoiViz {
                     for (let i = 0; i < result.path.length; i++) {
 
                         console.log(result.path[i]);
-                        
-                        let found = this.site_db.get_name(result.path[i]);
+
+                        let found = voronoi_viz.site_db.get_name(result.path[i]);
 
                         if (found.x != null || found.x != undefined) {
                             path.push({
@@ -511,18 +518,14 @@ class VoronoiViz {
         // -current speed
         // -historical(normal) speed
         // -deviation in speed from the normal
-        this.change_modes();
+        voronoi_viz.change_modes();
 
-        console.log(this.SELECTED_SITE)
         //in case the selected node has been mislabeled:
-        if (this.SELECTED_SITE != undefined) {
-            this.select_cell(this.SELECTED_SITE.node_acp_id);
-        }
 
+        let node = voronoi_viz.site_db.get_selected_node().node_acp_id;
+        voronoi_viz.select_cell(node);
 
     }
-
-
 
 
     //creates a d3 color interpolator 
@@ -576,9 +579,16 @@ class VoronoiViz {
 
         this.hud.show_node_information(node_id, query_date);
 
-        let url_date = new_day + '-' + new_month + '-' + new_year;
+        let url_date = new_year + '-' + new_month + '-' + new_day;
         update_url(node_id, url_date);
     }
+
+
+
+
+
+
+
 
 
     init_map() {
@@ -705,7 +715,7 @@ class VoronoiViz {
     //nodes and changing the directionality
     inverse_link(link) {
         let connected_sites = all_links.find(x => x.id === link).sites;
-        
+
         let from = this.site_db.get_id(connected_sites[0]);
         let to = this.site_db.get_id(connected_sites[1]);
 
@@ -809,10 +819,9 @@ class VoronoiViz {
 
     }
 
-    colorTransition(value) {
-        this.site_db.all.forEach((element) => {
-            element.setVisualisation(value);
-        });
+    colorTransition(viz_type) {
+     
+        this.site_db.set_visualisations(viz_type)
         var setColor = this.set_color_range();
 
         polygon_group.selectAll(".cell")
@@ -820,7 +829,7 @@ class VoronoiViz {
             .duration('1000')
             .attr('fill', function (d, i) {
 
-                let color = this.site_db.all[i].selected;
+                let color = voronoi_viz.site_db.all[i].selected;
                 if (color == null || color == undefined) {
                     return "rgb(50,50,50);"
                 } else {
@@ -931,11 +940,11 @@ class VoronoiViz {
         for (let d = 0; d < this.site_db.all.length; d++) {
 
             let node_id = this.site_db.all[d].id;
-            
+
             let neighbors = this.site_db.get_id(node_id).neighbors;
 
             for (let i = 0; i < neighbors.length; i++) {
-                
+
                 let x_coord = this.site_db.get_id(neighbors[i].id).x;
                 let y_coord = this.site_db.get_id(neighbors[i].id).y;
             }
@@ -947,14 +956,14 @@ class VoronoiViz {
             //console.log(d);
 
             if (this.value === "current") {
-                this.colorTransition("travel speed");
+                voronoi_viz.colorTransition("travel speed");
             }
             if (this.value === "deviation") {
 
-                this.colorTransition("speed deviation");
+                voronoi_viz.colorTransition("speed deviation");
             }
             if (this.value === "historical") {
-                this.colorTransition("historical speed");
+                voronoi_viz.colorTransition("historical speed");
             }
             if (this.value === "routes") {
                 console.log("routes");
@@ -978,8 +987,8 @@ class VoronoiViz {
                 }
             }
             if (this.value === "polygons") {
-                this.draw_voronoi();
-                this.generate_hull();
+                voronoi_viz.draw_voronoi();
+                voronoi_viz.generate_hull();
 
             }
         });
@@ -1102,6 +1111,8 @@ class VoronoiViz {
     select_cell(id) {
         this.deselect_all()
         let cell = document.getElementById(id)
+        let node = this.site_db.get_acp_id(id)
+        this.site_db.set_selected_node(node)
         this.cell_clicked(cell)
     };
 

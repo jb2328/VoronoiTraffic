@@ -111,6 +111,11 @@ class SiteDB {
     get_length() {
         return this.all.length;
     }
-
+    set_visualisations(viz_type){
+        this.all.forEach((element) => {
+            element.setVisualisation(viz_type);
+        });
+    }
+    
 
 }

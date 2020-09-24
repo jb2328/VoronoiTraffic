@@ -35,45 +35,6 @@ var YYYY, MM, DD;
 // ************** Date forwards / backwards function **********************************
 // ************************************************************************************
 
-// move page to new date +n days from current date
-function date_shift(n, node_id) {
-    let year, month, day;
-    console.log('date_shift()');
-    if (YYYY == '') {
-        year = plot_date.slice(0, 4);
-        month = plot_date.slice(5, 7);
-        day = plot_date.slice(8, 10);
-    } else {
-        year = YYYY;
-        month = MM;
-        day = DD;
-    }
-
-    console.log(year, month, day) //document.getElementById('date_now_header')
-    let new_date = new Date(document.getElementById('date_now_header').innerHTML); // as loaded in page template config_ values;
-    console.log('new_date', new_date)
-
-    new_date.setDate(new_date.getDate() + n);
-    console.log('new_new_date', new_date)
-
-    let new_year = new_date.getFullYear();
-    let new_month = ("0" + (new_date.getMonth() + 1)).slice(-2);
-    let new_month_long = new_date.toLocaleString('default', {
-        month: 'long'
-    });
-
-    let new_day = ("0" + new_date.getDate()).slice(-2);
-
-    let query_date = new_year + "-" + new_month + "-" + new_day;
-    document.getElementById('date_now_header').innerHTML = new_day + " " + new_month_long + " " + new_year
-
-    show_node_information(node_id, query_date);
-
-    let url_date = new_day + '-' + new_month + '-' + new_year;
-    update_url(node_id, url_date);
-}
-
-
 
 function update_url(node, date) {
     // console.log('UPDATING URL', date)
@@ -109,16 +70,16 @@ function onchange_feature_select(node_id, date) {
 function set_date_onclicks(node_id) {
     // set up onclick calls for day/week forwards/back buttons
     document.getElementById("back_1_week").onclick = function () {
-        date_shift(-7, node_id)
+        voronoi_viz.date_shift(-7, node_id)
     };
     document.getElementById("back_1_day").onclick = function () {
-        date_shift(-1, node_id)
+        voronoi_viz.date_shift(-1, node_id)
     };
     document.getElementById("forward_1_week").onclick = function () {
-        date_shift(7, node_id)
+        voronoi_viz.date_shift(7, node_id)
     };
     document.getElementById("forward_1_day").onclick = function () {
-        date_shift(1, node_id)
+        voronoi_viz.date_shift(1, node_id)
     };
 }
 

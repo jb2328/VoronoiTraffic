@@ -1,8 +1,5 @@
 "use strict";
-let ICON_CLOSE_DIV = 'x'
-const WEEK = 86400 * 7;
 
-const LINE_GRAPH_COLORS = ['MidnightBlue', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
 var x_scale, y_scale;
 
 var this_hud;
@@ -11,6 +8,7 @@ class Hud {
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
 
     constructor(desktop_viz, site_db) {
+        this.tools = new VizTools();
 
         this_hud = this;
 
@@ -33,7 +31,7 @@ class Hud {
 
         console.log('this. that', this.desktop)
 
-        document.getElementById('bar_chart').innerHTML = ICON_CLOSE_DIV;
+        document.getElementById('bar_chart').innerHTML = this.tools.ICON_CLOSE_DIV;
         document.getElementById('bar_chart').style.opacity = 1;
 
         // set the dimensions and margins of the graph
@@ -153,7 +151,7 @@ class Hud {
 
     show_horizontal_bar(data) {
 
-        document.getElementById('bar_chart').innerHTML = ICON_CLOSE_DIV;
+        document.getElementById('bar_chart').innerHTML = this.tools.ICON_CLOSE_DIV;
         document.getElementById('bar_chart').style.opacity = 1;
 
         // set the dimensions and margins of the graph
@@ -271,17 +269,14 @@ class Hud {
         let child_info = "<b>Inner nodes for:</b> " + "<b style='color:" + CELL_GROUPS[ZONE].color + "'>" + ZONE + "</b>" + "<br>";
         for (let u = 0; u < zone_children.length; u++) {
             let child = zone_children[u];
-            console.log(child)
+            //console.log(child)
 
-            const TAB = '&emsp;&emsp;&emsp;&emsp;'
-            const HALF_TAB = '&emsp;&emsp;'
-
-            let child_speed = HALF_TAB + TAB + "Current Speed: " + parseInt(child.travelSpeed) + "MPH";
+            let child_speed = this_hud.tools.HALF_TAB + this_hud.tools.TAB + "Current Speed: " + parseInt(child.travelSpeed) + "MPH";
 
             child_info += "<br>" + "<div class='metadata_zone' id='META_ZONE_" + child.node_acp_id + "'>" + "<i>" + child.name + "</i>" + "</div>" + child_speed;
 
         }
-        document.getElementById('zone_table').innerHTML = ICON_CLOSE_DIV + child_info;
+        document.getElementById('zone_table').innerHTML = this.tools.ICON_CLOSE_DIV + child_info;
         document.getElementById('zone_table').style.opacity = 1;
 
         d3.selectAll('.metadata_zone')
@@ -357,7 +352,15 @@ class Hud {
         //------------------------/HUD---------------------------//
     }
 
-    hide_all() {}
+    hide_all() {
+        document.getElementById("selected_cell").style.opacity = 0;
+        document.getElementById("datepicker").style.opacity = 0;
+        this.set_nav_date_visible(0);
+
+        this.desktop.deselect_all();
+
+
+    }
 
 
     //-----------LINEGRAPH HELPERS--------------//
@@ -404,8 +407,8 @@ class Hud {
 
                 let speed_out = parseInt((neighbour.links.out.length / tt_out) * TO_MPH);
 
-                let to = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + TAB + "<b>To:</b> " + "Current Speed: " + speed_in + "MPH" + "</div>";
-                let from = HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + TAB + "<b>From:</b> " + "Current Speed: " + speed_out + "MPH" + "</div>";
+                let to = this.tools.HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + this.tools.TAB + "<b>To:</b> " + "Current Speed: " + speed_in + "MPH" + "</div>";
+                let from = this.tools.HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + this.tools.TAB + "<b>From:</b> " + "Current Speed: " + speed_out + "MPH" + "</div>";
 
                 neighbour_info += "<br>" + "<i>" + neighbour.site + "</i>" + to + from;
             } catch (err) {
@@ -417,7 +420,7 @@ class Hud {
             "Average Travel Speed: " + parseInt(SITE.travelSpeed) + "MPH" + '<br>' +
             "Speed Deviation from Regular: " + parseInt(SITE.speedDeviation) + "MPH" + '<br><br>' + neighbour_info;
 
-        document.getElementById('metadata_table').innerHTML = ICON_CLOSE_DIV + full_metadata;
+        document.getElementById('metadata_table').innerHTML = this.tools.ICON_CLOSE_DIV + full_metadata;
         document.getElementById('metadata_table').style.opacity = 1;
     }
     //---------------------------------------------------//
@@ -437,7 +440,7 @@ class Hud {
             height = 300 - margin.top - margin.bottom;
 
         //MAKE SURE THE DIV IS EMPTY and visible
-        document.getElementById('line_graph').innerHTML = ICON_CLOSE_DIV;
+        document.getElementById('line_graph').innerHTML = this.tools.ICON_CLOSE_DIV;
         document.getElementById('line_graph').style.opacity = 1;
 
         // append the svg object to the body of the page
@@ -514,16 +517,16 @@ class Hud {
             let route_acp_id = route_data[u][0].acp_id;
 
             // Add the line
-            let path = this.create_path(this.svg_line_graph, route_data[u], route_acp_id, LINE_GRAPH_COLORS[u]);
+            let path = this.create_path(this.svg_line_graph, route_data[u], route_acp_id, this.tools.LINE_GRAPH_COLORS[u]);
 
 
-            d3.select('#META_' + route_acp_id).style('color', LINE_GRAPH_COLORS[u])
+            d3.select('#META_' + route_acp_id).style('color', this.tools.LINE_GRAPH_COLORS[u])
 
             //27 is th lenght of a route id, whreas 12 martks the star of the unique string in "CAMBRIDGE_JTMS_9800Z0SUAHN1"
 
             legend_keys.push({
                 'name': route_acp_id.substr(27 - 12, 27),
-                'color': LINE_GRAPH_COLORS[u]
+                'color': this.tools.LINE_GRAPH_COLORS[u]
             });
 
         }
@@ -594,7 +597,7 @@ class Hud {
                 d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.2)
                 d3.select('#LEGEND_' + selected).transition().duration(250).style('opacity', 1)
                 d3.select('#LG_' + selected).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
-                voronoi_viz.draw_link(selected, 350, LINE_GRAPH_COLORS[i]);
+                voronoi_viz.draw_link(selected, 350, this_hud.tools.LINE_GRAPH_COLORS[i]);
             })
             .on('mouseout', function (d) {
                 let selected = 'CAMBRIDGE_JTMS_' + d.name
@@ -620,7 +623,7 @@ class Hud {
                 let link_id = "CAMBRIDGE_JTMS%7C" + d.name
 
                 //get a date that's a week ago
-                let week_ago = (Date.parse(START) / 1000) - WEEK
+                let week_ago = (Date.parse(START) / 1000) - this_hud.tools.WEEK
                 let new_ts = new Date(week_ago * 1000)
                 let new_date = new_ts.getFullYear() + "-" + (new_ts.getMonth() + 1) + "-" + new_ts.getDate()
 
@@ -647,7 +650,7 @@ class Hud {
                 // Use D3 to select element, change color and size
                 d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.2)
                 d3.select(this).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
-                voronoi_viz.draw_link(d[0].acp_id, 350, LINE_GRAPH_COLORS[i]);
+                voronoi_viz.draw_link(d[0].acp_id, 350, this_hud.tools.LINE_GRAPH_COLORS[i]);
             })
             .on('mouseout', function () {
                 // Use D3 to select element, change color and size
@@ -670,7 +673,7 @@ class Hud {
             .attr("stroke-width", 2.5)
             .attr("d", d3.line()
                 .x(function (d) {
-                    let time_parameter = mode == 'historical' ? d.ts + WEEK : d.ts;
+                    let time_parameter = mode == 'historical' ? d.ts + this_hud.tools.WEEK : d.ts;
                     return x_scale(time_parameter)
                 })
                 .y(function (d) {

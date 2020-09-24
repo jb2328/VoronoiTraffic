@@ -6,18 +6,21 @@ class VizTools {
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
     constructor() {
 
+        this.WEEK = 86400 * 7;
+
+        this.LINE_GRAPH_COLORS = ['MidnightBlue', 'Fuchsia', 'Red', 'Teal', 'Orange', 'Maroon', 'Olive', 'Green', 'Purple', 'Lime', 'Aqua', 'Blue'];
+
         this.ICON_CLOSE_DIV = "<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
         this.ICON_CLOSE_AND_DESELECT = "<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); this.SELECTED_SITE=undefined; return false;'>x</span>"
 
         this.ICON_LOADING = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >';
 
-        this.HALF_TAB = '&emsp;&emsp;'
-        this.TAB = '&emsp;&emsp;&emsp;&emsp;'
+        this.HALF_TAB = '&emsp;&emsp;';
+        this.TAB = '&emsp;&emsp;&emsp;&emsp;';
+
+        this.SITE_PREFIX = 'SITE_';
 
     }
-
-
-
 
     find_lat_lng(map_object) {
         map_object.on('click',
@@ -67,5 +70,5 @@ class VizTools {
 
 }
 
- // Instantiate a jb2328 utility class e.g. for getBoundingBox()
- var viz_tools = new VizTools();
+// Instantiate a jb2328 utility class e.g. for getBoundingBox()
+var viz_tools = new VizTools();

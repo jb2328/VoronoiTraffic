@@ -1,11 +1,13 @@
 "use strict";
 
 const TO_MPH = 2.23694;
+const SITE_PREFIX = 'SITE_';
 
 var travelTimes;
 var travelSpeed;
 var historicalSpeed;
 var speedDeviation;
+
 
 var all_sites, all_links, all_journeys, all_routes = [];
 
