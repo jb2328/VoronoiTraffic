@@ -2,8 +2,8 @@
 class VoronoiViz {
 
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
-    constructor(site_db) {
-        //        var this = this;
+    constructor() {
+
         this.svg_canvas = null;
 
         this.site_db = new SiteDB();
@@ -12,46 +12,48 @@ class VoronoiViz {
         this.tools = new VizTools();
 
         // Transform parameters to scale SVG to screen
-        this.init_map();
+        this.init_map(this);
 
         this.SELECTED_SITE = '';
-        this.boundary_db=[];
+        this.boundary_db = [];
     }
-
-
 
     // init() called when page loaded
     init() {
+        var parent = this;
 
 
-        this.get_url_date();
+        parent.get_url_date();
 
         //-------------------------------//
         //--------LOADING API DATA-------//
         //-------------------------------//
 
-        load_api_data().then(() => {
+        parent.site_db.load_api_data().then(() => {
 
             console.log('Creating Nodes');
-            this.site_db.initialise_nodes();
+            parent.site_db.initialise_nodes();
 
             console.log('draw bar chart')
-            this.hud.show_vertical_bar(this.site_db.get_zone_averages());
+            parent.hud.show_vertical_bar(parent, parent.site_db.get_zone_averages());
 
             if (URL_NODE != '*') {
                 //merge:
-                let node = this.site_db.get_acp_id(URL_NODE);
-                this.SELECTED_SITE = node
-                this.site_db.set_selected_node(node);
+                let node = parent.site_db.get_acp_id(URL_NODE);
+                console.log('selecting node', node)
+                parent.site_db.set_selected_node(node);
+                console.log('selected node', parent.site_db.get_selected_node())
 
-                this.select_cell(node.node_acp_id)
+                parent.select_cell(parent, node.node_acp_id)
 
-                this.hud.show_all(this.SELECTED_SITE);
+                parent.hud.show_all(parent, parent.site_db.get_selected_node());
+
+                console.log('from url node', node, parent.site_db.get_selected_node())
             }
 
             console.log('loading Voronoi');
-            this.draw_voronoi();
-            this.generate_hull();
+            parent.draw_voronoi(parent);
+            parent.generate_hull(parent);
 
 
         });
@@ -64,23 +66,21 @@ class VoronoiViz {
         //Will execute myCallback every X seconds 
         //the use of .bind(this) is critical otherwise we can't call other class methods
         //https://stackoverflow.com/questions/42238984/uncaught-typeerror-this-method-is-not-a-function-node-js-class-export
-        window.setInterval(this.update.bind(this), 30000);
+        window.setInterval(parent.update.bind(parent), 30000);
     }
 
     update() {
+        var parent = this;
 
+        parent.site_db.load_api_data().then(() => {
 
-        console.log(this.SELECTED_SITE);
-
-        load_api_data().then(() => {
-
-            this.site_db.update_nodes();
+            parent.site_db.update_nodes();
             console.log('draw bar chart')
 
             // show_horizontal_bar(get_zone_averages());
-            this.hud.show_vertical_bar(this.site_db.get_zone_averages());
+            parent.hud.show_vertical_bar(parent, parent.site_db.get_zone_averages());
 
-            this.draw_voronoi();
+            parent.draw_voronoi(parent);
 
             console.log('reloaded api data')
 
@@ -125,9 +125,9 @@ class VoronoiViz {
             "</h2>"
     }
 
-    draw_voronoi() {
+    draw_voronoi(parent) {
 
-        console.log('selected_site', this.SELECTED_SITE)
+        console.log('selected_site', parent, parent.site_db.get_selected_node());
         //remove old cell overlay and prepare to draw a new one
         d3.select('#cell_overlay').remove();
 
@@ -162,6 +162,7 @@ class VoronoiViz {
         //e.g. when zoomed in, not all sites get drawn since they appear out of the screen
         var filtered_points = [];
 
+        console.log('ALL_SITES', all_sites)
         //filtered points are voronoi center points - bluetooth sensor locations
         filtered_points = all_sites.filter(function (d, i) {
             let latlng = new L.latLng(d.location.lat, d.location.lng);
@@ -178,8 +179,8 @@ class VoronoiViz {
             d.y = point.y;
 
             //set coordinates values in SITE_DB for further use
-            voronoi_viz.site_db.all[i].x = point.x;
-            voronoi_viz.site_db.all[i].y = point.y;
+            parent.site_db.all[i].x = point.x;
+            parent.site_db.all[i].y = point.y;
 
             return true;
         });
@@ -200,7 +201,7 @@ class VoronoiViz {
             d.y = point.y;
 
             //set coordinates values in BOUNDARY_DB for further reuse
-            voronoi_viz.boundary_db.push({
+            parent.boundary_db.push({
                 "lat": d.lat,
                 "lng": d.lng,
                 "x": point.x,
@@ -210,7 +211,7 @@ class VoronoiViz {
         });
 
         //create color a range to be able to color in cells based on their values
-        setColor = voronoi_viz.set_color_range();
+        setColor = parent.set_color_range(parent);
 
         //findLatLng(); //optional function, provides lat/lng coordinates if clicked on the map
 
@@ -262,7 +263,7 @@ class VoronoiViz {
         //appending the d3.js SVG to the map.
         //the svg_canvas variable will also contain all of the d3.generated proto objects
         //like lines, outlines and the polygons (voronoi cells).
-        this.svg_canvas = d3.select(map.getPanes().overlayPane).append("svg")
+        parent.svg_canvas = d3.select(map.getPanes().overlayPane).append("svg")
             .attr("id", "cell_overlay")
             .attr("class", "leaflet-zoom-hide")
             .style("width", map.getSize().x + "px")
@@ -271,24 +272,24 @@ class VoronoiViz {
             .style("margin-top", topLeft.y + "px");
 
         //append voronoi polygons to the canvas
-        polygon_group = this.svg_canvas.append("g")
+        polygon_group = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append zone outlines to the canvas
-        zone_outlines = this.svg_canvas.append("g")
+        zone_outlines = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append drawn links to the canvas
-        link_group = this.svg_canvas.append("g")
+        link_group = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append dijkstra shortest path generated line to the canvas
-        dijkstra_group = this.svg_canvas.append("g")
+        dijkstra_group = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append circles that illustrate sensors and polygons centers to the canvas.
         //It's not a global so we just declare it here
-        let circle_group = this.svg_canvas.append("g")
+        let circle_group = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
 
@@ -338,7 +339,7 @@ class VoronoiViz {
                 //color the cell based on the selected reading from the SITE_DB
                 //the lookup is done based on the matching id values (from SVG and in Nodes)
 
-                let color = voronoi_viz.site_db.get_id(d.data.id).selected;
+                let color = parent.site_db.get_id(d.data.id).selected;
 
                 //if undefined,set to gray
                 if (color == null || color == undefined) {
@@ -353,11 +354,11 @@ class VoronoiViz {
             .on('mouseover', function (d) {
 
                 //highlight the cell that is being hovered on
-                voronoi_viz.cell_mouseover(this);
+                parent.cell_mouseover(this);
 
                 //get the id and the neighbors for the node that this cell represents
                 let node_id = d.data.id;
-                let neighbors = voronoi_viz.site_db.get_id(node_id).neighbors;
+                let neighbors = parent.site_db.get_id(node_id).neighbors;
 
                 //remove old links that were drawn for the other nodes 
                 //that were hoverd in before
@@ -370,8 +371,8 @@ class VoronoiViz {
                     let inbound = neighbors[i].links.in.id;
                     let outbound = neighbors[i].links.out.id;
 
-                    voronoi_viz.draw_link(inbound, 350);
-                    voronoi_viz.draw_link(outbound, 350);
+                    parent.draw_link(parent, inbound, 350);
+                    parent.draw_link(parent, outbound, 350);
                 }
             })
             //----------ON MOUSEOUT---------//
@@ -379,7 +380,7 @@ class VoronoiViz {
             .on('mouseout', function () {
 
                 //unhighlight the cell that was being hovered on
-                voronoi_viz.cell_mouseout(this);
+                parent.cell_mouseout(this);
 
                 //cleanup the links that were drawn
                 links_drawn = [];
@@ -392,12 +393,13 @@ class VoronoiViz {
 
             .on('click', function (d, i) {
 
+                let selected_node = parent.site_db.get_acp_id(d.data.acp_id)
                 //set as the main global selection 
-                voronoi_viz.SELECTED_SITE = voronoi_viz.site_db.get_acp_id(d.data.acp_id)
-                voronoi_viz.site_db.selected_site = voronoi_viz.SELECTED_SITE;
-                voronoi_viz.select_cell(voronoi_viz.site_db.selected_site.node_acp_id)
+                parent.site_db.set_selected_node(selected_node);
 
-                voronoi_viz.hud.show_all(voronoi_viz.SELECTED_SITE);
+                parent.select_cell(parent, selected_node.node_acp_id)
+
+                parent.hud.show_all(parent, selected_node);
 
             })
 
@@ -420,7 +422,7 @@ class VoronoiViz {
                 if (selected_sites.length === 2) {
 
                     //create the problem graph with start and finish nodes
-                    let problem = voronoi_viz.generate_graph(selected_sites[0].name, selected_sites[1].name);
+                    let problem = parent.generate_graph(parent, selected_sites[0].name, selected_sites[1].name);
 
                     //run the Dijkstra shortest path on the generated graph  
                     //[returns the names of the nodes in order of the shortest path]
@@ -518,21 +520,21 @@ class VoronoiViz {
         // -current speed
         // -historical(normal) speed
         // -deviation in speed from the normal
-        voronoi_viz.change_modes();
+        parent.change_modes(parent);
 
         //in case the selected node has been mislabeled:
 
         let node = voronoi_viz.site_db.get_selected_node().node_acp_id;
-        voronoi_viz.select_cell(node);
+        parent.select_cell(parent, node);
 
     }
 
 
     //creates a d3 color interpolator 
     //from the min/max values of the data
-    set_color_range() {
+    set_color_range(parent) {
 
-        let values = this.site_db.get_min_max();
+        let values = parent.site_db.get_min_max();
         let min = values.min;
         let max = values.max;
 
@@ -547,6 +549,8 @@ class VoronoiViz {
 
     // move page to new date +n days from current date
     date_shift(n, node_id) {
+        let parent = this;
+
         let year, month, day;
         console.log('date_shift()');
         if (YYYY == '') {
@@ -577,21 +581,14 @@ class VoronoiViz {
         let query_date = new_year + "-" + new_month + "-" + new_day;
         document.getElementById('date_now_header').innerHTML = new_day + " " + new_month_long + " " + new_year
 
-        this.hud.show_node_information(node_id, query_date);
+        parent.hud.show_node_information(parent, node_id, query_date);
 
         let url_date = new_year + '-' + new_month + '-' + new_day;
         update_url(node_id, url_date);
     }
 
 
-
-
-
-
-
-
-
-    init_map() {
+    init_map(parent) {
 
         let stamenToner = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}.png', {
             attribution: 'Map tiles by Stamen Design, CC BY 3.0 - Map data © OpenStreetMap',
@@ -643,21 +640,21 @@ class VoronoiViz {
             '<input type="text" name="datefilter" id="datepicker" value="" />';
 
 
-        let line_graph_element = create_element('line_graph', 'bottomleft')
-        let datepicker_widget = create_element('datepicker', 'bottomleft', datepicker_text) //datepicker_text
+        let line_graph_element = parent.hud.create_element(parent, 'line_graph', 'bottomleft')
+        let datepicker_widget = parent.hud.create_element(parent, 'datepicker', 'bottomleft', datepicker_text) //datepicker_text
         document.getElementById("datepicker").style.opacity = 0;
 
         //probably should make a different function in Hud to hide everything
-        this.hud.set_nav_date_visible(0)
+        parent.hud.set_nav_date_visible(0)
 
-        let metadata_element = create_element('metadata_table', 'bottomleft')
+        let metadata_element = parent.hud.create_element(parent, 'metadata_table', 'bottomleft')
 
-        let selected_cell = create_element('selected_cell', 'topright', '<h4>Select a Cell</h4>')
+        let selected_cell = parent.hud.create_element(parent, 'selected_cell', 'topright', '<h4>Select a Cell</h4>')
 
-        let info_widget = create_element('info_bar', 'topright', info_viz_text)
+        let info_widget = parent.hud.create_element(parent, 'info_bar', 'topright', info_viz_text)
 
-        let horizontal_chart = create_element('bar_chart', 'topright', viz_tools.ICON_LOADING)
-        let zone_table = create_element('zone_table', 'bottomright')
+        let horizontal_chart = parent.hud.create_element(parent, 'bar_chart', 'topright', parent.tools.ICON_LOADING)
+        let zone_table = parent.hud.create_element(parent, 'zone_table', 'bottomright')
     }
 
     //----------------------------------//
@@ -666,31 +663,31 @@ class VoronoiViz {
 
     //draws a link between two sites
     //[*link* is link id, *dur* is the animation duration, *color* (optional) link's color when drawn]
-    draw_link(link, dur, color) {
+    draw_link(parent, link, dur, color) {
 
         //add the link_group to the canvas again 
         //(we detach it previously to make it invisible after mouseout is being performed)
-        link_group = this.svg_canvas.append("g")
+        link_group = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //find the sites that the link connects
         let connected_sites = all_links.find(x => x.id === link).sites;
 
-        let from = this.site_db.get_id(connected_sites[0]);
-        let to = this.site_db.get_id(connected_sites[1]);
+        let from = parent.site_db.get_id(connected_sites[0]);
+        let to = parent.site_db.get_id(connected_sites[1]);
 
         //acquire the direction of the link by checking if it's opposite exists.
         //If the opposite's drawn on screen, make arc's curvature inverse.
-        let direction = links_drawn.includes(this.inverse_link(link)) ? "in" : "out";
+        let direction = links_drawn.includes(parent.inverse_link(parent, link)) ? "in" : "out";
 
         //calculate the speed deviation for the link in question
-        let deviation = this.calculate_deviation(link) //negative slower, positive faster
+        let deviation = parent.calculate_deviation(link) //negative slower, positive faster
 
         //acquire the minmax values for the color scale.
         //we create a new color scale, even though the old one exits
         //because the drawn links always colored based on speed deviation, 
         //whereas the general setColorScale can be changed to speed ranges etc.
-        let values = this.site_db.get_min_max();
+        let values = parent.site_db.get_min_max();
 
         var scale = d3.scaleLinear()
             .domain([values.min, values.max])
@@ -702,9 +699,9 @@ class VoronoiViz {
         let strokeWeight = 5;
 
         //animate the line
-        let link_line = this.generate_arc(from, to, direction, strokeWeight, color);
+        let link_line = parent.generate_arc(from, to, direction, strokeWeight, color);
         let line_length = link_line.node().getTotalLength();
-        this.animate_movement(link_line, line_length, dur);
+        parent.animate_movement(link_line, line_length, dur);
 
         //add to the drawn list so we know what the opposite link's
         //direction is
@@ -713,11 +710,11 @@ class VoronoiViz {
 
     //find the opposite of the link by looking at the *to* and *from*
     //nodes and changing the directionality
-    inverse_link(link) {
+    inverse_link(parent, link) {
         let connected_sites = all_links.find(x => x.id === link).sites;
 
-        let from = this.site_db.get_id(connected_sites[0]);
-        let to = this.site_db.get_id(connected_sites[1]);
+        let from = parent.site_db.get_id(connected_sites[0]);
+        let to = parent.site_db.get_id(connected_sites[1]);
 
         let links = findLinks(from.node_id, to.node_id);
         return link === links.in.id ? links.out.id : links.in.id;
@@ -756,7 +753,15 @@ class VoronoiViz {
         let mid_x1 = mid_x - off * dir;
 
         //calculate the slope of the arc line
-        let mid_y1 = this.slope(mid_x1, start_x, start_y, end_x, end_y);
+        //let mid_y1 = parent.slope(mid_x1, start_x, start_y, end_x, end_y);
+
+        //computes the slope on which we place the arc lines
+        //indicate links between sites
+        let midX = (start_x + end_x) / 2;
+        let midY = (start_y + end_y) / 2;
+        let slope = (end_y - start_y) / (end_x - start_x);
+
+        let mid_y1 = (-1 / slope) * (mid_x1 - midX) + midY;
 
         return ['M', start_x, start_y, // the arc start coordinates (where the starting node is)
                 'C', // This means we're gonna build an elliptical arc
@@ -767,14 +772,7 @@ class VoronoiViz {
             .join(' ');
     }
 
-    //computes the slope on which we place the arc lines
-    //indicate links between sites
-    slope(x, x1, y1, x2, y2) {
-        let midX = (x1 + x2) / 2;
-        let midY = (y1 + y2) / 2;
-        let slope = (y2 - y1) / (x2 - x1);
-        return (-1 / slope) * (x - midX) + midY;
-    }
+
 
     //animates lines being rendered as if they move through the map.
     //It's how we create a sense of directionality from links
@@ -819,17 +817,17 @@ class VoronoiViz {
 
     }
 
-    colorTransition(viz_type) {
-     
-        this.site_db.set_visualisations(viz_type)
-        var setColor = this.set_color_range();
+    colorTransition(parent, viz_type) {
+
+        parent.site_db.set_visualisations(viz_type)
+        var setColor = parent.set_color_range(parent);
 
         polygon_group.selectAll(".cell")
             .transition()
             .duration('1000')
             .attr('fill', function (d, i) {
 
-                let color = voronoi_viz.site_db.all[i].selected;
+                let color = parent.site_db.all[i].selected;
                 if (color == null || color == undefined) {
                     return "rgb(50,50,50);"
                 } else {
@@ -843,13 +841,13 @@ class VoronoiViz {
 
     //Generate a graph that is used by the Dijkstra algorithm.
     //Find all the weights for node edges between the *start* and *finish* nodes
-    generate_graph(start, finish) {
+    generate_graph(parent, start, finish) {
 
         let graph = {};
 
         //iterate over the SITE_DB to find the start/finish nodes
         //and all the other nodes in between
-        this.site_db.all.forEach((element) => {
+        parent.site_db.all.forEach((element) => {
 
             let neighbors = element.neighbors;
 
@@ -935,44 +933,44 @@ class VoronoiViz {
             );
     }
 
-    drawRoutes() {
+    drawRoutes(parent) {
 
-        for (let d = 0; d < this.site_db.all.length; d++) {
+        for (let d = 0; d < parent.site_db.all.length; d++) {
 
-            let node_id = this.site_db.all[d].id;
+            let node_id = parent.site_db.all[d].id;
 
-            let neighbors = this.site_db.get_id(node_id).neighbors;
+            let neighbors = parent.site_db.get_id(node_id).neighbors;
 
             for (let i = 0; i < neighbors.length; i++) {
 
-                let x_coord = this.site_db.get_id(neighbors[i].id).x;
-                let y_coord = this.site_db.get_id(neighbors[i].id).y;
+                let x_coord = parent.site_db.get_id(neighbors[i].id).x;
+                let y_coord = parent.site_db.get_id(neighbors[i].id).y;
             }
         }
     }
 
-    change_modes() {
+    change_modes(parent) {
         d3.selectAll("input").on("change", function () {
             //console.log(d);
 
             if (this.value === "current") {
-                voronoi_viz.colorTransition("travel speed");
+                parent.colorTransition("travel speed");
             }
             if (this.value === "deviation") {
 
-                voronoi_viz.colorTransition("speed deviation");
+                parent.colorTransition("speed deviation");
             }
             if (this.value === "historical") {
-                voronoi_viz.colorTransition("historical speed");
+                parent.colorTransition("historical speed");
             }
             if (this.value === "routes") {
                 console.log("routes");
                 polygon_group.remove();
-                for (let j = 0; j < voronoi_viz.site_db.get_length(); j++) {
+                for (let j = 0; j < parent.site_db.get_length(); j++) {
 
-                    let node_id = voronoi_viz.site_db.all[j].id;
+                    let node_id = parent.site_db.all[j].id;
 
-                    let neighbors = voronoi_viz.site_db.get_id(node_id).neighbors;
+                    let neighbors = parent.site_db.get_id(node_id).neighbors;
 
                     //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;  
                     for (let i = 0; i < neighbors.length; i++) {
@@ -980,15 +978,15 @@ class VoronoiViz {
                         let inbound = neighbors[i].links.in.id;
                         let outbound = neighbors[i].links.out.id;
 
-                        voronoi_viz.draw_link(inbound, 1000);
-                        voronoi_viz.draw_link(outbound, 1000);
+                        parent.draw_link(parent, inbound, 1000);
+                        parent.draw_link(parent, outbound, 1000);
 
                     }
                 }
             }
             if (this.value === "polygons") {
-                voronoi_viz.draw_voronoi();
-                voronoi_viz.generate_hull();
+                parent.draw_voronoi(parent);
+                parent.generate_hull(parent);
 
             }
         });
@@ -997,7 +995,7 @@ class VoronoiViz {
     /*-----------------HULL MANAGEMENT FUNCT----------------*/
     /*------------------------------------------------------*/
 
-    generate_hull() {
+    generate_hull(parent) {
 
         //get a list of group ids  e.g (north, south, center etc)
         ZONES.forEach((group_id) => {
@@ -1052,7 +1050,7 @@ class VoronoiViz {
         })
     }
 
-    get_outline(zone_id) {
+    get_outline(parent, zone_id) {
         //generate_hull(); // perhaps should initiate somewhere else
 
         let cell_group_list = Object.keys(CELL_GROUPS);
@@ -1108,27 +1106,28 @@ class VoronoiViz {
     /*-----------------SELECTION FUNCT----------------------*/
     /*------------------------------------------------------*/
 
-    select_cell(id) {
-        this.deselect_all()
+    select_cell(parent, id) {
+        console.log('select_cell', parent)
+        parent.deselect_all(parent)
         let cell = document.getElementById(id)
         let node = this.site_db.get_acp_id(id)
-        this.site_db.set_selected_node(node)
-        this.cell_clicked(cell)
+        parent.site_db.set_selected_node(node)
+        parent.cell_clicked(cell)
     };
 
-    select_all() {
+    select_all(parent) {
         let cells = document.getElementsByClassName("cell")
         for (let i = 0; i < cells.length; i++) {
-            this.cell_clicked(cells[i])
+            parent.cell_clicked(cells[i])
         }
 
     };
 
 
-    deselect_all() {
+    deselect_all(parent) {
         let cells = document.getElementsByClassName("cell")
         for (let i = 0; i < cells.length; i++) {
-            this.cell_regular(cells[i])
+            parent.cell_regular(cells[i])
         }
     };
 
@@ -1183,32 +1182,6 @@ function path_to_poly(path_id) {
     return polygonPoints;
 }
 
-function create_element(element_id, position, inner_text) {
-
-    //to be modified with https://stackoverflow.com/questions/33614912/how-to-locate-leaflet-zoom-control-in-a-desired-position
-    let new_element = L.control({
-        position: position
-    }); //{       position: 'bottom'    }
-    new_element.onAdd = function (map) {
-        this.new_element = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
-        this.new_element.id = element_id;
-        this.update();
-
-        return this.new_element;
-    };
-    new_element.update = function (e) {
-        if (e === undefined) {
-            this.new_element.innerHTML = inner_text == undefined ? '' : viz_tools.ICON_CLOSE_DIV + inner_text; //voronoi_viz.viz_tools.ICON_CLOSE_DIV + inner_text
-            this.new_element.style.opacity = inner_text == undefined ? 0 : 1;
-            return;
-        }
-
-    };
-
-
-    return new_element.addTo(map);
-
-}
 
 
 function get_clock() {
