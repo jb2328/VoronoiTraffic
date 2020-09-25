@@ -646,7 +646,7 @@ class VoronoiViz {
 
         const datepicker_text = '<h4>Pick time and Date</h4>' +
             '<br>' +
-            '<input type="text" name="datefilter" id="datepicker" value="" />';
+            '<input type="text" name="datefilter" id="datepicker_input" value="" />';
 
 
         let line_graph_element = parent.hud.create_element(parent, 'line_graph', 'bottomleft')

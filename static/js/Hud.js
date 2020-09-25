@@ -8,7 +8,7 @@ class Hud {
     // Called to create instance in page : space_floorplan = SpaceFloorplan()
 
     constructor(desktop_viz, site_db) {
-       // this.tools = new VizTools();
+        // this.tools = new VizTools();
 
         this_hud = this;
 
@@ -116,7 +116,7 @@ class Hud {
             })
             .on('mouseover', function (d, i) {
 
-                parent.get_outline(parent,d.zone);
+                parent.get_outline(parent, d.zone);
 
                 for (let u = 0; u < ZONES.length; u++) {
                     if (d.zone != ZONES[u]) {
@@ -129,7 +129,7 @@ class Hud {
             .on('click', function (d, i) {
                 parent.get_outline(parent, d.zone);
 
-                parent.hud.get_zone_metadata(parent,d.zone)
+                parent.hud.get_zone_metadata(parent, d.zone)
 
             })
             .on('dblclick', function (d, i) {
@@ -145,7 +145,7 @@ class Hud {
 
     }
 
-    create_element(parent,element_id, position, inner_text) {
+    create_element(parent, element_id, position, inner_text) {
 
         //to be modified with https://stackoverflow.com/questions/33614912/how-to-locate-leaflet-zoom-control-in-a-desired-position
         let new_element = L.control({
@@ -155,21 +155,21 @@ class Hud {
             this.new_element = L.DomUtil.create('div', 'info'); //has to be of class "info for the nice shade effect"
             this.new_element.id = element_id;
             this.update();
-    
+
             return this.new_element;
         };
         new_element.update = function (e) {
             if (e === undefined) {
-                this.new_element.innerHTML = inner_text == undefined ? '' : parent.tools.ICON_CLOSE_DIV + inner_text; //voronoi_viz.viz_tools.ICON_CLOSE_DIV + inner_text
+                this.new_element.innerHTML = inner_text == undefined ? '' : parent.tools.ICON_CLOSE_DIV + inner_text; //voronoi_viz.parent.tools.ICON_CLOSE_DIV + inner_text
                 this.new_element.style.opacity = inner_text == undefined ? 0 : 1;
                 return;
             }
-    
+
         };
-    
-    
+
+
         return new_element.addTo(map);
-    
+
     }
     show_horizontal_bar(parent, data) {
 
@@ -243,7 +243,7 @@ class Hud {
                 return CELL_GROUPS[d.zone]['color']
             })
             .on('mouseover', function (d, i) {
-                parent.get_outline(parent,d.zone);
+                parent.get_outline(parent, d.zone);
 
                 for (let u = 0; u < ZONES.length; u++) {
                     if (d.zone != ZONES[u]) {
@@ -320,9 +320,9 @@ class Hud {
 
                 let highlighted_cell = parent.hud.site_db.get_acp_id(parent, this.id.replace('META_ZONE_', ''));
 
-                parent.select_cell(parent,highlighted_cell.node_acp_id)
+                parent.select_cell(parent, highlighted_cell.node_acp_id)
 
-                parent.hud.show_node_information(parent,highlighted_cell.node_acp_id)
+                parent.hud.show_node_information(parent, highlighted_cell.node_acp_id)
 
 
             })
@@ -331,14 +331,14 @@ class Hud {
 
     show_node_information(parent, acp_id, START, END) {
         document.getElementById("line_graph").style.opacity = 1;
-        document.getElementById("line_graph").innerHTML = viz_tools.ICON_LOADING;
+        document.getElementById("line_graph").innerHTML = parent.tools.ICON_LOADING;
 
         if (START == undefined) {
             START = new Date().toISOString().slice(0, 10)
         }
         console.log('show_node_info', acp_id)
-        parent.hud.show_node_metadata(parent,acp_id)
-        parent.hud.get_node_data(parent,acp_id, START, END)
+        parent.hud.show_node_metadata(parent, acp_id)
+        parent.hud.get_node_data(parent, acp_id, START, END)
     }
 
     set_nav_date_visible(trigger) {
@@ -351,7 +351,7 @@ class Hud {
 
     show_all(parent, selected_node) {
 
-        console.log('354', parent,selected_node)
+        console.log('354', parent, selected_node)
         //------------------------HUD---------------------------//
         let selected_date = YYYY + "-" + "0" + MM + "-" + DD //FIX MM
 
@@ -365,10 +365,15 @@ class Hud {
         parent.hud.set_nav_date_visible(1);
 
         //load metadata for the node
-        parent.hud.show_node_information(parent,selected_node.node_acp_id, selected_date);
+        parent.hud.show_node_information(parent, selected_node.node_acp_id, selected_date);
 
         //add d3/css styling to the selected cell to make it pop
-        parent.select_cell(parent,selected_node.node_acp_id)
+        parent.select_cell(parent, selected_node.node_acp_id)
+
+        //open datepicker if clicked on main center date
+        document.getElementById('date_now').addEventListener("click", function () {
+            document.getElementById('datepicker_input').click();
+        });
 
         //update url and add event listeners for date changes
         onchange_feature_select(selected_node.node_acp_id, DD + "-" + MM + "-" + YYYY)
@@ -385,20 +390,22 @@ class Hud {
 
     }
 
+//datepicker
+
 
     //-----------LINEGRAPH HELPERS--------------//
 
     //unused to function to calculate travelTime (tt) for
     //a given site from the SITE_DB
-    show_node_metadata(parent,site_id) {
+    show_node_metadata(parent, site_id) {
 
         //find the requested site_id in the SITE_DB
         let site = parent.site_db.all.find(x => x.node_acp_id == site_id);
         console.log('site_data', site)
-        parent.hud.get_site_metadata(parent,site)
+        parent.hud.get_site_metadata(parent, site)
     }
 
-    get_site_metadata(parent,SITE) {
+    get_site_metadata(parent, SITE) {
         let neighbour_info = "<b>Surrounding nodes:</b> " + "<br>";
         for (let u = 0; u < SITE.neighbors.length; u++) {
             let neighbour = SITE.neighbors[u];
@@ -451,7 +458,7 @@ class Hud {
     //---------------------------------------------------//
 
 
-    show_line_plot(parent,route_data, min_max, site_name, START, END) {
+    show_line_plot(parent, route_data, min_max, site_name, START, END) {
         // set the dimensions and margins of the graph
         var margin = {
                 top: 30,
@@ -514,7 +521,7 @@ class Hud {
             .style("text-anchor", "middle")
             .text("Speed (MPH)");
 
-            parent.hud.svg_line_graph.append("g")
+        parent.hud.svg_line_graph.append("g")
             .attr("transform", "translate(0," + height + ")")
             .call(x_axis)
             .selectAll("text")
@@ -531,7 +538,7 @@ class Hud {
             .domain([0, min_max.max_y + y_padding]) //[min_max.min_y - y_padding, min_max.max_y + y_padding]
             .range([height, 0]);
 
-            parent.hud.svg_line_graph.append("g")
+        parent.hud.svg_line_graph.append("g")
             .call(d3.axisLeft(y_scale));
 
         let legend_keys = []
@@ -540,10 +547,10 @@ class Hud {
             let route_acp_id = route_data[u][0].acp_id;
 
             // Add the line
-            let path =  parent.hud.create_path(parent, route_data[u], route_acp_id,  parent.tools.LINE_GRAPH_COLORS[u]);
+            let path = parent.hud.create_path(parent, route_data[u], route_acp_id, parent.tools.LINE_GRAPH_COLORS[u]);
 
 
-            d3.select('#META_' + route_acp_id).style('color',  parent.tools.LINE_GRAPH_COLORS[u])
+            d3.select('#META_' + route_acp_id).style('color', parent.tools.LINE_GRAPH_COLORS[u])
 
             //27 is th lenght of a route id, whreas 12 martks the star of the unique string in "CAMBRIDGE_JTMS_9800Z0SUAHN1"
 
@@ -585,7 +592,7 @@ class Hud {
             .style("font-size", "10px")
             .attr("class", "legend_text");
 
-            parent.hud.svg_line_graph.selectAll("mydots")
+        parent.hud.svg_line_graph.selectAll("mydots")
             .data(legend_keys)
             .enter()
             .append("rect")
@@ -611,7 +618,7 @@ class Hud {
             }) //LG for line graph
             .attr("class", "legend");
 
-            parent.hud.svg_line_graph.selectAll(".legend_text, .legend")
+        parent.hud.svg_line_graph.selectAll(".legend_text, .legend")
             .on('mouseover', function (d, i) {
                 let selected = 'CAMBRIDGE_JTMS_' + d.name
 
@@ -620,7 +627,7 @@ class Hud {
                 d3.selectAll('.connected_scatter_line').transition().duration(250).style('opacity', 0.2)
                 d3.select('#LEGEND_' + selected).transition().duration(250).style('opacity', 1)
                 d3.select('#LG_' + selected).transition().duration(250).style('opacity', 1).attr("stroke-width", 4);
-                parent.draw_link(parent,selected, 350, parent.tools.LINE_GRAPH_COLORS[i]);
+                parent.draw_link(parent, selected, 350, parent.tools.LINE_GRAPH_COLORS[i]);
             })
             .on('mouseout', function (d) {
                 let selected = 'CAMBRIDGE_JTMS_' + d.name
@@ -653,13 +660,13 @@ class Hud {
                 parent.hud.historical_link(link_id, new_date).then((data) => {
                     console.log('received', data)
 
-                    let hist_data =  parent.hud.restructure_hist_data(parent, [data]); //  WHY DO I NEED TWO RESTRUCTURINGS
+                    let hist_data = parent.hud.restructure_hist_data(parent, [data]); //  WHY DO I NEED TWO RESTRUCTURINGS
                     console.log('HIST data', hist_data);
 
                     let route_acp_id = 'DASH_' + hist_data[0].acp_id;
 
                     // Add the line
-                    normal_speed_line =  parent.hud.create_path(parent, hist_data, route_acp_id, 'black', 'historical')
+                    normal_speed_line = parent.hud.create_path(parent, hist_data, route_acp_id, 'black', 'historical')
                     console.log(normal_speed_line)
                 });
 
@@ -827,7 +834,7 @@ class Hud {
     }
 
     //DOES NOT SHOW DATA FOR MISSING ROUTES, SO MAYBE IT SHOULD DISPLAY HISTORICAL TRAVEL TIMES INSTEAD
-    async get_node_data(parent,site_id, date_start, date_end) {
+    async get_node_data(parent, site_id, date_start, date_end) {
 
         //find the requested site_id in the SITE_DB
         let site = parent.site_db.all.find(x => x.node_acp_id == site_id);
@@ -865,7 +872,7 @@ class Hud {
 
 
             //starts x axis at midnight
-            min_max.min_x = viz_tools.to_timestamp(date_start + " 00:00:00")
+            min_max.min_x = parent.tools.to_timestamp(date_start + " 00:00:00")
 
             //if queried data is for today, our x axis should still show 24hours
             if (min_max.max_x - min_max.min_x < 86399) { //86400
@@ -875,7 +882,7 @@ class Hud {
 
             try {
                 let restructured_route_data = parent.hud.restructure_to_sublists(hist_data)
-                parent.hud.show_line_plot(parent,restructured_route_data, min_max, site_name, date_start, date_end);
+                parent.hud.show_line_plot(parent, restructured_route_data, min_max, site_name, date_start, date_end);
             } catch (err) {
                 console.log('Error message', err)
                 document.getElementById('line_graph').innerHTML = "No data received";

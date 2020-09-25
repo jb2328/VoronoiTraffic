@@ -78,4 +78,4 @@ class VizTools {
 }
 
 // Instantiate a jb2328 utility class e.g. for getBoundingBox()
-var viz_tools = new VizTools();
+//var viz_tools = new VizTools();
