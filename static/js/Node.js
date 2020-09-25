@@ -1,7 +1,7 @@
 "use strict";
 
 class Node {
-    constructor(node_id) {
+    constructor(parent, node_id) {
 
         this.node_id = node_id;//node_id
         this.node_acp_id = 'SITE_' + this.node_id.replace('{', '').replace('}', '');
@@ -26,7 +26,7 @@ class Node {
         this.selectedName = null;
 
         this.parent = this.getParent();
-        this.name = this.getName();
+        this.name = this.getName(parent);
     }
 
     getParent() {
@@ -40,13 +40,13 @@ class Node {
         }
     }
 
-    getName() {
-        return all_sites.find(x => x.id === this.node_id).name;
+    getName(parent) {
+        return parent.site_db.all_sites.find(x => x.id === this.node_id).name;
 
 
     }
-    fetchName(id) {
-        return all_sites.find(x => x.id === id).name;
+    fetchName(parent,id) {
+        return parent.site_db.all_sites.find(x => x.id === id).name;
 
     }
     setVisualisation(vis) {
@@ -68,8 +68,8 @@ class Node {
         }
         //this.visualise=vis;
     }
-    getLocation() {
-        let data = all_sites; //"this.sites;
+    getLocation(parent) {
+        let data = parent.site_db.all_sites; //"this.sites;
         for (let i = 0; i < data.length; i++) {
             if (this.node_id == data[i].id) {
                 return {
@@ -79,17 +79,17 @@ class Node {
             }
         }
     }
-    findNeighbors() //data is all_links
+    findNeighbors(parent) //data is all_links
     {
         this.neighbors = [];
         let tt, ntt, travelTime;
-        for (let i = 0; i < all_links.length; i++) {
-            if (this.node_id == all_links[i].sites[0]) { //from this id
+        for (let i = 0; i < parent.site_db.all_links.length; i++) {
+            if (this.node_id == parent.site_db.all_links[i].sites[0]) { //from this id
                 //console.log('journeysB',journeys[i].id, this.node_id,data[i])
                 //console.log(data.length, journeys.length,i);
                 try {
-                    tt = all_journeys.find(x => x.id === all_links[i].id).travelTime;
-                    ntt = all_journeys.find(x => x.id === all_links[i].id).normalTravelTime;
+                    tt = parent.site_db.all_journeys.find(x => x.id === parent.site_db.all_links[i].id).travelTime;
+                    ntt = parent.site_db.all_journeys.find(x => x.id === parent.site_db.all_links[i].id).normalTravelTime;
                     travelTime = tt == undefined || null ? ntt : tt;
                 } catch (err) {
                     travelTime = undefined;
@@ -97,32 +97,32 @@ class Node {
                 }
 
                 //console.log(tt, travelTime);
-                let link = findLinks(this.node_id, all_links[i].sites[1]);
+                let link = parent.site_db.find_links(parent,this.node_id, parent.site_db.all_links[i].sites[1]);
                 this.neighbors.push({
                     "links": {
                         "out": link.out,
                         "in": link.in
                     },
-                    "name": all_links[i].name,
-                    "id": all_links[i].sites[1], //to this id
-                    "site": this.fetchName(all_links[i].sites[1]),
+                    "name": parent.site_db.all_links[i].name,
+                    "id": parent.site_db.all_links[i].sites[1], //to this id
+                    "site": this.fetchName(parent,parent.site_db.all_links[i].sites[1]),
                     "travelTime": travelTime,
                     "normalTravelTime": ntt,
-                    "dist": all_links[i].length
+                    "dist": parent.site_db.all_links[i].length
                 });
             }
         }
     }
 
-    computeTravelTime() {
+    computeTravelTime(parent) {
         let avg = [];
         let sum = 0;
         for (let i = 0; i < this.neighbors.length; i++) {
             let link = this.neighbors[i].links.out.id;
 
-            for (let u = 0; u < all_journeys.length; u++) {
-                if (link == all_journeys[u].id) {
-                    avg.push(all_journeys[u].travelTime);
+            for (let u = 0; u < parent.site_db.all_journeys.length; u++) {
+                if (link == parent.site_db.all_journeys[u].id) {
+                    avg.push(parent.site_db.all_journeys[u].travelTime);
                 }
             }
         }
@@ -133,7 +133,7 @@ class Node {
         this.travelTime = sum / avg.length;
     }
 
-    computeTravelSpeed() {
+    computeTravelSpeed(parent) {
         let currentAverage = [];
         let historicalAverage = [];
 
@@ -141,14 +141,14 @@ class Node {
             let link = this.neighbors[i].links.out.id;
             let dist = this.neighbors[i].dist;
 
-            for (let u = 0; u < all_journeys.length; u++) {
-                if (link == all_journeys[u].id) {
-                    let travelTime = all_journeys[u].travelTime;
-                    let historicalTime = all_journeys[u].normalTravelTime;
+            for (let u = 0; u < parent.site_db.all_journeys.length; u++) {
+                if (link == parent.site_db.all_journeys[u].id) {
+                    let travelTime = parent.site_db.all_journeys[u].travelTime;
+                    let historicalTime = parent.site_db.all_journeys[u].normalTravelTime;
                     // console.log(historicalTime);
 
-                    let currentSpeed = (dist / travelTime) * TO_MPH;
-                    let historicalSpeed = (dist / historicalTime) * TO_MPH;
+                    let currentSpeed = (dist / travelTime) * parent.tools.TO_MPH;
+                    let historicalSpeed = (dist / historicalTime) * parent.tools.TO_MPH;
 
                     if (currentSpeed == Infinity || historicalSpeed == Infinity) {
                         break;

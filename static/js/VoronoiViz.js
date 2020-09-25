@@ -7,6 +7,7 @@ class VoronoiViz {
         this.svg_canvas = null;
 
         this.site_db = new SiteDB();
+
         this.hud = new Hud(this, this.site_db);
 
         this.tools = new VizTools();
@@ -21,6 +22,7 @@ class VoronoiViz {
     // init() called when page loaded
     init() {
         var parent = this;
+        console.log('STARTING')
 
 
         parent.get_url_date();
@@ -29,26 +31,27 @@ class VoronoiViz {
         //--------LOADING API DATA-------//
         //-------------------------------//
 
-        parent.site_db.load_api_data().then(() => {
+        parent.site_db.load_api_data(parent).then(() => {
+            console.log('FETCHING DATA')
 
             console.log('Creating Nodes');
-            parent.site_db.initialise_nodes();
+            parent.site_db.initialise_nodes(parent);
 
             console.log('draw bar chart')
-            parent.hud.show_vertical_bar(parent, parent.site_db.get_zone_averages());
+            parent.hud.show_vertical_bar(parent, parent.site_db.get_zone_averages(parent));
 
             if (URL_NODE != '*') {
                 //merge:
-                let node = parent.site_db.get_acp_id(URL_NODE);
+                let node = parent.site_db.get_acp_id(parent, URL_NODE);
                 console.log('selecting node', node)
-                parent.site_db.set_selected_node(node);
-                console.log('selected node', parent.site_db.get_selected_node())
+                parent.site_db.set_selected_node(parent,node);
+                console.log('selected node', parent.site_db.get_selected_node(parent))
 
                 parent.select_cell(parent, node.node_acp_id)
 
-                parent.hud.show_all(parent, parent.site_db.get_selected_node());
+                parent.hud.show_all(parent, parent.site_db.get_selected_node(parent));
 
-                console.log('from url node', node, parent.site_db.get_selected_node())
+                console.log('from url node', node, parent.site_db.get_selected_node(parent))
             }
 
             console.log('loading Voronoi');
@@ -60,8 +63,8 @@ class VoronoiViz {
 
 
         //attach map event listeners
-        map.on("viewreset moveend", this.draw_voronoi);
-        map.on("viewreset moveend", this.generate_hull);
+        map.on("viewreset moveend", parent.draw_voronoi.bind(parent));
+        map.on("viewreset moveend", parent.generate_hull.bind(parent));
 
         //Will execute myCallback every X seconds 
         //the use of .bind(this) is critical otherwise we can't call other class methods
@@ -71,14 +74,15 @@ class VoronoiViz {
 
     update() {
         var parent = this;
+        console.log('UPDATING')
 
-        parent.site_db.load_api_data().then(() => {
+        parent.site_db.load_api_data(parent).then(() => {
 
-            parent.site_db.update_nodes();
+            parent.site_db.update_nodes(parent);
             console.log('draw bar chart')
 
             // show_horizontal_bar(get_zone_averages());
-            parent.hud.show_vertical_bar(parent, parent.site_db.get_zone_averages());
+            parent.hud.show_vertical_bar(parent, parent.site_db.get_zone_averages(parent));
 
             parent.draw_voronoi(parent);
 
@@ -126,8 +130,14 @@ class VoronoiViz {
     }
 
     draw_voronoi(parent) {
+        console.log('PARENT1', parent)
+        if(parent.type=="moveend"){
+            console.log('defining parent', this)
+            parent=this;
+        }
+        console.log('PARENT2', parent)
 
-        console.log('selected_site', parent, parent.site_db.get_selected_node());
+        console.log('selected_site', parent, parent.site_db.get_selected_node(parent));
         //remove old cell overlay and prepare to draw a new one
         d3.select('#cell_overlay').remove();
 
@@ -162,9 +172,8 @@ class VoronoiViz {
         //e.g. when zoomed in, not all sites get drawn since they appear out of the screen
         var filtered_points = [];
 
-        console.log('ALL_SITES', all_sites)
-        //filtered points are voronoi center points - bluetooth sensor locations
-        filtered_points = all_sites.filter(function (d, i) {
+       //filtered points are voronoi center points - bluetooth sensor locations
+        filtered_points = parent.site_db.all_sites.filter(function (d, i) {
             let latlng = new L.latLng(d.location.lat, d.location.lng);
 
             //make sure not drawing out of bounds
@@ -339,7 +348,7 @@ class VoronoiViz {
                 //color the cell based on the selected reading from the SITE_DB
                 //the lookup is done based on the matching id values (from SVG and in Nodes)
 
-                let color = parent.site_db.get_id(d.data.id).selected;
+                let color = parent.site_db.get_id(parent,d.data.id).selected;
 
                 //if undefined,set to gray
                 if (color == null || color == undefined) {
@@ -358,7 +367,7 @@ class VoronoiViz {
 
                 //get the id and the neighbors for the node that this cell represents
                 let node_id = d.data.id;
-                let neighbors = parent.site_db.get_id(node_id).neighbors;
+                let neighbors = parent.site_db.get_id(parent,node_id).neighbors;
 
                 //remove old links that were drawn for the other nodes 
                 //that were hoverd in before
@@ -393,9 +402,9 @@ class VoronoiViz {
 
             .on('click', function (d, i) {
 
-                let selected_node = parent.site_db.get_acp_id(d.data.acp_id)
+                let selected_node = parent.site_db.get_acp_id(parent, d.data.acp_id)
                 //set as the main global selection 
-                parent.site_db.set_selected_node(selected_node);
+                parent.site_db.set_selected_node(parent, selected_node);
 
                 parent.select_cell(parent, selected_node.node_acp_id)
 
@@ -436,7 +445,7 @@ class VoronoiViz {
 
                         console.log(result.path[i]);
 
-                        let found = voronoi_viz.site_db.get_name(result.path[i]);
+                        let found = voronoi_viz.site_db.get_name(parent, result.path[i]);
 
                         if (found.x != null || found.x != undefined) {
                             path.push({
@@ -524,7 +533,7 @@ class VoronoiViz {
 
         //in case the selected node has been mislabeled:
 
-        let node = voronoi_viz.site_db.get_selected_node().node_acp_id;
+        let node = voronoi_viz.site_db.get_selected_node(parent).node_acp_id;
         parent.select_cell(parent, node);
 
     }
@@ -534,7 +543,7 @@ class VoronoiViz {
     //from the min/max values of the data
     set_color_range(parent) {
 
-        let values = parent.site_db.get_min_max();
+        let values = parent.site_db.get_min_max(parent);
         let min = values.min;
         let max = values.max;
 
@@ -671,23 +680,23 @@ class VoronoiViz {
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //find the sites that the link connects
-        let connected_sites = all_links.find(x => x.id === link).sites;
+        let connected_sites = parent.site_db.all_links.find(x => x.id === link).sites;
 
-        let from = parent.site_db.get_id(connected_sites[0]);
-        let to = parent.site_db.get_id(connected_sites[1]);
+        let from = parent.site_db.get_id(parent,connected_sites[0]);
+        let to = parent.site_db.get_id(parent,connected_sites[1]);
 
         //acquire the direction of the link by checking if it's opposite exists.
         //If the opposite's drawn on screen, make arc's curvature inverse.
         let direction = links_drawn.includes(parent.inverse_link(parent, link)) ? "in" : "out";
 
         //calculate the speed deviation for the link in question
-        let deviation = parent.calculate_deviation(link) //negative slower, positive faster
+        let deviation = parent.calculate_deviation(parent, link) //negative slower, positive faster
 
         //acquire the minmax values for the color scale.
         //we create a new color scale, even though the old one exits
         //because the drawn links always colored based on speed deviation, 
         //whereas the general setColorScale can be changed to speed ranges etc.
-        let values = parent.site_db.get_min_max();
+        let values = parent.site_db.get_min_max(parent);
 
         var scale = d3.scaleLinear()
             .domain([values.min, values.max])
@@ -711,12 +720,12 @@ class VoronoiViz {
     //find the opposite of the link by looking at the *to* and *from*
     //nodes and changing the directionality
     inverse_link(parent, link) {
-        let connected_sites = all_links.find(x => x.id === link).sites;
+        let connected_sites = parent.site_db.all_links.find(x => x.id === link).sites;
 
-        let from = parent.site_db.get_id(connected_sites[0]);
-        let to = parent.site_db.get_id(connected_sites[1]);
+        let from = parent.site_db.get_id(parent, connected_sites[0]);
+        let to = parent.site_db.get_id(parent, connected_sites[1]);
 
-        let links = findLinks(from.node_id, to.node_id);
+        let links = parent.site_db.find_links(parent, from.node_id, to.node_id);
         return link === links.in.id ? links.out.id : links.in.id;
 
     }
@@ -795,12 +804,12 @@ class VoronoiViz {
 
     //STILL NOT SURE IF THIS ACTUALLY BELONGS HERE
     //calculates speed deviation for a given link
-    calculate_deviation(link) {
-        let dist = all_links.find(x => x.id === link).length;
+    calculate_deviation(parent,link) {
+        let dist = parent.site_db.all_links.find(x => x.id === link).length;
         let travelTime, normalTravelTime;
         try {
-            travelTime = all_journeys.find(x => x.id === link).travelTime;
-            normalTravelTime = all_journeys.find(x => x.id === link).normalTravelTime;
+            travelTime = parent.site_db.all_journeys.find(x => x.id === link).travelTime;
+            normalTravelTime = parent.site_db.all_journeys.find(x => x.id === link).normalTravelTime;
         } catch {
             return undefined
         }
@@ -809,8 +818,8 @@ class VoronoiViz {
             travelTime = normalTravelTime;
         }
 
-        let current = (dist / travelTime) * TO_MPH;
-        let normal = (dist / normalTravelTime) * TO_MPH; //historical speed
+        let current = (dist / travelTime) * parent.tools.TO_MPH;
+        let normal = (dist / normalTravelTime) * parent.tools.TO_MPH; //historical speed
 
         //negative speed is slower, positive speed is faster
         return current - normal;
@@ -939,12 +948,12 @@ class VoronoiViz {
 
             let node_id = parent.site_db.all[d].id;
 
-            let neighbors = parent.site_db.get_id(node_id).neighbors;
+            let neighbors = parent.site_db.get_id(parent, node_id).neighbors;
 
             for (let i = 0; i < neighbors.length; i++) {
 
-                let x_coord = parent.site_db.get_id(neighbors[i].id).x;
-                let y_coord = parent.site_db.get_id(neighbors[i].id).y;
+                let x_coord = parent.site_db.get_id(parent, neighbors[i].id).x;
+                let y_coord = parent.site_db.get_id(parent, neighbors[i].id).y;
             }
         }
     }
@@ -970,7 +979,7 @@ class VoronoiViz {
 
                     let node_id = parent.site_db.all[j].id;
 
-                    let neighbors = parent.site_db.get_id(node_id).neighbors;
+                    let neighbors = parent.site_db.get_id(parent, node_id).neighbors;
 
                     //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;  
                     for (let i = 0; i < neighbors.length; i++) {
@@ -1110,8 +1119,8 @@ class VoronoiViz {
         console.log('select_cell', parent)
         parent.deselect_all(parent)
         let cell = document.getElementById(id)
-        let node = this.site_db.get_acp_id(id)
-        parent.site_db.set_selected_node(node)
+        let node = this.site_db.get_acp_id(parent, id)
+        parent.site_db.set_selected_node(parent, node)
         parent.cell_clicked(cell)
     };
 

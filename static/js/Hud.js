@@ -116,7 +116,7 @@ class Hud {
             })
             .on('mouseover', function (d, i) {
 
-                parent.get_outline(d.zone);
+                parent.get_outline(parent,d.zone);
 
                 for (let u = 0; u < ZONES.length; u++) {
                     if (d.zone != ZONES[u]) {
@@ -127,9 +127,9 @@ class Hud {
 
             })
             .on('click', function (d, i) {
-                parent.get_outline(d.zone);
+                parent.get_outline(parent, d.zone);
 
-                parent.hud.get_zone_metadata(d.zone)
+                parent.hud.get_zone_metadata(parent,d.zone)
 
             })
             .on('dblclick', function (d, i) {
@@ -243,7 +243,7 @@ class Hud {
                 return CELL_GROUPS[d.zone]['color']
             })
             .on('mouseover', function (d, i) {
-                parent.get_outline(d.zone);
+                parent.get_outline(parent,d.zone);
 
                 for (let u = 0; u < ZONES.length; u++) {
                     if (d.zone != ZONES[u]) {
@@ -255,9 +255,9 @@ class Hud {
 
             })
             .on('click', function (d, i) {
-                parent.get_outline(d.zone);
+                parent.get_outline(parent, d.zone);
 
-                parent.hud.get_zone_metadata(d.zone)
+                parent.hud.get_zone_metadata(parent, d.zone)
 
             })
             .on('dblclick', function (d, i) {
@@ -318,7 +318,7 @@ class Hud {
         d3.selectAll('.metadata_zone')
             .on('click', function (d, i) {
 
-                let highlighted_cell = parent.hud.site_db.get_acp_id(this.id.replace('META_ZONE_', ''));
+                let highlighted_cell = parent.hud.site_db.get_acp_id(parent, this.id.replace('META_ZONE_', ''));
 
                 parent.select_cell(parent,highlighted_cell.node_acp_id)
 
@@ -404,8 +404,8 @@ class Hud {
             let neighbour = SITE.neighbors[u];
             console.log('SITE', neighbour.site)
 
-            let link_in = all_journeys.find(journey => journey.id === neighbour.links.in.id)
-            let link_out = all_journeys.find(journey => journey.id === neighbour.links.out.id)
+            let link_in = parent.site_db.all_journeys.find(journey => journey.id === neighbour.links.in.id)
+            let link_out = parent.site_db.all_journeys.find(journey => journey.id === neighbour.links.out.id)
             let tt_in, tt_out;
 
 
@@ -417,7 +417,7 @@ class Hud {
                     tt_in = link_in.travelTime;
                 }
 
-                let speed_in = parseInt((neighbour.links.in.length / tt_in) * TO_MPH);
+                let speed_in = parseInt((neighbour.links.in.length / tt_in) * parent.tools.TO_MPH);
                 console.log('journey iD:', neighbour.links.in, tt_in, speed_in)
 
 
@@ -428,7 +428,7 @@ class Hud {
                     tt_out = link_out.travelTime;
                 }
 
-                let speed_out = parseInt((neighbour.links.out.length / tt_out) * TO_MPH);
+                let speed_out = parseInt((neighbour.links.out.length / tt_out) * parent.tools.TO_MPH);
 
                 let to = parent.tools.HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.in.id + "'>" + parent.tools.TAB + "<b>To:</b> " + "Current Speed: " + speed_in + "MPH" + "</div>";
                 let from = parent.tools.HALF_TAB + "<div class='metadata' id='META_" + neighbour.links.out.id + "'>" + parent.tools.TAB + "<b>From:</b> " + "Current Speed: " + speed_out + "MPH" + "</div>";
@@ -653,7 +653,7 @@ class Hud {
                 parent.hud.historical_link(link_id, new_date).then((data) => {
                     console.log('received', data)
 
-                    let hist_data =  parent.hud.restructure_hist_data([data]); //  WHY DO I NEED TWO RESTRUCTURINGS
+                    let hist_data =  parent.hud.restructure_hist_data(parent, [data]); //  WHY DO I NEED TWO RESTRUCTURINGS
                     console.log('HIST data', hist_data);
 
                     let route_acp_id = 'DASH_' + hist_data[0].acp_id;
@@ -854,7 +854,7 @@ class Hud {
 
         parent.hud.await_promises(parent, all_lists.length, site.neighbors.length).then(() => {
 
-            let hist_data = parent.hud.restructure_hist_data(all_lists); //  WHY DO I NEED TWO RESTRUCTURINGS
+            let hist_data = parent.hud.restructure_hist_data(parent, all_lists); //  WHY DO I NEED TWO RESTRUCTURINGS
 
             let min_max = {
                 'min_x': Math.min(...hist_data.map(a => a.ts)),
@@ -884,7 +884,7 @@ class Hud {
         })
     }
 
-    restructure_hist_data(unstr_fetched_data) {
+    restructure_hist_data(parent, unstr_fetched_data) {
         let structured_data = []
 
         unstr_fetched_data.forEach(item => {
@@ -895,7 +895,7 @@ class Hud {
             elements.forEach(element => {
 
                 //console.log('element', element, "time", element.time.slice(11, 20), "date", element.time.slice(0, 10));
-                let link_length = all_links.find(x => x.acp_id === element.id).length;
+                let link_length = parent.site_db.all_links.find(x => x.acp_id === element.id).length;
 
                 if ((element.travelTime < 500) && (element.travelTime > 0)) {
 
@@ -905,8 +905,8 @@ class Hud {
                         "ts": element.acp_ts,
                         "travel_time": element.travelTime, //normalTravelTime
                         "normal_travel_time": element.normalTravelTime, //
-                        "speed": (link_length / element.travelTime) * TO_MPH,
-                        "normal_speed": (link_length / element.normalTravelTime) * TO_MPH,
+                        "speed": (link_length / element.travelTime) * parent.tools.TO_MPH,
+                        "normal_speed": (link_length / element.normalTravelTime) * parent.tools.TO_MPH,
                         "time": element.time.slice(11, 20),
                         "date": element.time.slice(0, 10),
                         "length": link_length

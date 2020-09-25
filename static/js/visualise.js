@@ -10,9 +10,6 @@ var map, // The Leaflet map object itself
 
 var topLeft;
 
-
-var all_sites, all_links, all_journeys = [];
-
 var links_drawn = [];
 
 var BOUNDARY_DB = [];

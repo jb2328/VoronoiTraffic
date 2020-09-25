@@ -33,6 +33,12 @@ class VizTools {
             });
     }
 
+    
+     array_avg(arr){
+      return (arr.reduce((a, b) => a + b, 0) / arr.length)
+     }
+
+
     arrays_equal(a, b) {
         if (a === b) return true;
         if (a == null || b == null) return false;
