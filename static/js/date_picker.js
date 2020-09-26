@@ -1,5 +1,5 @@
 // var space_floorplan = new SpaceFloorplan();
-let current_date = new Date().toISOString().slice(0, 10).split('-').join('/');
+//let current_date = new Date().toISOString().slice(0, 10).split('-').join('/');
 
 $(function () {
 
