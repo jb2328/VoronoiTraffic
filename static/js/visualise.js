@@ -1,37 +1,16 @@
 "use strict";
 
-// m/sec to mph
-//const TO_MPH = 2.23694;
-
-
 // Script state globals
 var map, // The Leaflet map object itself
     clock; // The clock control
 
 var topLeft;
 
-var links_drawn = [];
-
-var BOUNDARY_DB = [];
-var boundary_points = [];
-
-var polygon_group;
-var setColor;
-
-
-var link_group, zone_outlines, dijkstra_group, road_group;
-
-
 var YYYY, MM, DD;
-
-
-
-
 
 // ************************************************************************************
 // ************** Date forwards / backwards function **********************************
 // ************************************************************************************
-
 
 function update_url(node, date) {
     // console.log('UPDATING URL', date)

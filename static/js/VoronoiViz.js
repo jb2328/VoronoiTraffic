@@ -17,6 +17,18 @@ class VoronoiViz {
 
         this.SELECTED_SITE = '';
         this.boundary_db = [];
+        this.boundary_points = [];
+
+        //object globals
+        this.links_drawn = [];
+
+        //svg groups
+        this.polygon_group;
+        this.dijkstra_group;
+        this.zone_outlines;
+
+        //color range picker
+        this.set_color;
     }
 
     // init() called when page loaded
@@ -44,7 +56,7 @@ class VoronoiViz {
                 //merge:
                 let node = parent.site_db.get_acp_id(parent, URL_NODE);
                 console.log('selecting node', node)
-                parent.site_db.set_selected_node(parent,node);
+                parent.site_db.set_selected_node(parent, node);
                 console.log('selected node', parent.site_db.get_selected_node(parent))
 
                 parent.select_cell(parent, node.node_acp_id)
@@ -131,9 +143,9 @@ class VoronoiViz {
 
     draw_voronoi(parent) {
         console.log('PARENT1', parent)
-        if(parent.type=="moveend"){
+        if (parent.type == "moveend") {
             console.log('defining parent', this)
-            parent=this;
+            parent = this;
         }
         console.log('PARENT2', parent)
 
@@ -163,7 +175,7 @@ class VoronoiViz {
          
          Here we use all_sites(Bluetooth sensor sites) and boundary_sites(imaginary sites that close off the Voronoi diagram)
          Naming conventions: "sites" is refering to physical lat/lng location, whereas "points" are pixel values on screen,
-         hence the creation of variables like boundary_sites and boundary_points. 
+         hence the creation of variables like boundary_sites and parent.boundary_points. 
     
          */
 
@@ -172,7 +184,7 @@ class VoronoiViz {
         //e.g. when zoomed in, not all sites get drawn since they appear out of the screen
         var filtered_points = [];
 
-       //filtered points are voronoi center points - bluetooth sensor locations
+        //filtered points are voronoi center points - bluetooth sensor locations
         filtered_points = parent.site_db.all_sites.filter(function (d, i) {
             let latlng = new L.latLng(d.location.lat, d.location.lng);
 
@@ -194,10 +206,10 @@ class VoronoiViz {
             return true;
         });
 
-        //boundary_points are voronoi center points that limit the perimeter of the visible cells.
+        //parent.boundary_points are voronoi center points that limit the perimeter of the visible cells.
         //We created a list of invisible cells so that the Voronoi diagram does not triangulate
         //itself to inifinity. The coordinates for these can be found in boundary_sites.js
-        boundary_points = boundary_sites.filter(function (d, i) {
+        parent.boundary_points = boundary_sites.filter(function (d, i) {
             let latlng = new L.latLng(d.lat, d.lng);
             if (!drawLimit.contains(latlng)) {
                 return false
@@ -220,7 +232,7 @@ class VoronoiViz {
         });
 
         //create color a range to be able to color in cells based on their values
-        setColor = parent.set_color_range(parent);
+        parent.set_color = parent.set_color_range(parent);
 
         //findLatLng(); //optional function, provides lat/lng coordinates if clicked on the map
 
@@ -249,17 +261,17 @@ class VoronoiViz {
 
         //combine boundary(invisible) nodes with the actual sensor node to make polygons
         //that are evenly triangulated
-        for (let i = 0; i < boundary_points.length; i++) {
-            filtered_points.push(boundary_points[i]);
+        for (let i = 0; i < parent.boundary_points.length; i++) {
+            filtered_points.push(parent.boundary_points[i]);
         }
 
         //create voronoi polygons from all the nodes.
-        //this wouldn't work if we did voronoi.polygons(boundary_points)
+        //this wouldn't work if we did voronoi.polygons(parent.boundary_points)
         //and voronoi.polygons(filtered_points) separately
         let voronoi_polygons = voronoi.polygons(filtered_points);
 
         //list containing all visible polygons. Here we separate
-        //filetered_points from boundary_points again
+        //filetered_points from parent.boundary_points again
         let ready_voronoi_polygons = [];
 
         //invisible polygons are undefined so we ignore them
@@ -281,19 +293,19 @@ class VoronoiViz {
             .style("margin-top", topLeft.y + "px");
 
         //append voronoi polygons to the canvas
-        polygon_group = parent.svg_canvas.append("g")
+        parent.polygon_group = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append zone outlines to the canvas
-        zone_outlines = parent.svg_canvas.append("g")
+        parent.zone_outlines = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append drawn links to the canvas
-        link_group = parent.svg_canvas.append("g")
+        parent.link_group = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append dijkstra shortest path generated line to the canvas
-        dijkstra_group = parent.svg_canvas.append("g")
+        parent.dijkstra_group = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //append circles that illustrate sensors and polygons centers to the canvas.
@@ -320,7 +332,7 @@ class VoronoiViz {
 
         //creates paths objects from the genetated polygon data 
         //(polygons are drawn as paths FYI)
-        polygon_group.selectAll("g")
+        parent.polygon_group.selectAll("g")
             .data(ready_voronoi_polygons)
             .enter()
             .append("path")
@@ -342,19 +354,19 @@ class VoronoiViz {
         //---------------START-----------------//
 
         //add some visual properties to the drawn cells
-        polygon_group.selectAll(".cell")
+        parent.polygon_group.selectAll(".cell")
             .attr('fill', function (d) {
 
                 //color the cell based on the selected reading from the SITE_DB
                 //the lookup is done based on the matching id values (from SVG and in Nodes)
 
-                let color = parent.site_db.get_id(parent,d.data.id).selected;
+                let color = parent.site_db.get_id(parent, d.data.id).selected;
 
                 //if undefined,set to gray
                 if (color == null || color == undefined) {
                     return "rgb(50,50,50);"
                 } else {
-                    return setColor(color)
+                    return parent.set_color(color)
                 }
             })
 
@@ -367,12 +379,12 @@ class VoronoiViz {
 
                 //get the id and the neighbors for the node that this cell represents
                 let node_id = d.data.id;
-                let neighbors = parent.site_db.get_id(parent,node_id).neighbors;
+                let neighbors = parent.site_db.get_id(parent, node_id).neighbors;
 
                 //remove old links that were drawn for the other nodes 
                 //that were hoverd in before
                 d3.selectAll('.arc_line').remove()
-                link_group.remove();
+                parent.link_group.remove();
 
                 //draw links for every neighbor that the node has
                 for (let i = 0; i < neighbors.length; i++) {
@@ -392,8 +404,8 @@ class VoronoiViz {
                 parent.cell_mouseout(this);
 
                 //cleanup the links that were drawn
-                links_drawn = [];
-                link_group.remove();
+                parent.links_drawn = [];
+                parent.link_group.remove();
                 d3.selectAll('.arc_line').remove()
 
             })
@@ -468,7 +480,7 @@ class VoronoiViz {
                         .curve(d3.curveCatmullRom.alpha(1)); //or d3.curveCardinal.tension(0.1)//or d3.curveNatural
 
                     //append the generated shortest path line to the dijkstra group on the global svg canvas
-                    let shortest_path_line = dijkstra_group.append("path")
+                    let shortest_path_line = parent.dijkstra_group.append("path")
                         .attr("d", line(path))
                         .attr('id', 'shortest_path')
                         .attr("stroke", "green")
@@ -501,7 +513,7 @@ class VoronoiViz {
         //----------------END------------------//
 
         //add the *title* so that the name of the node appears when the cell is being hovered on
-        polygon_group.selectAll(".cell").append("title").text(function (d) {
+        parent.polygon_group.selectAll(".cell").append("title").text(function (d) {
             return d.data.name;
         });
 
@@ -594,6 +606,7 @@ class VoronoiViz {
 
         let url_date = new_year + '-' + new_month + '-' + new_day;
         update_url(node_id, url_date);
+
     }
 
 
@@ -623,7 +636,7 @@ class VoronoiViz {
         // Clock
         clock = get_clock().addTo(map)
 
-        //THE FOLLOWING ARE VERY MUCH MISPLACED HERE, SHOULD BE A PART OF Hud CLASS
+        //THE FOLLOWING ARE VERY MUCH MISPLACED HERE, SHOULD BE A PART OF Hud CLASS OR AT LEAST VizTools
 
         const info_viz_text = '<h4>Information</h4>' +
             "<br>" +
@@ -672,30 +685,32 @@ class VoronoiViz {
 
     //draws a link between two sites
     //[*link* is link id, *dur* is the animation duration, *color* (optional) link's color when drawn]
+    //This function has further nested functions that I thought would not make sense as object methods, 
+    //since those were only used in the context of draw_link()
     draw_link(parent, link, dur, color) {
 
         //add the link_group to the canvas again 
         //(we detach it previously to make it invisible after mouseout is being performed)
-        link_group = parent.svg_canvas.append("g")
+        parent.link_group = parent.svg_canvas.append("g")
             .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
 
         //find the sites that the link connects
         let connected_sites = parent.site_db.all_links.find(x => x.id === link).sites;
 
-        let from = parent.site_db.get_id(parent,connected_sites[0]);
-        let to = parent.site_db.get_id(parent,connected_sites[1]);
+        let from = parent.site_db.get_id(parent, connected_sites[0]);
+        let to = parent.site_db.get_id(parent, connected_sites[1]);
 
         //acquire the direction of the link by checking if it's opposite exists.
         //If the opposite's drawn on screen, make arc's curvature inverse.
-        let direction = links_drawn.includes(parent.inverse_link(parent, link)) ? "in" : "out";
+        let direction = parent.links_drawn.includes(parent.site_db.inverse_link(parent, link)) ? "in" : "out";
 
         //calculate the speed deviation for the link in question
-        let deviation = parent.calculate_deviation(parent, link) //negative slower, positive faster
+        let deviation = parent.site_db.calculate_deviation(parent, link) //negative slower, positive faster
 
         //acquire the minmax values for the color scale.
         //we create a new color scale, even though the old one exits
         //because the drawn links always colored based on speed deviation, 
-        //whereas the general setColorScale can be changed to speed ranges etc.
+        //whereas the general set_colorScale can be changed to speed ranges etc.
         let values = parent.site_db.get_min_max(parent);
 
         var scale = d3.scaleLinear()
@@ -703,135 +718,102 @@ class VoronoiViz {
             .range([values.min, values.max]);
 
         //if color's not defined, color the link based on speed deviation
-        color = color == undefined ? setColor(scale(deviation)) : color;
+        color = color == undefined ? parent.set_color(scale(deviation)) : color;
 
         let strokeWeight = 5;
 
         //animate the line
-        let link_line = parent.generate_arc(from, to, direction, strokeWeight, color);
+        let link_line = generate_arc(from, to, direction, strokeWeight, color);
         let line_length = link_line.node().getTotalLength();
-        parent.animate_movement(link_line, line_length, dur);
+        animate_movement(link_line, line_length, dur);
 
         //add to the drawn list so we know what the opposite link's
         //direction is
-        links_drawn.push(link);
-    }
 
-    //find the opposite of the link by looking at the *to* and *from*
-    //nodes and changing the directionality
-    inverse_link(parent, link) {
-        let connected_sites = parent.site_db.all_links.find(x => x.id === link).sites;
-
-        let from = parent.site_db.get_id(parent, connected_sites[0]);
-        let to = parent.site_db.get_id(parent, connected_sites[1]);
-
-        let links = parent.site_db.find_links(parent, from.node_id, to.node_id);
-        return link === links.in.id ? links.out.id : links.in.id;
-
-    }
-
-    //----------Generating and Drawing Arcs--------//
-
-    generate_arc(A, B, direction, strokeWeight, stroke) {
-
-        return link_group
-            .append('path')
-            .attr('d', this.curved_line(A.x, A.y, B.x, B.y, direction === "in" ? 1 : -1))
-            .attr('class', 'arc_line')
-            .style("fill", "none")
-            .style("fill-opacity", 0)
-            .attr("stroke", stroke)
-            .attr("stroke-opacity", 1)
-            .style("stroke-width", strokeWeight);
-    }
-
-    //compute the arc points given start/end coordinates
-    //[start/end coordinates, dir stands for direction]
-    curved_line(start_x, start_y, end_x, end_y, dir) {
-
-        //find the middle location of where the curvature is 0
-        let mid_x = (start_x + end_x) / 2;
-
-        let a = Math.abs(start_x - end_x);
-        let b = Math.abs(start_y - end_y);
-
-        //curvature height/or how curved the line is
-        //[y offset in other words]
-        let off = a > b ? b / 10 : 15;
-
-        let mid_x1 = mid_x - off * dir;
-
-        //calculate the slope of the arc line
-        //let mid_y1 = parent.slope(mid_x1, start_x, start_y, end_x, end_y);
-
-        //computes the slope on which we place the arc lines
-        //indicate links between sites
-        let midX = (start_x + end_x) / 2;
-        let midY = (start_y + end_y) / 2;
-        let slope = (end_y - start_y) / (end_x - start_x);
-
-        let mid_y1 = (-1 / slope) * (mid_x1 - midX) + midY;
-
-        return ['M', start_x, start_y, // the arc start coordinates (where the starting node is)
-                'C', // This means we're gonna build an elliptical arc
-                start_x, ",", start_y, ",",
-                mid_x1, mid_y1,
-                end_x, ',', end_y
-            ]
-            .join(' ');
-    }
+        parent.links_drawn.push(link);
 
 
+        //----------Generating and Drawing Arcs--------//
 
-    //animates lines being rendered as if they move through the map.
-    //It's how we create a sense of directionality from links
-    animate_movement(line, outboundLength, dur) {
+        function generate_arc(A, B, direction, strokeWeight, stroke) {
 
-        return line
-            .attr("stroke-dasharray", outboundLength + " " + outboundLength)
-            .attr("stroke-dashoffset", outboundLength)
-            .transition()
-            .duration(dur)
-            .ease(d3.easeLinear)
-            .attr("stroke-dashoffset", 0)
-            .on("end",
-                function (d, i) {
-                    // d3.select(this).remove()
-                }
-            );
-    }
-
-
-    //STILL NOT SURE IF THIS ACTUALLY BELONGS HERE
-    //calculates speed deviation for a given link
-    calculate_deviation(parent,link) {
-        let dist = parent.site_db.all_links.find(x => x.id === link).length;
-        let travelTime, normalTravelTime;
-        try {
-            travelTime = parent.site_db.all_journeys.find(x => x.id === link).travelTime;
-            normalTravelTime = parent.site_db.all_journeys.find(x => x.id === link).normalTravelTime;
-        } catch {
-            return undefined
+            return parent.link_group
+                .append('path')
+                .attr('d', curved_line(A.x, A.y, B.x, B.y, direction === "in" ? 1 : -1))
+                .attr('class', 'arc_line')
+                .style("fill", "none")
+                .style("fill-opacity", 0)
+                .attr("stroke", stroke)
+                .attr("stroke-opacity", 1)
+                .style("stroke-width", strokeWeight);
         }
 
-        if (travelTime == null || travelTime == undefined) {
-            travelTime = normalTravelTime;
+        //compute the arc points given start/end coordinates
+        //[start/end coordinates, dir stands for direction]
+        function curved_line(start_x, start_y, end_x, end_y, dir) {
+
+            //find the middle location of where the curvature is 0
+            let mid_x = (start_x + end_x) / 2;
+
+            let a = Math.abs(start_x - end_x);
+            let b = Math.abs(start_y - end_y);
+
+            //curvature height/or how curved the line is
+            //[y offset in other words]
+            let off = a > b ? b / 10 : 15;
+
+            let mid_x1 = mid_x - off * dir;
+
+            //calculate the slope of the arc line
+            //let mid_y1 = parent.slope(mid_x1, start_x, start_y, end_x, end_y);
+
+            //computes the slope on which we place the arc lines
+            //indicate links between sites
+            let midX = (start_x + end_x) / 2;
+            let midY = (start_y + end_y) / 2;
+            let slope = (end_y - start_y) / (end_x - start_x);
+
+            let mid_y1 = (-1 / slope) * (mid_x1 - midX) + midY;
+
+            return ['M', start_x, start_y, // the arc start coordinates (where the starting node is)
+                    'C', // This means we're gonna build an elliptical arc
+                    start_x, ",", start_y, ",",
+                    mid_x1, mid_y1,
+                    end_x, ',', end_y
+                ]
+                .join(' ');
         }
 
-        let current = (dist / travelTime) * parent.tools.TO_MPH;
-        let normal = (dist / normalTravelTime) * parent.tools.TO_MPH; //historical speed
 
-        //negative speed is slower, positive speed is faster
-        return current - normal;
+
+        //animates lines being rendered as if they move through the map.
+        //It's how we create a sense of directionality from links
+        function animate_movement(line, outboundLength, dur) {
+
+            return line
+                .attr("stroke-dasharray", outboundLength + " " + outboundLength)
+                .attr("stroke-dashoffset", outboundLength)
+                .transition()
+                .duration(dur)
+                .ease(d3.easeLinear)
+                .attr("stroke-dashoffset", 0)
+                .on("end",
+                    function (d, i) {
+                        // d3.select(this).remove()
+                    }
+                );
+        }
 
     }
+
+    
 
     colorTransition(parent, viz_type) {
 
-        parent.site_db.set_visualisations(viz_type)
-        var setColor = parent.set_color_range(parent);
+        parent.site_db.set_visualisations(parent,viz_type)
+        let set_color = parent.set_color_range(parent);
 
-        polygon_group.selectAll(".cell")
+        parent.polygon_group.selectAll(".cell")
             .transition()
             .duration('1000')
             .attr('fill', function (d, i) {
@@ -840,7 +822,7 @@ class VoronoiViz {
                 if (color == null || color == undefined) {
                     return "rgb(50,50,50);"
                 } else {
-                    return setColor(color) //c10[i % 10]
+                    return set_color(color) //c10[i % 10]
                 }
             })
 
@@ -896,7 +878,7 @@ class VoronoiViz {
 
     drawLinks(start_x, start_y, end_x, end_y, dur, fill) {
 
-        let link_in = link_group
+        let link_in = parent.link_group
             .append('path')
             .attr('d', this.curved_line(start_x, start_y, end_x, end_y, 1))
             .style("fill", fill)
@@ -905,7 +887,7 @@ class VoronoiViz {
             .attr("stroke-opacity", 0.5)
             .style("stroke-width", 2);
 
-        let link_out = link_group
+        let link_out = parent.link_group
             .append('path')
             .attr('d', this.curved_line(end_x, end_y, start_x, start_y, -1))
             .style("fill", fill)
@@ -974,10 +956,10 @@ class VoronoiViz {
             }
             if (this.value === "routes") {
                 console.log("routes");
-                polygon_group.remove();
+                parent.polygon_group.remove();
                 for (let j = 0; j < parent.site_db.get_length(); j++) {
 
-                    let node_id = parent.site_db.all[j].id;
+                    let node_id = parent.site_db.all[j].node_id;
 
                     let neighbors = parent.site_db.get_id(parent, node_id).neighbors;
 
@@ -1075,7 +1057,7 @@ class VoronoiViz {
         //.curve(d3.curveCatmullRomClosed.alpha(0.95)); //d3.curveCardinal.tension(0.1)//d3.curveNatural
 
         if (zone_id != undefined) {
-            zone_outlines.append("g")
+            parent.zone_outlines.append("g")
                 .append("path")
                 .attr('class', 'zone_outline')
                 .attr("d", lineFunction(CELL_GROUPS[zone_id]['points']))
@@ -1091,7 +1073,7 @@ class VoronoiViz {
                 .on("end", function (d, i) {});
         } else {
             for (let j = 0; j < cell_group_list.length; j++) {
-                zone_outlines.append("g")
+                parent.zone_outlines.append("g")
                     .append("path")
                     .attr('class', 'zone_outline')
                     .attr("d", lineFunction(CELL_GROUPS[cell_group_list[j]]['points']))

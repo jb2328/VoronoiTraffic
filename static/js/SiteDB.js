@@ -117,6 +117,45 @@ class SiteDB {
         }
     }
 
+    // MAKES MORE SENSE TO HAVE inverse_link() IN SITE_DB
+    //find the opposite of the link by looking at the *to* and *from*
+    //nodes and changing the directionality
+    inverse_link(parent, link) {
+        let connected_sites = parent.site_db.all_links.find(x => x.id === link).sites;
+
+        let from = parent.site_db.get_id(parent, connected_sites[0]);
+        let to = parent.site_db.get_id(parent, connected_sites[1]);
+
+        let links = parent.site_db.find_links(parent, from.node_id, to.node_id);
+        return link === links.in.id ? links.out.id : links.in.id;
+
+    }
+
+
+    //STILL NOT SURE IF THIS ACTUALLY BELONGS HERE, SHOULD MOVE TO SITE_DB
+    //calculates speed deviation for a given link
+    calculate_deviation(parent, link) {
+        let dist = parent.site_db.all_links.find(x => x.id === link).length;
+        let travelTime, normalTravelTime;
+        try {
+            travelTime = parent.site_db.all_journeys.find(x => x.id === link).travelTime;
+            normalTravelTime = parent.site_db.all_journeys.find(x => x.id === link).normalTravelTime;
+        } catch {
+            return undefined
+        }
+
+        if (travelTime == null || travelTime == undefined) {
+            travelTime = normalTravelTime;
+        }
+
+        let current = (dist / travelTime) * parent.tools.TO_MPH;
+        let normal = (dist / normalTravelTime) * parent.tools.TO_MPH; //historical speed
+
+        //negative speed is slower, positive speed is faster
+        return current - normal;
+
+    }
+
     get_zone_averages(parent) {
         let zones = Object.keys(CELL_GROUPS);
         let zone_readings = [];
@@ -180,8 +219,9 @@ class SiteDB {
 
     //returns a node based on its node name property
     get_length(parent) {
-        return parent.site_db.all.length;
+        return this.all.length;//fix later ->breaks if you do parent.site_db.all.length
     }
+
     set_visualisations(parent,viz_type) {
         parent.site_db.all.forEach((element) => {
             element.setVisualisation(viz_type);
