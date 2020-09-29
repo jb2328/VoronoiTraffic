@@ -20,13 +20,11 @@ def fileFrontPage():
   #      pass
     return render_template('main.html',DATE=selected_date,NODE=selected_node )
 
-  
+
 
 if __name__ == '__main__':
     print("Voronoi Traffic Map starting...")
 
     #app.run(host="127.0.0.1",port=5000,debug=DEBUG)
-    app.run(port=6400,debug=DEBUG)
+    app.run(host="0.0.0.0",port=6400,debug=DEBUG)
     #app.run()
-
-

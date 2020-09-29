@@ -61,11 +61,18 @@
 
     <script type="text/javascript" src="{{ url_for('static',filename='/js/date_picker.js') }}"></script>
 
-
+    <script>
+        var URL_NODE = '{{NODE}}';
+        var URL_DATE = '{{DATE}}';
+        function page_init() {
+            var voronoi_viz = new VoronoiViz(); //(SITE_DB)
+            voronoi_viz.init();
+        }
+    </script>
 
 </head>
 
-<body onload='voronoi_viz.init()'>
+<body onload='page_init()'>
     <div class="selection_wrapper">
 
         <form id="selection_form">
@@ -82,12 +89,6 @@
     </div> <!-- end selection_wrapper -->
 
     <div id="map" style="height: 98vh; border: 1px solid black;"></div>
-
-    <script>
-        var URL_NODE = '{{NODE}}';
-        var URL_DATE = '{{DATE}}';
-        var voronoi_viz = new VoronoiViz(); //(SITE_DB)
-    </script>
 
 </body>
 
