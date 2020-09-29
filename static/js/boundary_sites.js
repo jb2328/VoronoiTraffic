@@ -106,29 +106,3 @@ var boundary_sites = [{
     "y": null
 }
 ];
-
-//boundary_sites=getCircle();
-//transforms arbitrary circle coordinates to lat lng.
-//That is how the original locations were obtained.
-function getCircle() {
-    let a = 0;
-    let r = 700;
-    let arr = [];
-    let newPts=[];
-    for (let t = 0; t < 6.28; t += 0.05) {
-        let x = a + r * Math.cos(t);
-        let y = a + r * Math.sin(t);
-
-        let lng = voronoi_viz.map_values(x, -500, 500, 0.03, 0.2);
-        let lat = voronoi_viz.map_values(y, -500, 500, 52.15, 52.246)
-
-        newPts.push({
-            "x": x,
-            "y": y,
-            "lng": lng,
-            "lat": lat
-        });
-    }
-    // console.log(newPts);
-    return newPts;
-}

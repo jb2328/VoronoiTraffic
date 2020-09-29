@@ -10,9 +10,8 @@ class SiteDB {
         this.selected_site = null;
         this.all_sites, this.all_routes, this.all_journeys, this.all_links = [];
 
-        //I think it would make most sense to move data_building.js functions to the site_db class where in the constructor(?) or elsewhere
-        //would fetch initial data etc. Having those types of global functions perhaps isn't the best way to approach this.
-        // var all_sites, all_links, all_journeys, all_routes = [];
+        //CELL_GROUPS are located in the cell_groups.js file
+        this.ZONES = Object.keys(CELL_GROUPS)
 
     }
 
@@ -68,7 +67,7 @@ class SiteDB {
         //     setTimeout(load_data, 60000);
         // });
     }
-    find_links(parent,id1, id2) {
+    find_links(parent, id1, id2) {
         //id1 from (outbound)
         //id2 to (inbound)
 
@@ -92,7 +91,7 @@ class SiteDB {
 
         for (let i = 0; i < parent.site_db.all_sites.length; i++) {
 
-            let node = new Node(parent,parent.site_db.all_sites[i].id)
+            let node = new Node(parent, parent.site_db.all_sites[i].id)
 
             node.lat = parent.site_db.all_sites[i].acp_lat;
             node.lng = parent.site_db.all_sites[i].acp_lng;
@@ -155,7 +154,7 @@ class SiteDB {
     }
 
     get_zone_averages(parent) {
-        let zones = Object.keys(CELL_GROUPS);
+        let zones = parent.site_db.ZONES;
         let zone_readings = [];
         for (let i = 0; i < zones.length; i++) {
             let zone_temp = []
@@ -169,7 +168,7 @@ class SiteDB {
         return zone_readings
     }
 
-    set_selected_node(parent,new_selection) {
+    set_selected_node(parent, new_selection) {
         parent.site_db.selected_site = new_selection;
     }
     get_selected_node(parent) {
@@ -200,27 +199,27 @@ class SiteDB {
     //WHAT I WAS THINKING
 
     //returns a node based on its node acp_id property
-    get_acp_id(parent,node_acp_id) {
+    get_acp_id(parent, node_acp_id) {
         return parent.site_db.all.find(x => x.node_acp_id === node_acp_id);
 
     }
 
     //returns a node based on its node id property
-    get_id(parent,node_id) {
+    get_id(parent, node_id) {
         return parent.site_db.all.find(x => x.node_id === node_id);
     }
 
     //returns a node based on its node name property
-    get_name(parent,node_name) {
+    get_name(parent, node_name) {
         return parent.site_db.all.find(x => x.name === node_name);
     }
 
     //returns a node based on its node name property
     get_length(parent) {
-        return this.all.length;//fix later ->breaks if you do parent.site_db.all.length
+        return this.all.length; //fix later ->breaks if you do parent.site_db.all.length
     }
 
-    set_visualisations(parent,viz_type) {
+    set_visualisations(parent, viz_type) {
         parent.site_db.all.forEach((element) => {
             element.setVisualisation(viz_type);
         });

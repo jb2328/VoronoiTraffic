@@ -8,19 +8,20 @@ class VoronoiViz {
 
         this.site_db = new SiteDB();
 
-        this.hud = new Hud(this, this.site_db);
+        this.hud = new Hud();
 
         this.tools = new VizTools();
 
         // Transform parameters to scale SVG to screen
         this.init_map(this);
 
-        this.SELECTED_SITE = '';
+        //object globals
+        this.map;
+        this.clock;
+        this.topLeft;
+        this.links_drawn = [];
         this.boundary_db = [];
         this.boundary_points = [];
-
-        //object globals
-        this.links_drawn = [];
 
         //svg groups
         this.polygon_group;
@@ -33,50 +34,28 @@ class VoronoiViz {
 
     // init() called when page loaded
     init() {
-        var parent = this;
         console.log('STARTING')
 
-
-        parent.get_url_date();
+        var parent = this;
 
         //-------------------------------//
         //--------LOADING API DATA-------//
         //-------------------------------//
 
         parent.site_db.load_api_data(parent).then(() => {
-            console.log('FETCHING DATA')
 
-            console.log('Creating Nodes');
             parent.site_db.initialise_nodes(parent);
 
-            console.log('draw bar chart')
-            parent.hud.show_vertical_bar(parent, parent.site_db.get_zone_averages(parent));
+            parent.hud.init(parent, URL_NODE);
 
-            if (URL_NODE != '*') {
-                //merge:
-                let node = parent.site_db.get_acp_id(parent, URL_NODE);
-                console.log('selecting node', node)
-                parent.site_db.set_selected_node(parent, node);
-                console.log('selected node', parent.site_db.get_selected_node(parent))
-
-                parent.select_cell(parent, node.node_acp_id)
-
-                parent.hud.show_all(parent, parent.site_db.get_selected_node(parent));
-
-                console.log('from url node', node, parent.site_db.get_selected_node(parent))
-            }
-
-            console.log('loading Voronoi');
             parent.draw_voronoi(parent);
             parent.generate_hull(parent);
 
-
         });
 
-
         //attach map event listeners
-        map.on("viewreset moveend", parent.draw_voronoi.bind(parent));
-        map.on("viewreset moveend", parent.generate_hull.bind(parent));
+        parent.map.on("viewreset moveend", parent.draw_voronoi.bind(parent));
+        parent.map.on("viewreset moveend", parent.generate_hull.bind(parent));
 
         //Will execute myCallback every X seconds 
         //the use of .bind(this) is critical otherwise we can't call other class methods
@@ -104,26 +83,29 @@ class VoronoiViz {
         });
 
         console.log('updated', Date.now())
-        clock.update(Date.now());
+        parent.clock.update(Date.now());
     }
 
-
+    //parses the URL date, updates the date bar in the middle of the page (top)
+    //and returns the formatted date to be passed to other functions
     get_url_date() {
         let date, month_long;
+
         if (URL_DATE == '*') {
             date = new Date()
             month_long = date.toLocaleString('default', {
                 month: 'long'
             });
         } else {
-            let spllit_date = URL_DATE.split('-')
+            let split_date = URL_DATE.split('-')
 
             let months = [];
-            //use moment.js for the date conversion from '9' or '09' to Septemeber
-            months.push(moment().month(spllit_date[1] - 1).format("MMMM"));
+
+            //use moment.js for the date conversion from '9' or '09' to September
+            months.push(moment().month(split_date[1] - 1).format("MMMM"));
 
             //make a string again to keep new Date() happy
-            let date_string = spllit_date[0].toString() + ' ' + months[0].toString() + ' ' + spllit_date[2].toString();
+            let date_string = split_date[0].toString() + ' ' + months[0].toString() + ' ' + split_date[2].toString();
 
             date = new Date(date_string)
             month_long = date.toLocaleString('default', {
@@ -131,30 +113,46 @@ class VoronoiViz {
             });
         }
 
+        //get date values to be returned/added on the top-middle div
+        let year = date.getFullYear();
+        let month_short = ("0" + (date.getMonth() + 1)).slice(-2);
+        let day = ("0" + (date.getDate())).slice(-2)
 
-        YYYY = date.getFullYear(); //'{{ YYYY }}';
-        MM = date.getMonth() + 1; //'{{ MM }}';
-        DD = date.getDate(); //'{{ DD }}';
+        //update the innerHTML
+        document.getElementById('date_now').innerHTML = "<h2 id='date_now_header'>" + day + " " +
+            month_long + " " + year + "</h2>";
 
-        document.getElementById('date_now').innerHTML = "<h2 id='date_now_header'>" + DD + " " +
-            month_long + " " + YYYY +
-            "</h2>"
+        return year + "-" + month_short + "-" + day;
     }
 
+    get_selected_date(parent){
+        let new_date = new Date(document.getElementById('date_now_header').innerHTML); // as loaded in page template config_ values;
+
+        let new_year = new_date.getFullYear();
+        let new_day = ("0" + new_date.getDate()).slice(-2);
+        let new_month = ("0" + (new_date.getMonth() + 1)).slice(-2);
+        let new_month_long = new_date.toLocaleString('default', {
+            month: 'long'
+        });
+
+        return new_year + "-" + new_month + "-" + new_day;
+    }
     draw_voronoi(parent) {
-        console.log('PARENT1', parent)
+
+        //on 'moveend' redeclare the parent, otherwise the visualisaiton fails to load
+        //since the 'this' becomes the 'moveend' object
         if (parent.type == "moveend") {
-            console.log('defining parent', this)
             parent = this;
         }
-        console.log('PARENT2', parent)
 
-        console.log('selected_site', parent, parent.site_db.get_selected_node(parent));
+        //set selected_date to be used throughout the visualisation
+        let selected_date=parent.get_selected_date(parent);
+
         //remove old cell overlay and prepare to draw a new one
         d3.select('#cell_overlay').remove();
 
         // Reset the clock
-        clock.update();
+        parent.clock.update();
 
         //create a variable for the dbclick functionality
         ///that finds the shortest path between two selected cites
@@ -162,13 +160,13 @@ class VoronoiViz {
 
         //create map bounds to know where to stop drawing
         //as well topLeft && bottomRight values  
-        let bounds = map.getBounds(),
-            bottomRight = map.latLngToLayerPoint(bounds.getSouthEast()),
+        let bounds = parent.map.getBounds(),
+            bottomRight = parent.map.latLngToLayerPoint(bounds.getSouthEast()),
             drawLimit = bounds.pad(0.4);
 
         //topLeft is a global since it's used outside the scope to position
         //other objects in relation to the Voronoi diagram
-        topLeft = map.latLngToLayerPoint(bounds.getNorthWest());
+        parent.topLeft = parent.map.latLngToLayerPoint(bounds.getNorthWest());
 
         /*
          Lat/Lng to pixel conversion
@@ -193,7 +191,7 @@ class VoronoiViz {
                 return false
             };
 
-            let point = map.latLngToLayerPoint(latlng);
+            let point = parent.map.latLngToLayerPoint(latlng);
 
             //set coordinates values in all_sites for further use
             d.x = point.x;
@@ -215,7 +213,7 @@ class VoronoiViz {
                 return false
             };
 
-            let point = map.latLngToLayerPoint(latlng);
+            let point = parent.map.latLngToLayerPoint(latlng);
 
             //set coordinates values in boundary_sites for further use
             d.x = point.x;
@@ -251,7 +249,7 @@ class VoronoiViz {
                 return d.y;
             })
             .extent([
-                [topLeft.x, topLeft.y],
+                [parent.topLeft.x, parent.topLeft.y],
                 [bottomRight.x, bottomRight.y]
             ]);
 
@@ -284,34 +282,34 @@ class VoronoiViz {
         //appending the d3.js SVG to the map.
         //the svg_canvas variable will also contain all of the d3.generated proto objects
         //like lines, outlines and the polygons (voronoi cells).
-        parent.svg_canvas = d3.select(map.getPanes().overlayPane).append("svg")
+        parent.svg_canvas = d3.select(parent.map.getPanes().overlayPane).append("svg")
             .attr("id", "cell_overlay")
             .attr("class", "leaflet-zoom-hide")
-            .style("width", map.getSize().x + "px")
-            .style("height", map.getSize().y + "px")
-            .style("margin-left", topLeft.x + "px")
-            .style("margin-top", topLeft.y + "px");
+            .style("width", parent.map.getSize().x + "px")
+            .style("height", parent.map.getSize().y + "px")
+            .style("margin-left", parent.topLeft.x + "px")
+            .style("margin-top", parent.topLeft.y + "px");
 
         //append voronoi polygons to the canvas
         parent.polygon_group = parent.svg_canvas.append("g")
-            .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+            .attr("transform", "translate(" + (-parent.topLeft.x) + "," + (-parent.topLeft.y) + ")");
 
         //append zone outlines to the canvas
         parent.zone_outlines = parent.svg_canvas.append("g")
-            .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+            .attr("transform", "translate(" + (-parent.topLeft.x) + "," + (-parent.topLeft.y) + ")");
 
         //append drawn links to the canvas
         parent.link_group = parent.svg_canvas.append("g")
-            .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+            .attr("transform", "translate(" + (-parent.topLeft.x) + "," + (-parent.topLeft.y) + ")");
 
         //append dijkstra shortest path generated line to the canvas
         parent.dijkstra_group = parent.svg_canvas.append("g")
-            .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+            .attr("transform", "translate(" + (-parent.topLeft.x) + "," + (-parent.topLeft.y) + ")");
 
         //append circles that illustrate sensors and polygons centers to the canvas.
         //It's not a global so we just declare it here
         let circle_group = parent.svg_canvas.append("g")
-            .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+            .attr("transform", "translate(" + (-parent.topLeft.x) + "," + (-parent.topLeft.y) + ")");
 
 
         /*Drawing the Voronoi polygons on the map.
@@ -420,7 +418,7 @@ class VoronoiViz {
 
                 parent.select_cell(parent, selected_node.node_acp_id)
 
-                parent.hud.show_all(parent, selected_node);
+                parent.hud.show_all(parent, selected_node, selected_date);
 
             })
 
@@ -457,7 +455,7 @@ class VoronoiViz {
 
                         console.log(result.path[i]);
 
-                        let found = voronoi_viz.site_db.get_name(parent, result.path[i]);
+                        let found = parent.site_db.get_name(parent, result.path[i]);
 
                         if (found.x != null || found.x != undefined) {
                             path.push({
@@ -544,9 +542,13 @@ class VoronoiViz {
         parent.change_modes(parent);
 
         //in case the selected node has been mislabeled:
+        try {
+            let node = parent.site_db.get_selected_node(parent).node_acp_id;
+            parent.select_cell(parent, node);
+        } catch (error) {
+            console.log('no node has been selected yet, error expected:\n', error);
+        }
 
-        let node = parent.site_db.get_selected_node(parent).node_acp_id;
-        parent.select_cell(parent, node);
 
     }
 
@@ -572,17 +574,7 @@ class VoronoiViz {
     date_shift(n, node_id) {
         let parent = this;
 
-        let year, month, day;
         console.log('date_shift()');
-        if (YYYY == '') {
-            year = plot_date.slice(0, 4);
-            month = plot_date.slice(5, 7);
-            day = plot_date.slice(8, 10);
-        } else {
-            year = YYYY;
-            month = MM;
-            day = DD;
-        }
 
         let new_date = new Date(document.getElementById('date_now_header').innerHTML); // as loaded in page template config_ values;
 
@@ -614,7 +606,7 @@ class VoronoiViz {
 
         //get the date for today, later to be used to check if the url needs updating
         let new_date = new Date()
-        let today = ("0" + new_date.getDate()).slice(-2) + "-" + ("0"+(new_date.getMonth() + 1)).slice(-2)+ "-" + new_date.getFullYear();
+        let today = ("0" + new_date.getDate()).slice(-2) + "-" + ("0" + (new_date.getMonth() + 1)).slice(-2) + "-" + new_date.getFullYear();
 
         //update the current date on the top of the screen (in case update_url() called not
         //from within the date_shift() function)
@@ -638,14 +630,11 @@ class VoronoiViz {
 
         searchParams.set("node", node);
 
-        console.log('DATES', today, checker_date, today == checker_date)
-        console.log('search params',)
-        if (searchParams.get("date")!=checker_date) {
-           // if(today != checker_date){
-            searchParams.set("date", checker_date);           
-        }
-        else{
-           // searchParams=searchParams.toString().split("&")[0]
+        if (searchParams.get("date") != checker_date) {
+            // if(today != checker_date){
+            searchParams.set("date", checker_date);
+        } else {
+            // searchParams=searchParams.toString().split("&")[0]
         }
 
         let newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
@@ -691,7 +680,7 @@ class VoronoiViz {
         });
         let cambridge = new L.LatLng(52.20038, 0.1);
 
-        map = new L.Map("map", {
+        parent.map = new L.Map("map", {
             center: cambridge,
             zoom: 12,
             zoomDelta: 0.1,
@@ -700,11 +689,11 @@ class VoronoiViz {
             doubleClickZoom: false,
         });
 
-        map.doubleClickZoom.disable();
+        parent.map.doubleClickZoom.disable();
 
 
         // Clock
-        clock = get_clock().addTo(map)
+        parent.clock = parent.get_clock().addTo(parent.map)
 
         //THE FOLLOWING ARE VERY MUCH MISPLACED HERE, SHOULD BE A PART OF Hud CLASS OR AT LEAST VizTools
 
@@ -749,6 +738,29 @@ class VoronoiViz {
         let zone_table = parent.hud.create_element(parent, 'zone_table', 'bottomright')
     }
 
+    get_clock() {
+        let control = L.control({
+            position: 'topleft'
+        });
+        control.onAdd = function () {
+            var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded clock');
+            div.innerHTML = 'Loading...';
+            return div;
+        };
+        control.update = function () {
+            //needs fixing as time end us being 1:1 instead of 01:01
+            let now = new Date();
+            let hh = now.getHours();
+            let mm = now.getMinutes();
+            let ss = now.getSeconds();
+            // If datetime is today
+            control.getContainer().innerHTML = 'Updated ' +("0" + hh).slice(-2)+ ':' + ("0" + mm).slice(-2);
+    
+            console.log("updated")
+    
+        };
+        return control;
+    }
     //----------------------------------//
     //---------Drawing Links------------//
     //----------------------------------//
@@ -762,7 +774,7 @@ class VoronoiViz {
         //add the link_group to the canvas again 
         //(we detach it previously to make it invisible after mouseout is being performed)
         parent.link_group = parent.svg_canvas.append("g")
-            .attr("transform", "translate(" + (-topLeft.x) + "," + (-topLeft.y) + ")");
+            .attr("transform", "translate(" + (-parent.topLeft.x) + "," + (-parent.topLeft.y) + ")");
 
         //find the sites that the link connects
         let connected_sites = parent.site_db.all_links.find(x => x.id === link).sites;
@@ -1015,17 +1027,16 @@ class VoronoiViz {
             //console.log(d);
 
             if (this.value === "current") {
-                parent.colorTransition("travel speed");
+                parent.colorTransition(parent,"travel speed");
             }
             if (this.value === "deviation") {
 
-                parent.colorTransition("speed deviation");
+                parent.colorTransition(parent,"speed deviation");
             }
             if (this.value === "historical") {
-                parent.colorTransition("historical speed");
+                parent.colorTransition(parent,"historical speed");
             }
             if (this.value === "routes") {
-                console.log("routes");
                 parent.polygon_group.remove();
                 for (let j = 0; j < parent.site_db.get_length(); j++) {
 
@@ -1058,8 +1069,15 @@ class VoronoiViz {
 
     generate_hull(parent) {
 
+        //on 'moveend' redeclare the parent, otherwise the visualisaiton fails to load
+        //since the 'this' becomes the 'moveend' object
+        if (parent.type == "moveend") {
+            parent = this;
+        }
+
+
         //get a list of group ids  e.g (north, south, center etc)
-        ZONES.forEach((group_id) => {
+        parent.site_db.ZONES.forEach((group_id) => {
 
             let site_id_list = CELL_GROUPS[group_id]['acp_ids']
             let point_list = []
@@ -1081,7 +1099,7 @@ class VoronoiViz {
 
             //perhaps 185 for all will just work as well
             let concavity_threshold;
-            if (map._zoom <= 12) {
+            if (parent.map._zoom <= 12) {
                 concavity_threshold = 85
             } else {
                 concavity_threshold = 185;
@@ -1168,7 +1186,6 @@ class VoronoiViz {
     /*------------------------------------------------------*/
 
     select_cell(parent, id) {
-        console.log('select_cell', parent)
         parent.deselect_all(parent)
         let cell = document.getElementById(id)
         let node = parent.site_db.get_acp_id(parent, id)
@@ -1225,46 +1242,4 @@ class VoronoiViz {
             .style("fill-opacity", 0.3);
     };
 
-}
-
-function path_to_poly(path_id) {
-    var numPoints = 8;
-
-    var mypath = document.getElementById(path_id);
-    var pathLength = mypath.getTotalLength();
-    var polygonPoints = [];
-
-    for (var i = 0; i < numPoints; i++) {
-        var p = mypath.getPointAtLength(i * pathLength / numPoints);
-        polygonPoints.push(p.x);
-        polygonPoints.push(p.y);
-    }
-
-    return polygonPoints;
-}
-
-
-
-function get_clock() {
-    var control = L.control({
-        position: 'topleft'
-    });
-    control.onAdd = function () {
-        var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded clock');
-        div.innerHTML = 'Loading...';
-        return div;
-    };
-    control.update = function () {
-        //needs fixing as time end us being 1:1 instead of 01:01
-        var now = new Date();
-        var hh = now.getHours();
-        var mm = now.getMinutes();
-        var ss = now.getSeconds();
-        // If datetime is today
-        control.getContainer().innerHTML = 'Updated ' + hh + ':' + mm;
-
-        console.log("updated")
-
-    };
-    return control;
 }

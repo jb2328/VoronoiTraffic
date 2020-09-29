@@ -83,5 +83,3 @@ var CELL_GROUPS = {
         'color':    'LightPink'
     }
 }
-
-const ZONES=Object.keys(CELL_GROUPS)

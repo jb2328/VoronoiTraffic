@@ -37,8 +37,6 @@
 
     <script type="text/javascript" src="{{ url_for('static',filename='/js/cell_groups.js') }}"></script>
 
-    <script type="text/javascript" src="{{ url_for('static',filename='/js/visualise.js') }}"></script>
-
     <!-- Objects -->
 
     <script type="text/javascript" src="{{ url_for('static',filename='/js/Node.js') }}"></script>
@@ -65,7 +63,7 @@
         var URL_NODE = '{{NODE}}';
         var URL_DATE = '{{DATE}}';
         function page_init() {
-            var voronoi_viz = new VoronoiViz(); //(SITE_DB)
+            var voronoi_viz = new VoronoiViz();
             voronoi_viz.init();
         }
     </script>
