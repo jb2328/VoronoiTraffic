@@ -19,6 +19,8 @@ class VizTools {
         this.TAB = '&emsp;&emsp;&emsp;&emsp;';
 
         this.SITE_PREFIX = 'SITE_';
+        
+        // m/sec to mph
         this.TO_MPH = 2.23694;
 
     }
