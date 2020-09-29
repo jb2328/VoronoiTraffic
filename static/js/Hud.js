@@ -305,13 +305,12 @@ class Hud {
         let child_info = "<b>Inner nodes for:</b> " + "<b style='color:" + CELL_GROUPS[ZONE].color + "'>" + ZONE + "</b>" + "<br>";
         for (let u = 0; u < zone_children.length; u++) {
             let child = zone_children[u];
-            //console.log(child)
 
             let child_speed = parent.tools.HALF_TAB + parent.tools.TAB + "Current Speed: " + parseInt(child.travelSpeed) + "MPH";
 
             child_info += "<br>" + "<div class='metadata_zone' id='META_ZONE_" + child.node_acp_id + "'>" + "<i>" + child.name + "</i>" + "</div>" + child_speed;
-
         }
+        
         document.getElementById('zone_table').innerHTML = parent.tools.ICON_CLOSE_DIV + child_info;
         document.getElementById('zone_table').style.opacity = 1;
 
@@ -356,6 +355,7 @@ class Hud {
         if (START == undefined) {
             START = new Date().toISOString().slice(0, 10)
         }
+
         console.log('show_node_info', acp_id)
         parent.hud.show_node_metadata(parent, acp_id)
         parent.hud.get_node_data(parent, acp_id, START, END)
@@ -371,9 +371,8 @@ class Hud {
 
     show_all(parent, selected_node) {
 
-        console.log('354', parent, selected_node)
         //------------------------HUD---------------------------//
-        let selected_date = YYYY + "-" + "0" + MM + "-" + DD //FIX MM
+        let selected_date = YYYY + "-" + ('0' + MM).slice(-2) + "-" + DD //FIX MM
 
         //make HUD elements visible
         document.getElementById("selected_cell").style.opacity = 1;
@@ -392,11 +391,11 @@ class Hud {
 
         //open datepicker if clicked on main center date
         document.getElementById('date_now').addEventListener("click", function () {
-            document.getElementById('datepicker_input').click();
+        document.getElementById('datepicker_input').click();
         });
 
         //update url and add event listeners for date changes
-        onchange_feature_select(selected_node.node_acp_id, DD + "-" + MM + "-" + YYYY)
+        parent.onchange_feature_select(parent,selected_node.node_acp_id, selected_date)
         //------------------------/HUD---------------------------//
     }
 
@@ -429,7 +428,6 @@ class Hud {
         let neighbour_info = "<b>Surrounding nodes:</b> " + "<br>";
         for (let u = 0; u < SITE.neighbors.length; u++) {
             let neighbour = SITE.neighbors[u];
-            console.log('SITE', neighbour.site)
 
             let link_in = parent.site_db.all_journeys.find(journey => journey.id === neighbour.links.in.id)
             let link_out = parent.site_db.all_journeys.find(journey => journey.id === neighbour.links.out.id)
@@ -439,7 +437,6 @@ class Hud {
             try {
                 if (link_in.travelTime == undefined || link_in.travelTime == null) {
                     tt_in = link_in.normalTravelTime;
-                    console.log('tt in failed', link_in)
                 } else {
                     tt_in = link_in.travelTime;
                 }
@@ -450,7 +447,6 @@ class Hud {
 
                 if (link_out.travelTime == undefined || link_out.travelTime == null) {
                     tt_out = link_out.normalTravelTime;
-                    console.log('tt our failed', link_out)
                 } else {
                     tt_out = link_out.travelTime;
                 }
@@ -501,8 +497,6 @@ class Hud {
             .append("g")
             .attr("transform",
                 "translate(" + margin.left + "," + margin.top + ")");
-
-        // console.log('domains', min_x, max_x, min_y, max_y);
 
         x_scale = d3.scaleLinear()
             .domain([min_max.min_x, min_max.max_x])
@@ -563,7 +557,7 @@ class Hud {
 
         let legend_keys = []
         for (let u = 0; u < route_data.length; u++) {
-            console.log('route_data', route_data[u])
+            //console.log('route_data', route_data[u])
             let route_acp_id = route_data[u][0].acp_id;
 
             // Add the line
@@ -582,7 +576,7 @@ class Hud {
         }
 
         legend_keys.push({
-            'name': 'HISTORICAL DATA',
+            'name': 'PAST DATA',
             'color': 'LightGrey'
         });
 

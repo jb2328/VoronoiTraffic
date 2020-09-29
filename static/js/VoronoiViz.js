@@ -545,7 +545,7 @@ class VoronoiViz {
 
         //in case the selected node has been mislabeled:
 
-        let node = voronoi_viz.site_db.get_selected_node(parent).node_acp_id;
+        let node = parent.site_db.get_selected_node(parent).node_acp_id;
         parent.select_cell(parent, node);
 
     }
@@ -584,12 +584,9 @@ class VoronoiViz {
             day = DD;
         }
 
-        console.log(year, month, day) //document.getElementById('date_now_header')
         let new_date = new Date(document.getElementById('date_now_header').innerHTML); // as loaded in page template config_ values;
-        console.log('new_date', new_date)
 
         new_date.setDate(new_date.getDate() + n);
-        console.log('new_new_date', new_date)
 
         let new_year = new_date.getFullYear();
         let new_month = ("0" + (new_date.getMonth() + 1)).slice(-2);
@@ -605,8 +602,81 @@ class VoronoiViz {
         parent.hud.show_node_information(parent, node_id, query_date);
 
         let url_date = new_year + '-' + new_month + '-' + new_day;
-        update_url(node_id, url_date);
+        parent.update_url(node_id, url_date);
 
+    }
+    // ************************************************************************************
+    // ************** Date forwards / backwards function **********************************
+    // ************************************************************************************
+
+
+    update_url(node, date) {
+
+        //get the date for today, later to be used to check if the url needs updating
+        let new_date = new Date()
+        let today = ("0" + new_date.getDate()).slice(-2) + "-" + ("0"+(new_date.getMonth() + 1)).slice(-2)+ "-" + new_date.getFullYear();
+
+        //update the current date on the top of the screen (in case update_url() called not
+        //from within the date_shift() function)
+        let passed_date = new Date(date)
+
+        let new_day = ("0" + passed_date.getDate()).slice(-2);
+        let new_month = ("0" + (passed_date.getMonth() + 1)).slice(-2);
+        let new_year = passed_date.getFullYear();
+        let new_month_long = passed_date.toLocaleString('default', {
+            month: 'long'
+        });
+
+        let header_date = new_day + "-" + new_month_long + "-" + new_year;
+        let checker_date = new_day + "-" + new_month + "-" + new_year;
+
+        //set the new date on the top
+        document.getElementById('date_now_header').innerHTML = header_date;
+
+        //update the actual url
+        let searchParams = new URLSearchParams(window.location.search)
+
+        searchParams.set("node", node);
+
+        console.log('DATES', today, checker_date, today == checker_date)
+        console.log('search params',)
+        if (searchParams.get("date")!=checker_date) {
+           // if(today != checker_date){
+            searchParams.set("date", checker_date);           
+        }
+        else{
+           // searchParams=searchParams.toString().split("&")[0]
+        }
+
+        let newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
+        window.history.pushState(null, '', newRelativePathQuery);
+        console.log('updated URL', node, checker_date)
+    }
+
+
+    onchange_feature_select(parent, node_id, date) {
+        console.log("onchange_feature_select", window.location.href);
+
+        parent.set_date_onclicks(parent, node_id);
+
+        // Change the URL in the address bar
+        parent.update_url(node_id, date);
+    }
+
+    set_date_onclicks(parent, node_id) {
+        // set up onclick calls for day/week forwards/back buttons
+        document.getElementById("back_1_week").onclick = function () {
+            parent.date_shift(-7, node_id)
+        };
+        document.getElementById("back_1_day").onclick = function () {
+            parent.date_shift(-1, node_id)
+        };
+        document.getElementById("forward_1_week").onclick = function () {
+            parent.date_shift(7, node_id)
+        };
+        document.getElementById("forward_1_day").onclick = function () {
+            parent.date_shift(1, node_id)
+        };
     }
 
 
@@ -806,11 +876,11 @@ class VoronoiViz {
 
     }
 
-    
+
 
     colorTransition(parent, viz_type) {
 
-        parent.site_db.set_visualisations(parent,viz_type)
+        parent.site_db.set_visualisations(parent, viz_type)
         let set_color = parent.set_color_range(parent);
 
         parent.polygon_group.selectAll(".cell")
@@ -1101,7 +1171,7 @@ class VoronoiViz {
         console.log('select_cell', parent)
         parent.deselect_all(parent)
         let cell = document.getElementById(id)
-        let node = this.site_db.get_acp_id(parent, id)
+        let node = parent.site_db.get_acp_id(parent, id)
         parent.site_db.set_selected_node(parent, node)
         parent.cell_clicked(cell)
     };

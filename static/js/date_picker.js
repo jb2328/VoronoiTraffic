@@ -20,6 +20,11 @@ $(function () {
     let start_date = start.format('YYYY-MM-DD');
     let end_date = end.format('YYYY-MM-DD');
 
+    YYYY = start_date.slice(0, 4);
+    MM = start_date.slice(5, 7);
+    DD = start_date.slice(8, 10);
+
+    voronoi_viz.update_url(voronoi_viz.site_db.selected_site.node_acp_id, start_date)
     voronoi_viz.hud.show_node_information(voronoi_viz, voronoi_viz.site_db.selected_site.node_acp_id, start_date, end_date);
 
   });
@@ -28,9 +33,16 @@ $(function () {
   $('input[name="datefilter"]').on('apply.daterangepicker', function (ev, picker) {
     $(this).val(picker.startDate.format('YYYY-MM-DD') + ' - ' + picker.endDate.format('YYYY-MM-DD'));
     let start_date = picker.startDate.format('YYYY-MM-DD');
+
+    console.log('START DATE HERE', start_date)
     let end_date = picker.endDate.format('YYYY-MM-DD')
     console.log('applied', start_date, end_date)
 
+    YYYY = start_date.slice(0, 4);
+    MM = start_date.slice(5, 7);
+    DD = start_date.slice(8, 10);
+
+    voronoi_viz.update_url(voronoi_viz.site_db.selected_site.node_acp_id, start_date)
     voronoi_viz.hud.show_node_information(voronoi_viz, voronoi_viz.site_db.selected_site.node_acp_id, start_date, end_date);
 
   });

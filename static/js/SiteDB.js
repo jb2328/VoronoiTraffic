@@ -117,7 +117,6 @@ class SiteDB {
         }
     }
 
-    // MAKES MORE SENSE TO HAVE inverse_link() IN SITE_DB
     //find the opposite of the link by looking at the *to* and *from*
     //nodes and changing the directionality
     inverse_link(parent, link) {
@@ -132,7 +131,6 @@ class SiteDB {
     }
 
 
-    //STILL NOT SURE IF THIS ACTUALLY BELONGS HERE, SHOULD MOVE TO SITE_DB
     //calculates speed deviation for a given link
     calculate_deviation(parent, link) {
         let dist = parent.site_db.all_links.find(x => x.id === link).length;
