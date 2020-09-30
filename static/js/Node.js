@@ -1,9 +1,12 @@
 "use strict";
 
 class Node {
-    constructor(parent, node_id) {
+    //Node class is responsible for having all the data for individual nodes
+    // that are used to render cells on the screen
 
-        this.node_id = node_id;//node_id
+    constructor(voronoi_viz,node_id) {
+
+        this.node_id = node_id; //node_id
         this.node_acp_id = 'SITE_' + this.node_id.replace('{', '').replace('}', '');
 
         this.name = null;
@@ -25,11 +28,12 @@ class Node {
         this.selected = null;
         this.selectedName = null;
 
-        this.parent = this.getParent();
-        this.name = this.getName(parent);
+        this.zone = this.getZone();
+        this.name = this.getName(voronoi_viz);
     }
 
-    getParent() {
+    //returns the zone that the node belongs to (east, west, north, south, center)
+    getZone() {
 
         let groups = Object.keys(CELL_GROUPS);
         for (let i = 0; i < groups.length; i++) {
@@ -40,15 +44,17 @@ class Node {
         }
     }
 
+    //returns the name of the node
     getName(parent) {
         return parent.site_db.all_sites.find(x => x.id === this.node_id).name;
-
-
     }
-    fetchName(parent,id) {
+
+    //returns the name of the node based on the id
+    fetchName(parent, id) {
         return parent.site_db.all_sites.find(x => x.id === id).name;
-
     }
+
+    //sets the default visualisation value
     setVisualisation(vis) {
         this.selectedName = vis;
         switch (vis) {
@@ -64,10 +70,10 @@ class Node {
             default:
                 this.selected = this.speedDeviation; //this.travelSpeed;
                 break;
-
         }
-        //this.visualise=vis;
     }
+
+    //returns the location of the node
     getLocation(parent) {
         let data = parent.site_db.all_sites; //"this.sites;
         for (let i = 0; i < data.length; i++) {
@@ -79,14 +85,15 @@ class Node {
             }
         }
     }
-    findNeighbors(parent) //data is all_links
+
+    //adds the list of surrounding neigbour nodes to the node metadata
+    findNeighbors(parent) //data is in all_links
     {
         this.neighbors = [];
         let tt, ntt, travelTime;
         for (let i = 0; i < parent.site_db.all_links.length; i++) {
             if (this.node_id == parent.site_db.all_links[i].sites[0]) { //from this id
-                //console.log('journeysB',journeys[i].id, this.node_id,data[i])
-                //console.log(data.length, journeys.length,i);
+
                 try {
                     tt = parent.site_db.all_journeys.find(x => x.id === parent.site_db.all_links[i].id).travelTime;
                     ntt = parent.site_db.all_journeys.find(x => x.id === parent.site_db.all_links[i].id).normalTravelTime;
@@ -97,7 +104,7 @@ class Node {
                 }
 
                 //console.log(tt, travelTime);
-                let link = parent.site_db.find_links(parent,this.node_id, parent.site_db.all_links[i].sites[1]);
+                let link = parent.site_db.find_links(parent, this.node_id, parent.site_db.all_links[i].sites[1]);
                 this.neighbors.push({
                     "links": {
                         "out": link.out,
@@ -105,7 +112,7 @@ class Node {
                     },
                     "name": parent.site_db.all_links[i].name,
                     "id": parent.site_db.all_links[i].sites[1], //to this id
-                    "site": this.fetchName(parent,parent.site_db.all_links[i].sites[1]),
+                    "site": this.fetchName(parent, parent.site_db.all_links[i].sites[1]),
                     "travelTime": travelTime,
                     "normalTravelTime": ntt,
                     "dist": parent.site_db.all_links[i].length
@@ -114,12 +121,16 @@ class Node {
         }
     }
 
+    //calculates travel time to to and from every neighbour
     computeTravelTime(parent) {
         let avg = [];
         let sum = 0;
+
+        //iterate over all of the neighours
         for (let i = 0; i < this.neighbors.length; i++) {
             let link = this.neighbors[i].links.out.id;
 
+            //iterate over all of the journeys that exist within neighours
             for (let u = 0; u < parent.site_db.all_journeys.length; u++) {
                 if (link == parent.site_db.all_journeys[u].id) {
                     avg.push(parent.site_db.all_journeys[u].travelTime);
@@ -133,19 +144,21 @@ class Node {
         this.travelTime = sum / avg.length;
     }
 
+    //calculates travel speed to to and from every neighbour
     computeTravelSpeed(parent) {
         let currentAverage = [];
         let historicalAverage = [];
 
+        //iterate over all of the neighours
         for (let i = 0; i < this.neighbors.length; i++) {
             let link = this.neighbors[i].links.out.id;
             let dist = this.neighbors[i].dist;
 
+            //iterate over all of the journeys that exist within neighours
             for (let u = 0; u < parent.site_db.all_journeys.length; u++) {
                 if (link == parent.site_db.all_journeys[u].id) {
                     let travelTime = parent.site_db.all_journeys[u].travelTime;
                     let historicalTime = parent.site_db.all_journeys[u].normalTravelTime;
-                    // console.log(historicalTime);
 
                     let currentSpeed = (dist / travelTime) * parent.tools.TO_MPH;
                     let historicalSpeed = (dist / historicalTime) * parent.tools.TO_MPH;
@@ -158,7 +171,6 @@ class Node {
                     currentAverage.push(currentSpeed);
                 }
             }
-            //console.log(historicalAverage);
 
         }
         if (historicalAverage.length > 0) {
@@ -171,7 +183,6 @@ class Node {
             this.travelSpeed = currentSum / currentAverage.length;
         }
 
-        //double check
         this.speedDeviation = this.travelSpeed - this.historicalSpeed;
 
     }
