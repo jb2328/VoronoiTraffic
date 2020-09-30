@@ -9,8 +9,6 @@ class Node {
         this.node_id = node_id; //node_id
         this.node_acp_id = 'SITE_' + this.node_id.replace('{', '').replace('}', '');
 
-        this.name = null;
-
         this.lat = null;
         this.lng = null;
         this.x = null;
@@ -24,7 +22,6 @@ class Node {
         this.speedDeviation = null;
 
         //selected variable output - tt,ts,hs or sd
-        //to be changed since this is silly
         this.selected = null;
         this.selectedName = null;
 
