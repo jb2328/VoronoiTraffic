@@ -32,7 +32,7 @@ const dijkstra = (graph,S,F) => {
   // track paths
   const parents = {finish: null};
   for (let child in graph.S) {
-    console.log(parents[child]);
+   // console.log(parents[child]);
     parents[child] = 'start';
   }
 
@@ -71,10 +71,10 @@ const dijkstra = (graph,S,F) => {
     distance: costs.F,
     path: optimalPath
   };
-  console.log("From ",S," to ",F)
+  //console.log("From ",S," to ",F)
   results.path[0]=S;
   results.path[results.path.length-1]=F;
   return results;
 };
 
-console.log(dijkstra(problem));
+//console.log(dijkstra(problem));

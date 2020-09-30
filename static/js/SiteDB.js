@@ -1,8 +1,8 @@
 "use strict";
 
 class SiteDB {
-
-    // Called to create instance in page : space_floorplan = SpaceFloorplan()
+//site_db has all of the queried data, data querying functions and the ability to
+//retrieve any nodes based on their id, acp_id or name properties
     constructor() {
 
         this.all = [];
@@ -11,8 +11,7 @@ class SiteDB {
         this.all_sites, this.all_routes, this.all_journeys, this.all_links = [];
 
         //CELL_GROUPS are located in the cell_groups.js file
-        this.zones = Object.keys(CELL_GROUPS)
-
+        this.zones = Object.keys(CELL_GROUPS);
     }
 
     /*------------------------------------------------------*/
@@ -32,7 +31,6 @@ class SiteDB {
             voronoi_viz.site_db.all_routes = route_response.route_list
             voronoi_viz.site_db.all_links = link_response.link_list;
             voronoi_viz.site_db.all_journeys = journey_response.request_data;
-
 
             /*--------------------------DATA CLEANUP-----------------------------*/
 
@@ -57,8 +55,6 @@ class SiteDB {
             voronoi_viz.site_db.all_sites.forEach((element) => {
                 element.acp_id = voronoi_viz.tools.SITE_PREFIX + element.id.replace('{', '').replace('}', '');
             });
-
-
         })
 
         // .fail(function () {
@@ -104,10 +100,7 @@ class SiteDB {
             node.set_visualisation(null); //speed deviation//travel speed
 
             voronoi_viz.site_db.all.push(node);
-
-
         }
-
     }
 
     update_nodes(voronoi_viz) {
@@ -128,7 +121,6 @@ class SiteDB {
 
         let links = voronoi_viz.site_db.find_links(voronoi_viz, from.node_id, to.node_id);
         return link === links.in.id ? links.out.id : links.in.id;
-
     }
 
 
@@ -152,7 +144,6 @@ class SiteDB {
 
         //negative speed is slower, positive speed is faster
         return current - normal;
-
     }
 
     get_zone_averages(voronoi_viz) {
@@ -165,7 +156,6 @@ class SiteDB {
                 'zone': zones[i],
                 'value': voronoi_viz.tools.array_avg(zone_temp)
             })
-
         }
         return zone_readings
     }
@@ -225,6 +215,4 @@ class SiteDB {
             element.set_visualisation(viz_type);
         });
     }
-
-
 }

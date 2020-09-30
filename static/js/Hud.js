@@ -517,7 +517,8 @@ class Hud {
                 neighbour_info += "<br>" + "<i>" + neighbour.site + "</i>" + to + from;
 
             } catch (err) {
-                console.log("metadata_error", err.message)
+                console.log("metadata_error:\n", err.message)
+                console.log("(usually happens when sensor data is missing, not a big deal)")
             }
         }
 
@@ -822,7 +823,6 @@ class Hud {
                 })
             );
 
-
         let totalLength = path.node().getTotalLength();
 
         //check if mode argument is provided as "historical". For regular lines, we pass no argument at all
@@ -848,7 +848,6 @@ class Hud {
                 .attr("stroke-dashoffset", 0);
         }
         return path
-
     }
 
     //---------------------------------------------------//
@@ -888,10 +887,8 @@ class Hud {
                         "date": element.time.slice(0, 10),
                         "length": link_length
                     })
-
                 }
             })
-
         })
         return structured_data;
     }
@@ -1007,7 +1004,6 @@ class Hud {
             voronoi_viz.hud.historical_link(id_in, date_start, date_end).then((data) => {
                 queried_links.push(data)
             });
-
         }
 
         //wait until all primises have been resolved and then start restructuring the raw data
@@ -1057,7 +1053,6 @@ class Hud {
             asnwered: cond2
         })
         //console.log('promises have been resolved');
-
     }
 
 
@@ -1080,7 +1075,6 @@ class Hud {
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
-
 
     //---------------------------------------------------//
     //------------------/ASYNC FUNCTIONS-----------------//

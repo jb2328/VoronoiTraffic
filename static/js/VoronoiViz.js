@@ -452,7 +452,7 @@ class VoronoiViz {
                     //fill the path variable with the shortest path data returned by the Dijkstra algorithm
                     for (let i = 0; i < result.path.length; i++) {
 
-                        console.log(result.path[i]);
+                        //console.log(result.path[i]);
 
                         let found = voronoi_viz.site_db.get_node_from_name(voronoi_viz, result.path[i]);
 
@@ -462,7 +462,6 @@ class VoronoiViz {
                                 "y": found.y
                             });;
                         }
-
                     }
 
                     //d3's line interpolator/generator
@@ -570,8 +569,6 @@ class VoronoiViz {
     date_shift(n, node_id) {
         let voronoi_viz = this;
 
-        console.log('date_shift()');
-
         let new_date = new Date(document.getElementById('date_now_header').innerHTML); // as loaded in page template config_ values;
 
         new_date.setDate(new_date.getDate() + n);
@@ -596,7 +593,6 @@ class VoronoiViz {
     // ************************************************************************************
     // ************** Date forwards / backwards function **********************************
     // ************************************************************************************
-
 
     update_url(node, date) {
 
@@ -624,8 +620,6 @@ class VoronoiViz {
         //used to check if the passed date is equal to 'today'
         let checker_date = new_day + "-" + new_month + "-" + new_year;
 
-        console.log('passed date:',date, checker_date)
-
         //-----------------------------------------------//
         //-------------update the actual url-------------//
         //-----------------------------------------------//
@@ -650,10 +644,7 @@ class VoronoiViz {
         console.log('updated URL', node, checker_date)
     }
 
-
     onchange_feature_select(voronoi_viz, node_id, date) {
-        console.log("onchange_feature_select", window.location.href);
-
         voronoi_viz.set_date_onclicks(voronoi_viz, node_id);
 
         // Change the URL in the address bar
@@ -675,7 +666,6 @@ class VoronoiViz {
             voronoi_viz.date_shift(1, node_id)
         };
     }
-
 
     init_map(voronoi_viz) {
 
@@ -794,7 +784,6 @@ class VoronoiViz {
 
         voronoi_viz.links_drawn.push(link);
 
-
         //----------Generating and Drawing Arcs--------//
 
         function generate_arc(A, B, direction, strokeWeight, stroke) {
@@ -846,8 +835,6 @@ class VoronoiViz {
                 .join(' ');
         }
 
-
-
         //animates lines being rendered as if they move through the map.
         //It's how we create a sense of directionality from links
         function animate_movement(line, outboundLength, dur) {
@@ -891,10 +878,7 @@ class VoronoiViz {
                     return set_color(color) //c10[i % 10]
                 }
             })
-
     }
-
-
 
     //Generate a graph that is used by the Dijkstra algorithm.
     //Find all the weights for node edges between the *start* and *finish* nodes
@@ -937,10 +921,8 @@ class VoronoiViz {
             }
 
         });
-
         return graph;
     }
-
 
     drawLinks(start_x, start_y, end_x, end_y, dur, fill) {
 
@@ -1008,8 +990,7 @@ class VoronoiViz {
 
     change_modes(voronoi_viz) {
         d3.selectAll("input").on("change", function () {
-            //console.log(d);
-
+            
             if (this.value === "current") {
                 voronoi_viz.color_transition(voronoi_viz, "travel speed");
             }
@@ -1028,14 +1009,13 @@ class VoronoiViz {
 
                     let neighbors = voronoi_viz.site_db.get_node_from_id(voronoi_viz, node_id).neighbors;
 
-                    //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;  
+                    //possible bug where both directions appear the same colour
                     for (let i = 0; i < neighbors.length; i++) {
                         let inbound = neighbors[i].links.in.id;
                         let outbound = neighbors[i].links.out.id;
 
                         voronoi_viz.draw_link(voronoi_viz, inbound, 1000);
                         voronoi_viz.draw_link(voronoi_viz, outbound, 1000);
-
                     }
                 }
             }
@@ -1057,7 +1037,6 @@ class VoronoiViz {
         if (voronoi_viz.type == "moveend") {
             voronoi_viz = this;
         }
-
 
         //get a list of group ids  e.g (north, south, center etc)
         voronoi_viz.site_db.zones.forEach((group_id) => {
@@ -1113,9 +1092,7 @@ class VoronoiViz {
                     })
                 }
             }
-
             CELL_GROUPS[group_id]['points'] = points;
-
         })
     }
 
@@ -1131,8 +1108,6 @@ class VoronoiViz {
             .y(function (d, i) {
                 return d.y;
             });
-        //.curve(d3.curveBasisClosed);
-        //.curve(d3.curveCatmullRomClosed.alpha(0.95)); //d3.curveCardinal.tension(0.1)//d3.curveNatural
 
         if (zone_id != undefined) {
             voronoi_viz.zone_outlines.append("g")
@@ -1147,8 +1122,7 @@ class VoronoiViz {
                 .duration(500)
                 .ease(d3.easeLinear)
                 .style("opacity", 1)
-
-                .on("end", function (d, i) {});
+                .on("end", function (d, i) {});//do something on end
         } else {
             for (let j = 0; j < cell_group_list.length; j++) {
                 voronoi_viz.zone_outlines.append("g")
@@ -1163,13 +1137,10 @@ class VoronoiViz {
                     .duration(500)
                     .ease(d3.easeLinear)
                     .style("opacity", 1)
-
-                    .on("end", function (d, i) {});
+                    .on("end", function (d, i) {});//do something on end
             }
         }
-
     }
-
 
     /*------------------------------------------------------*/
     /*-----------------SELECTION FUNCT----------------------*/
@@ -1188,9 +1159,7 @@ class VoronoiViz {
         for (let i = 0; i < cells.length; i++) {
             voronoi_viz.cell_clicked(cells[i])
         }
-
     };
-
 
     deselect_all(voronoi_viz) {
         let cells = document.getElementsByClassName("cell")
@@ -1204,7 +1173,6 @@ class VoronoiViz {
         d3.select(cell).transition()
             .duration('300')
             .style('stroke', 'black')
-            //.style('stroke-width', 10)
             .style("stroke-opacity", 1)
             .style("fill-opacity", 0.85);
     };
@@ -1212,7 +1180,6 @@ class VoronoiViz {
         d3.select(cell).transition()
             .duration('300')
             .style('stroke', 'black')
-            // .style('stroke-width', 0.5)
             .style("stroke-opacity", 0.3)
             .style("fill-opacity", 0.3);
     };
@@ -1231,7 +1198,6 @@ class VoronoiViz {
             .style("stroke-opacity", 0.3)
             .style("fill-opacity", 0.3);
     };
-
 
     /*------------------------------------------------------*/
     /*----------------/SELECTION FUNCT----------------------*/

@@ -3,7 +3,7 @@
 
 class VizTools {
 
-    // Called to create instance in page : space_floorplan = SpaceFloorplan()
+    //viz_tools is a separate class that hass useful js functions and constants for the main viz to run
     constructor() {
 
         this.WEEK = 86400 * 7;
@@ -101,6 +101,3 @@ class VizTools {
     }
 
 }
-
-// Instantiate a jb2328 utility class e.g. for getBoundingBox()
-//var viz_tools = new VizTools();
