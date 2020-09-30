@@ -62,10 +62,10 @@ To best read the ReadMe it's important to establish a common dictionary, specifi
 * Cell - an area that is denoted for a single Node in the Voronoi diagram
 * Link - a route connecting two *Nodes*
 
-The visualisation can also color the cells not only based on the *Nodes'* speed deviation but also their current and historical speeds, however it tends to provide less information as some *Nodes* have missing data resulting in gray patches (in speed deviation we simply show that the deviation is 0). Furthermore, some *Nodes* e.g. ones in the West zone, will always provide highest speeds (due to M11) and thus will forever remain coloured greeen.
+The visualisation can also color the cells not only based on the *Nodes'* speed deviation but also their current and historical speeds, however it tends to provide less information as some *Nodes* have missing data resulting in gray patches (in speed deviation we simply show that the deviation is 0). Furthermore, some *Nodes* e.g. ones in the West zone, will always show highest speeds (due to M11) and thus will forever remain coloured green.
 
 #### SiteDB, Nodes, and Hud
-![alt text](imgs/wiki_files/Objects.png "Nodes")
+![alt text](imgs/wiki_files/objects.png "Nodes")
 (Open the raw file to zoom in)
 
 ### VizTools
