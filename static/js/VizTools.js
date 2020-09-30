@@ -13,13 +13,36 @@ class VizTools {
         this.ICON_CLOSE_DIV = "<span id='close' onclick='this.parentNode.style.opacity=0; return false;'>x</span>"
         this.ICON_CLOSE_AND_DESELECT = "<span id='close' onclick='this.parentNode.style.opacity=0; deselect_all(); this.SELECTED_SITE=undefined; return false;'>x</span>"
 
+        this.INFO_VIZ_TEXT = '<h4>Information</h4>' +
+            "<br>" +
+            "<div>" +
+            "<form id='routes'>" +
+            "<input type='radio' name='mode' value='routes'> Routes<br>" +
+            "<input type='radio' name='mode' value='polygons'checked='checked'> Polygons<br>" +
+
+            "</form>" +
+            "<br>" +
+            "</div>" +
+            "<br>" +
+            "<div>" +
+            "<form id='modes'>" +
+            "<input type='radio' name='mode' value='current'> Current Speed<br>" +
+            "<input type='radio' name='mode' value='historical'> Normal Speed<br>" +
+            "<input type='radio' name='mode' value='deviation' checked='checked'> Deviation<br>" +
+            "</form>" +
+            "</div>";
+
+        this.DATEPICKER_TEXT = '<h4>Pick time and Date</h4>' +
+            '<br>' +
+            '<input type="text" name="datefilter" id="datepicker_input" value="" />';
+
         this.ICON_LOADING = '<img src="./static/images/loading_icon.gif "width="100px" height="100px" >';
 
         this.HALF_TAB = '&emsp;&emsp;';
         this.TAB = '&emsp;&emsp;&emsp;&emsp;';
 
         this.SITE_PREFIX = 'SITE_';
-        
+
         // m/sec to mph
         this.TO_MPH = 2.23694;
 
@@ -35,10 +58,10 @@ class VizTools {
             });
     }
 
-    
-     array_avg(arr){
-      return (arr.reduce((a, b) => a + b, 0) / arr.length)
-     }
+
+    array_avg(arr) {
+        return (arr.reduce((a, b) => a + b, 0) / arr.length)
+    }
 
 
     arrays_equal(a, b) {

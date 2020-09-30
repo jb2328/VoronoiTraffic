@@ -28,12 +28,12 @@ class Node {
         this.selected = null;
         this.selectedName = null;
 
-        this.zone = this.getZone();
-        this.name = this.getName(voronoi_viz);
+        this.zone = this.get_zone();
+        this.name = this.get_name(voronoi_viz);
     }
 
     //returns the zone that the node belongs to (east, west, north, south, center)
-    getZone() {
+    get_zone() {
 
         let groups = Object.keys(CELL_GROUPS);
         for (let i = 0; i < groups.length; i++) {
@@ -45,17 +45,17 @@ class Node {
     }
 
     //returns the name of the node
-    getName(parent) {
-        return parent.site_db.all_sites.find(x => x.id === this.node_id).name;
+    get_name(voronoi_viz) {
+        return voronoi_viz.site_db.all_sites.find(x => x.id === this.node_id).name;
     }
 
     //returns the name of the node based on the id
-    fetchName(parent, id) {
-        return parent.site_db.all_sites.find(x => x.id === id).name;
+    fetch_name(voronoi_viz, id) {
+        return voronoi_viz.site_db.all_sites.find(x => x.id === id).name;
     }
 
     //sets the default visualisation value
-    setVisualisation(vis) {
+    set_visualisation(vis) {
         this.selectedName = vis;
         switch (vis) {
             case "historical speed":
@@ -74,8 +74,8 @@ class Node {
     }
 
     //returns the location of the node
-    getLocation(parent) {
-        let data = parent.site_db.all_sites; //"this.sites;
+    get_location(voronoi_viz) {
+        let data = voronoi_viz.site_db.all_sites; //"this.sites;
         for (let i = 0; i < data.length; i++) {
             if (this.node_id == data[i].id) {
                 return {
@@ -87,16 +87,16 @@ class Node {
     }
 
     //adds the list of surrounding neigbour nodes to the node metadata
-    findNeighbors(parent) //data is in all_links
+    find_neighbors(voronoi_viz) //data is in all_links
     {
         this.neighbors = [];
         let tt, ntt, travelTime;
-        for (let i = 0; i < parent.site_db.all_links.length; i++) {
-            if (this.node_id == parent.site_db.all_links[i].sites[0]) { //from this id
+        for (let i = 0; i < voronoi_viz.site_db.all_links.length; i++) {
+            if (this.node_id == voronoi_viz.site_db.all_links[i].sites[0]) { //from this id
 
                 try {
-                    tt = parent.site_db.all_journeys.find(x => x.id === parent.site_db.all_links[i].id).travelTime;
-                    ntt = parent.site_db.all_journeys.find(x => x.id === parent.site_db.all_links[i].id).normalTravelTime;
+                    tt = voronoi_viz.site_db.all_journeys.find(x => x.id === voronoi_viz.site_db.all_links[i].id).travelTime;
+                    ntt = voronoi_viz.site_db.all_journeys.find(x => x.id === voronoi_viz.site_db.all_links[i].id).normalTravelTime;
                     travelTime = tt == undefined || null ? ntt : tt;
                 } catch (err) {
                     travelTime = undefined;
@@ -104,25 +104,25 @@ class Node {
                 }
 
                 //console.log(tt, travelTime);
-                let link = parent.site_db.find_links(parent, this.node_id, parent.site_db.all_links[i].sites[1]);
+                let link = voronoi_viz.site_db.find_links(voronoi_viz, this.node_id, voronoi_viz.site_db.all_links[i].sites[1]);
                 this.neighbors.push({
                     "links": {
                         "out": link.out,
                         "in": link.in
                     },
-                    "name": parent.site_db.all_links[i].name,
-                    "id": parent.site_db.all_links[i].sites[1], //to this id
-                    "site": this.fetchName(parent, parent.site_db.all_links[i].sites[1]),
+                    "name": voronoi_viz.site_db.all_links[i].name,
+                    "id": voronoi_viz.site_db.all_links[i].sites[1], //to this id
+                    "site": this.fetch_name(voronoi_viz, voronoi_viz.site_db.all_links[i].sites[1]),
                     "travelTime": travelTime,
                     "normalTravelTime": ntt,
-                    "dist": parent.site_db.all_links[i].length
+                    "dist": voronoi_viz.site_db.all_links[i].length
                 });
             }
         }
     }
 
     //calculates travel time to to and from every neighbour
-    computeTravelTime(parent) {
+    compute_travel_time(voronoi_viz) {
         let avg = [];
         let sum = 0;
 
@@ -131,9 +131,9 @@ class Node {
             let link = this.neighbors[i].links.out.id;
 
             //iterate over all of the journeys that exist within neighours
-            for (let u = 0; u < parent.site_db.all_journeys.length; u++) {
-                if (link == parent.site_db.all_journeys[u].id) {
-                    avg.push(parent.site_db.all_journeys[u].travelTime);
+            for (let u = 0; u < voronoi_viz.site_db.all_journeys.length; u++) {
+                if (link == voronoi_viz.site_db.all_journeys[u].id) {
+                    avg.push(voronoi_viz.site_db.all_journeys[u].travelTime);
                 }
             }
         }
@@ -145,7 +145,7 @@ class Node {
     }
 
     //calculates travel speed to to and from every neighbour
-    computeTravelSpeed(parent) {
+    compute_travel_speed(voronoi_viz) {
         let currentAverage = [];
         let historicalAverage = [];
 
@@ -155,23 +155,22 @@ class Node {
             let dist = this.neighbors[i].dist;
 
             //iterate over all of the journeys that exist within neighours
-            for (let u = 0; u < parent.site_db.all_journeys.length; u++) {
-                if (link == parent.site_db.all_journeys[u].id) {
-                    let travelTime = parent.site_db.all_journeys[u].travelTime;
-                    let historicalTime = parent.site_db.all_journeys[u].normalTravelTime;
+            for (let u = 0; u < voronoi_viz.site_db.all_journeys.length; u++) {
+                if (link == voronoi_viz.site_db.all_journeys[u].id) {
+                    let travelTime = voronoi_viz.site_db.all_journeys[u].travelTime;
+                    let historicalTime = voronoi_viz.site_db.all_journeys[u].normalTravelTime;
 
-                    let currentSpeed = (dist / travelTime) * parent.tools.TO_MPH;
-                    let historicalSpeed = (dist / historicalTime) * parent.tools.TO_MPH;
+                    let currentSpeed = (dist / travelTime) * voronoi_viz.tools.TO_MPH;
+                    let historicalSpeed = (dist / historicalTime) * voronoi_viz.tools.TO_MPH;
 
                     if (currentSpeed == Infinity || historicalSpeed == Infinity) {
-                        break;
+                        continue;
                     }
 
                     historicalAverage.push(historicalSpeed);
                     currentAverage.push(currentSpeed);
                 }
             }
-
         }
         if (historicalAverage.length > 0) {
             let historicalSum = historicalAverage.reduce((previous, current) => current += previous);
@@ -183,7 +182,8 @@ class Node {
             this.travelSpeed = currentSum / currentAverage.length;
         }
 
+        //if this.travelSpeed or this.historicalSpeed are null, we get 0 and thus fill in the 
+        //cell as the neutral yellow-orange color
         this.speedDeviation = this.travelSpeed - this.historicalSpeed;
-
     }
 }

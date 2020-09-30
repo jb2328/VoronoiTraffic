@@ -75,12 +75,12 @@ class VoronoiViz {
             // show_horizontal_bar(get_zone_averages());
             voronoi_viz.hud.show_vertical_bar(voronoi_viz, voronoi_viz.site_db.get_zone_averages(voronoi_viz));
 
+            console.log('redraw voronoi')
             voronoi_viz.draw_voronoi(voronoi_viz);
 
             console.log('reloaded api data');
         });
 
-        console.log('updated', Date.now())
         voronoi_viz.clock.update(Date.now());
     }
 
@@ -89,6 +89,7 @@ class VoronoiViz {
     get_url_date() {
         let date, month_long;
 
+        //if no date provided, set the date as 'today'
         if (URL_DATE == '*') {
             date = new Date()
             month_long = date.toLocaleString('default', {
@@ -123,7 +124,7 @@ class VoronoiViz {
         return year + "-" + month_short + "-" + day;
     }
 
-    get_selected_date(voronoi_viz){
+    get_selected_date(voronoi_viz) {
         let new_date = new Date(document.getElementById('date_now_header').innerHTML); // as loaded in page template config_ values;
 
         let new_year = new_date.getFullYear();
@@ -143,9 +144,6 @@ class VoronoiViz {
         if (voronoi_viz.type == "moveend") {
             voronoi_viz = this;
         }
-
-        //set selected_date to be used throughout the visualisation
-        let selected_date=voronoi_viz.get_selected_date(voronoi_viz);
 
         //remove old cell overlay and prepare to draw a new one
         d3.select('#cell_overlay').remove();
@@ -357,7 +355,7 @@ class VoronoiViz {
                 //color the cell based on the selected reading from the SITE_DB
                 //the lookup is done based on the matching id values (from SVG and in Nodes)
 
-                let color = voronoi_viz.site_db.get_id(voronoi_viz, d.data.id).selected;
+                let color = voronoi_viz.site_db.get_node_from_id(voronoi_viz, d.data.id).selected;
 
                 //if undefined,set to gray
                 if (color == null || color == undefined) {
@@ -376,7 +374,7 @@ class VoronoiViz {
 
                 //get the id and the neighbors for the node that this cell represents
                 let node_id = d.data.id;
-                let neighbors = voronoi_viz.site_db.get_id(voronoi_viz, node_id).neighbors;
+                let neighbors = voronoi_viz.site_db.get_node_from_id(voronoi_viz, node_id).neighbors;
 
                 //remove old links that were drawn for the other nodes 
                 //that were hoverd in before
@@ -411,12 +409,14 @@ class VoronoiViz {
 
             .on('click', function (d, i) {
 
-                let selected_node = voronoi_viz.site_db.get_acp_id(voronoi_viz, d.data.acp_id)
+                let selected_node = voronoi_viz.site_db.get_node_from_acp_id(voronoi_viz, d.data.acp_id)
                 //set as the main global selection 
                 voronoi_viz.site_db.set_selected_node(voronoi_viz, selected_node);
 
                 voronoi_viz.select_cell(voronoi_viz, selected_node.node_acp_id)
 
+                //get the selected date from the middle-top date div
+                let selected_date = voronoi_viz.get_selected_date(voronoi_viz);
                 voronoi_viz.hud.show_all(voronoi_viz, selected_node, selected_date);
 
             })
@@ -454,7 +454,7 @@ class VoronoiViz {
 
                         console.log(result.path[i]);
 
-                        let found = voronoi_viz.site_db.get_name(voronoi_viz, result.path[i]);
+                        let found = voronoi_viz.site_db.get_node_from_name(voronoi_viz, result.path[i]);
 
                         if (found.x != null || found.x != undefined) {
                             path.push({
@@ -615,24 +615,36 @@ class VoronoiViz {
             month: 'long'
         });
 
+        //set the header date with a long month name (September) instead of short (09)
         let header_date = new_day + "-" + new_month_long + "-" + new_year;
-        let checker_date = new_day + "-" + new_month + "-" + new_year;
 
         //set the new date on the top
         document.getElementById('date_now_header').innerHTML = header_date;
 
-        //update the actual url
+        //used to check if the passed date is equal to 'today'
+        let checker_date = new_day + "-" + new_month + "-" + new_year;
+
+        console.log('passed date:',date, checker_date)
+
+        //-----------------------------------------------//
+        //-------------update the actual url-------------//
+        //-----------------------------------------------//
+
         let searchParams = new URLSearchParams(window.location.search)
 
+        //always set the selected node in the url
         searchParams.set("node", node);
 
+        //if new date is different than the past, then change it 
         if (searchParams.get("date") != checker_date) {
-            // if(today != checker_date){
-            searchParams.set("date", checker_date);
-        } else {
-            // searchParams=searchParams.toString().split("&")[0]
-        }
-
+            //but ignore the date parameter if it's 'today'
+            if (today != checker_date) {
+                searchParams.set("date", checker_date);
+            } 
+            else {
+                searchParams = searchParams.toString().split("&")[0]
+            }
+        } 
         let newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
         window.history.pushState(null, '', newRelativePathQuery);
         console.log('updated URL', node, checker_date)
@@ -679,59 +691,33 @@ class VoronoiViz {
         voronoi_viz.map = new L.Map("map", {
             center: cambridge,
             zoom: 12,
-            zoomDelta: 0.1,
+            zoomDelta: 0.5,
+            zoomSnap: 0.25,
             wheelPxPerZoomLevel: 150,
             layers: [stamenToner],
             doubleClickZoom: false,
         });
 
+        //disable double click because it's used by Dijsktra shortest path
         voronoi_viz.map.doubleClickZoom.disable();
 
-
         // Clock
-        voronoi_viz.clock = voronoi_viz.get_clock().addTo(voronoi_viz.map)
+        voronoi_viz.clock = voronoi_viz.get_clock().addTo(voronoi_viz.map);
 
-        //THE FOLLOWING ARE VERY MUCH MISPLACED HERE, SHOULD BE A PART OF Hud CLASS OR AT LEAST VizTools
+        //the order in which these elements are created is important, otherwise Leaflet becomes unhappy and creates a mess
+        let line_graph_element = voronoi_viz.hud.create_element(voronoi_viz, 'line_graph', 'bottomleft');
 
-        const info_viz_text = '<h4>Information</h4>' +
-            "<br>" +
-            "<div>" +
-            "<form id='routes'>" +
-            "<input type='radio' name='mode' value='routes'> Routes<br>" +
-            "<input type='radio' name='mode' value='polygons'checked='checked'> Polygons<br>" +
+        let datepicker_widget = voronoi_viz.hud.create_element(voronoi_viz, 'datepicker', 'bottomleft', voronoi_viz.tools.DATEPICKER_TEXT);
+        document.getElementById("datepicker").style.opacity = 0; //hide it
 
-            "</form>" +
-            "<br>" +
-            "</div>" +
-            "<br>" +
-            "<div>" +
-            "<form id='modes'>" +
-            "<input type='radio' name='mode' value='current'> Current Speed<br>" +
-            "<input type='radio' name='mode' value='historical'> Normal Speed<br>" +
-            "<input type='radio' name='mode' value='deviation' checked='checked'> Deviation<br>" +
-            "</form>" +
-            "</div>";
+        let metadata_element = voronoi_viz.hud.create_element(voronoi_viz, 'metadata_table', 'bottomleft');
+        let selected_cell = voronoi_viz.hud.create_element(voronoi_viz, 'selected_cell', 'topright', '<h4>Select a Cell</h4>');
+        let info_widget = voronoi_viz.hud.create_element(voronoi_viz, 'info_bar', 'topright', voronoi_viz.tools.INFO_VIZ_TEXT);
+        let horizontal_chart = voronoi_viz.hud.create_element(voronoi_viz, 'bar_chart', 'topright', voronoi_viz.tools.ICON_LOADING);
+        let zone_table = voronoi_viz.hud.create_element(voronoi_viz, 'zone_table', 'bottomright');
 
-        const datepicker_text = '<h4>Pick time and Date</h4>' +
-            '<br>' +
-            '<input type="text" name="datefilter" id="datepicker_input" value="" />';
-
-
-        let line_graph_element = voronoi_viz.hud.create_element(voronoi_viz, 'line_graph', 'bottomleft')
-        let datepicker_widget = voronoi_viz.hud.create_element(voronoi_viz, 'datepicker', 'bottomleft', datepicker_text) //datepicker_text
-        document.getElementById("datepicker").style.opacity = 0;
-
-        //probably should make a different function in Hud to hide everything
+        //make navigation bar arrows for dates invisible
         voronoi_viz.hud.set_nav_date_visible(0)
-
-        let metadata_element = voronoi_viz.hud.create_element(voronoi_viz, 'metadata_table', 'bottomleft')
-
-        let selected_cell = voronoi_viz.hud.create_element(voronoi_viz, 'selected_cell', 'topright', '<h4>Select a Cell</h4>')
-
-        let info_widget = voronoi_viz.hud.create_element(voronoi_viz, 'info_bar', 'topright', info_viz_text)
-
-        let horizontal_chart = voronoi_viz.hud.create_element(voronoi_viz, 'bar_chart', 'topright', voronoi_viz.tools.ICON_LOADING)
-        let zone_table = voronoi_viz.hud.create_element(voronoi_viz, 'zone_table', 'bottomright')
     }
 
     get_clock() {
@@ -750,10 +736,8 @@ class VoronoiViz {
             let mm = now.getMinutes();
             let ss = now.getSeconds();
             // If datetime is today
-            control.getContainer().innerHTML = 'Updated ' +("0" + hh).slice(-2)+ ':' + ("0" + mm).slice(-2);
-    
-            console.log("updated")
-    
+            control.getContainer().innerHTML = 'Updated ' + ("0" + hh).slice(-2) + ':' + ("0" + mm).slice(-2);
+
         };
         return control;
     }
@@ -775,8 +759,8 @@ class VoronoiViz {
         //find the sites that the link connects
         let connected_sites = voronoi_viz.site_db.all_links.find(x => x.id === link).sites;
 
-        let from = voronoi_viz.site_db.get_id(voronoi_viz, connected_sites[0]);
-        let to = voronoi_viz.site_db.get_id(voronoi_viz, connected_sites[1]);
+        let from = voronoi_viz.site_db.get_node_from_id(voronoi_viz, connected_sites[0]);
+        let to = voronoi_viz.site_db.get_node_from_id(voronoi_viz, connected_sites[1]);
 
         //acquire the direction of the link by checking if it's opposite exists.
         //If the opposite's drawn on screen, make arc's curvature inverse.
@@ -881,12 +865,16 @@ class VoronoiViz {
                     }
                 );
         }
-
     }
 
+    //fills in the cells with color oafter the mode has been changed.
+    //Important thing here-->deviation is calculated using:         
+    //this.speedDeviation = this.travelSpeed - this.historicalSpeed;
+    //hence if travelSpeed or historicalSpeed are null, the deviation becomes 0,
+    //so we still have a value to fill the cell with. For current_speed and historical_speed
+    //modes we get null, hence the gray color appearing
 
-
-    colorTransition(voronoi_viz, viz_type) {
+    color_transition(voronoi_viz, viz_type) {
 
         voronoi_viz.site_db.set_visualisations(voronoi_viz, viz_type)
         let set_color = voronoi_viz.set_color_range(voronoi_viz);
@@ -1008,12 +996,12 @@ class VoronoiViz {
 
             let node_id = voronoi_viz.site_db.all[d].id;
 
-            let neighbors = voronoi_viz.site_db.get_id(voronoi_viz, node_id).neighbors;
+            let neighbors = voronoi_viz.site_db.get_node_from_id(voronoi_viz, node_id).neighbors;
 
             for (let i = 0; i < neighbors.length; i++) {
 
-                let x_coord = voronoi_viz.site_db.get_id(voronoi_viz, neighbors[i].id).x;
-                let y_coord = voronoi_viz.site_db.get_id(voronoi_viz, neighbors[i].id).y;
+                let x_coord = voronoi_viz.site_db.get_node_from_id(voronoi_viz, neighbors[i].id).x;
+                let y_coord = voronoi_viz.site_db.get_node_from_id(voronoi_viz, neighbors[i].id).y;
             }
         }
     }
@@ -1023,14 +1011,14 @@ class VoronoiViz {
             //console.log(d);
 
             if (this.value === "current") {
-                voronoi_viz.colorTransition(voronoi_viz,"travel speed");
+                voronoi_viz.color_transition(voronoi_viz, "travel speed");
             }
             if (this.value === "deviation") {
 
-                voronoi_viz.colorTransition(voronoi_viz,"speed deviation");
+                voronoi_viz.color_transition(voronoi_viz, "speed deviation");
             }
             if (this.value === "historical") {
-                voronoi_viz.colorTransition(voronoi_viz,"historical speed");
+                voronoi_viz.color_transition(voronoi_viz, "historical speed");
             }
             if (this.value === "routes") {
                 voronoi_viz.polygon_group.remove();
@@ -1038,11 +1026,10 @@ class VoronoiViz {
 
                     let node_id = voronoi_viz.site_db.all[j].node_id;
 
-                    let neighbors = voronoi_viz.site_db.get_id(voronoi_viz, node_id).neighbors;
+                    let neighbors = voronoi_viz.site_db.get_node_from_id(voronoi_viz, node_id).neighbors;
 
                     //REALLY BROKEN, BOTH DIRECTIONS SHOW THE SAME COLOR;  
                     for (let i = 0; i < neighbors.length; i++) {
-                        //console.log(i);
                         let inbound = neighbors[i].links.in.id;
                         let outbound = neighbors[i].links.out.id;
 
@@ -1055,7 +1042,6 @@ class VoronoiViz {
             if (this.value === "polygons") {
                 voronoi_viz.draw_voronoi(voronoi_viz);
                 voronoi_viz.generate_hull(voronoi_viz);
-
             }
         });
     }
@@ -1063,6 +1049,7 @@ class VoronoiViz {
     /*-----------------HULL MANAGEMENT FUNCT----------------*/
     /*------------------------------------------------------*/
 
+    //generates a hull around the different zones (north, south etc)
     generate_hull(voronoi_viz) {
 
         //on 'moveend' redeclare the voronoi_viz, otherwise the visualisaiton fails to load
@@ -1073,33 +1060,35 @@ class VoronoiViz {
 
 
         //get a list of group ids  e.g (north, south, center etc)
-        voronoi_viz.site_db.ZONES.forEach((group_id) => {
+        voronoi_viz.site_db.zones.forEach((group_id) => {
 
             let site_id_list = CELL_GROUPS[group_id]['acp_ids']
             let point_list = []
             let point_pairs = []
+
             //get a list of site IDs inside a group e.g ('SITE_CA31BF74-167C-469D-A2BF-63F9C2CE919A',... etc)
             site_id_list.forEach((site_acp_id) => {
-                // let site_id='{'+site_acp_id.replace(SITE_PREFIX,'')+'}';
-                // console.log('SITE',site_acp_id, site_id)
 
+                //elements that are off-screen bounds will return as undefined
                 let element = d3.select('#' + site_acp_id).node();
-                let total_len = parseInt(element.getTotalLength());
 
-                for (let u = 0; u < total_len; u += 2) {
-                    point_pairs.push([element.getPointAtLength(u).x, element.getPointAtLength(u).y])
-                    point_list.push(element.getPointAtLength(u))
+                //therefore we look out for those and skip part of the function if that occurs
+                if (element != undefined) {
+                    let total_len = parseInt(element.getTotalLength());
+
+                    for (let u = 0; u < total_len; u += 2) {
+                        point_pairs.push([element.getPointAtLength(u).x, element.getPointAtLength(u).y])
+                        point_list.push(element.getPointAtLength(u))
+                    }
                 }
-
             });
 
-            //perhaps 185 for all will just work as well
+            //set concvity threshold for the algorithm so that its zoom-dependent
             let concavity_threshold;
             if (voronoi_viz.map._zoom <= 12) {
                 concavity_threshold = 85
             } else {
                 concavity_threshold = 185;
-
             }
 
             let defaultHull = d3.concaveHull().distance(concavity_threshold);
@@ -1108,16 +1097,21 @@ class VoronoiViz {
             CELL_GROUPS[group_id]['default_hull'] = defaultHull(point_pairs);
             CELL_GROUPS[group_id]['padded_hull'] = paddedHull(point_pairs);
 
-
-            let padded_zone_outline = paddedHull(point_pairs)[0]
-
+            //'points' contains a set of x/y coordinates that denote the hull's line.
+            //we use 'points' list rather than padded_zone_outline because we have to
+            //reformat it to be used withing the d3.js context
             let points = []
 
-            for (let j = 0; j < padded_zone_outline.length; j++) {
-                points.push({
-                    'x': padded_zone_outline[j][0],
-                    'y': padded_zone_outline[j][1]
-                })
+            //zone outline in a single list -- to be reformated in the for loop below
+            let padded_zone_outline = paddedHull(point_pairs)[0]
+
+            if (padded_zone_outline != undefined) {
+                for (let j = 0; j < padded_zone_outline.length; j++) {
+                    points.push({
+                        'x': padded_zone_outline[j][0],
+                        'y': padded_zone_outline[j][1]
+                    })
+                }
             }
 
             CELL_GROUPS[group_id]['points'] = points;
@@ -1125,8 +1119,8 @@ class VoronoiViz {
         })
     }
 
+    //works in tandem with generate_hull() to draw the hull outline
     get_outline(voronoi_viz, zone_id) {
-        //generate_hull(); // perhaps should initiate somewhere else
 
         let cell_group_list = Object.keys(CELL_GROUPS);
 
@@ -1184,7 +1178,7 @@ class VoronoiViz {
     select_cell(voronoi_viz, id) {
         voronoi_viz.deselect_all(voronoi_viz)
         let cell = document.getElementById(id)
-        let node = voronoi_viz.site_db.get_acp_id(voronoi_viz, id)
+        let node = voronoi_viz.site_db.get_node_from_acp_id(voronoi_viz, id)
         voronoi_viz.site_db.set_selected_node(voronoi_viz, node)
         voronoi_viz.cell_clicked(cell)
     };
@@ -1238,4 +1232,8 @@ class VoronoiViz {
             .style("fill-opacity", 0.3);
     };
 
+
+    /*------------------------------------------------------*/
+    /*----------------/SELECTION FUNCT----------------------*/
+    /*------------------------------------------------------*/
 }

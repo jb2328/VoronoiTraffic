@@ -11,7 +11,7 @@ class SiteDB {
         this.all_sites, this.all_routes, this.all_journeys, this.all_links = [];
 
         //CELL_GROUPS are located in the cell_groups.js file
-        this.ZONES = Object.keys(CELL_GROUPS)
+        this.zones = Object.keys(CELL_GROUPS)
 
     }
 
@@ -98,10 +98,10 @@ class SiteDB {
             node.lat = voronoi_viz.site_db.all_sites[i].acp_lat;
             node.lng = voronoi_viz.site_db.all_sites[i].acp_lng;
 
-            node.findNeighbors(voronoi_viz);
-            node.computeTravelTime(voronoi_viz);
-            node.computeTravelSpeed(voronoi_viz);
-            node.setVisualisation(null); //speed deviation//travel speed
+            node.find_neighbors(voronoi_viz);
+            node.compute_travel_time(voronoi_viz);
+            node.compute_travel_speed(voronoi_viz);
+            node.set_visualisation(null); //speed deviation//travel speed
 
             voronoi_viz.site_db.all.push(node);
 
@@ -113,8 +113,8 @@ class SiteDB {
     update_nodes(voronoi_viz) {
         console.log('updating nodes')
         for (let i = 0; i < voronoi_viz.site_db.all.length; i++) {
-            voronoi_viz.site_db.all[i].computeTravelTime(voronoi_viz);
-            voronoi_viz.site_db.all[i].computeTravelSpeed(voronoi_viz);
+            voronoi_viz.site_db.all[i].compute_travel_time(voronoi_viz);
+            voronoi_viz.site_db.all[i].compute_travel_speed(voronoi_viz);
         }
     }
 
@@ -123,8 +123,8 @@ class SiteDB {
     inverse_link(voronoi_viz, link) {
         let connected_sites = voronoi_viz.site_db.all_links.find(x => x.id === link).sites;
 
-        let from = voronoi_viz.site_db.get_id(voronoi_viz, connected_sites[0]);
-        let to = voronoi_viz.site_db.get_id(voronoi_viz, connected_sites[1]);
+        let from = voronoi_viz.site_db.get_node_from_id(voronoi_viz, connected_sites[0]);
+        let to = voronoi_viz.site_db.get_node_from_id(voronoi_viz, connected_sites[1]);
 
         let links = voronoi_viz.site_db.find_links(voronoi_viz, from.node_id, to.node_id);
         return link === links.in.id ? links.out.id : links.in.id;
@@ -156,7 +156,7 @@ class SiteDB {
     }
 
     get_zone_averages(voronoi_viz) {
-        let zones = voronoi_viz.site_db.ZONES;
+        let zones = voronoi_viz.site_db.zones;
         let zone_readings = [];
         for (let i = 0; i < zones.length; i++) {
             let zone_temp = []
@@ -197,23 +197,21 @@ class SiteDB {
         };
     }
 
-    //these 'getters' have slightly ambiguous names, as they 
-    //always return the *node* from what is asked by the getter
-    //e.g. get_acp_id(arg_acp_id) returns the node from the provided acp in the argument
+    //these 'getters' are slighty long but it was better than just
+    //using e.g. get_acp_id(node_acp_id) to return a node from its acp_id. 
 
     //returns a node based on its node acp_id property
-    get_acp_id(voronoi_viz, node_acp_id) {
+    get_node_from_acp_id(voronoi_viz, node_acp_id) {
         return voronoi_viz.site_db.all.find(x => x.node_acp_id === node_acp_id);
-
     }
 
     //returns a node based on its node id property
-    get_id(voronoi_viz, node_id) {
+    get_node_from_id(voronoi_viz, node_id) {
         return voronoi_viz.site_db.all.find(x => x.node_id === node_id);
     }
 
     //returns a node based on its node name property
-    get_name(voronoi_viz, node_name) {
+    get_node_from_name(voronoi_viz, node_name) {
         return voronoi_viz.site_db.all.find(x => x.name === node_name);
     }
 
@@ -224,7 +222,7 @@ class SiteDB {
 
     set_visualisations(voronoi_viz, viz_type) {
         voronoi_viz.site_db.all.forEach((element) => {
-            element.setVisualisation(viz_type);
+            element.set_visualisation(viz_type);
         });
     }
 
