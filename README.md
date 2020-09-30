@@ -61,6 +61,9 @@ To best read the ReadMe it's important to establish a common dictionary, specifi
 * Node - a sensor itself with its location in lat/lng
 * Cell - an area that is denoted for a single Node in the Voronoi diagram
 * Link - a route connecting two *Nodes*
+* Zone - an entity comprised of a list of *Nodes* based on their geographical position in Cambridge (*North, East, West etc.*)
+* Bar Chart - a chart on the right side showing the average speed for all *Nodes* in one of the 5 *Zones*
+* Line Graph - a graph on the bottom left corner showing the link speeds for a selected *Node*
 
 The visualisation can also color the cells not only based on the *Nodes'* speed deviation but also their current and historical speeds, however it tends to provide less information as some *Nodes* have missing data resulting in gray patches (in speed deviation we simply show that the deviation is 0). Furthermore, some *Nodes* e.g. ones in the West zone, will always show highest speeds (due to M11) and thus will forever remain coloured green.
 
