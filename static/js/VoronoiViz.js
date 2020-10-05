@@ -12,9 +12,6 @@ class VoronoiViz {
 
         this.tools = new VizTools();
 
-        // Transform parameters to scale SVG to screen
-        this.init_map(this);
-
         //object globals
         this.map;
         this.clock;
@@ -30,6 +27,9 @@ class VoronoiViz {
 
         //color range picker
         this.set_color;
+        
+        // initialises the map on screen
+        this.init_map(this);
     }
 
     // init() called when page loaded
@@ -634,11 +634,10 @@ class VoronoiViz {
             //but ignore the date parameter if it's 'today'
             if (today != checker_date) {
                 searchParams.set("date", checker_date);
-            } 
-            else {
+            } else {
                 searchParams = searchParams.toString().split("&")[0]
             }
-        } 
+        }
         let newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
         window.history.pushState(null, '', newRelativePathQuery);
         console.log('updated URL', node, checker_date)
@@ -990,7 +989,7 @@ class VoronoiViz {
 
     change_modes(voronoi_viz) {
         d3.selectAll("input").on("change", function () {
-            
+
             if (this.value === "current") {
                 voronoi_viz.color_transition(voronoi_viz, "travel speed");
             }
@@ -1122,7 +1121,7 @@ class VoronoiViz {
                 .duration(500)
                 .ease(d3.easeLinear)
                 .style("opacity", 1)
-                .on("end", function (d, i) {});//do something on end
+                .on("end", function (d, i) {}); //do something on end
         } else {
             for (let j = 0; j < cell_group_list.length; j++) {
                 voronoi_viz.zone_outlines.append("g")
@@ -1137,7 +1136,7 @@ class VoronoiViz {
                     .duration(500)
                     .ease(d3.easeLinear)
                     .style("opacity", 1)
-                    .on("end", function (d, i) {});//do something on end
+                    .on("end", function (d, i) {}); //do something on end
             }
         }
     }
