@@ -27,7 +27,7 @@ class VoronoiViz {
 
         //color range picker
         this.set_color;
-        
+
         // initialises the map on screen
         this.init_map(this);
     }
@@ -69,13 +69,14 @@ class VoronoiViz {
 
         voronoi_viz.site_db.load_api_data(voronoi_viz).then(() => {
 
+            console.log('updating nodes');
             voronoi_viz.site_db.update_nodes(voronoi_viz);
-            console.log('draw bar chart')
 
+            console.log('draw bar chart');
             // show_horizontal_bar(get_zone_averages());
             voronoi_viz.hud.show_vertical_bar(voronoi_viz, voronoi_viz.site_db.get_zone_averages(voronoi_viz));
 
-            console.log('redraw voronoi')
+            console.log('redraw voronoi');
             voronoi_viz.draw_voronoi(voronoi_viz);
 
             console.log('reloaded api data');
@@ -146,7 +147,7 @@ class VoronoiViz {
         }
 
         //remove old cell overlay and prepare to draw a new one
-        d3.select('#cell_overlay').remove();
+        voronoi_viz.screen_cleanup(voronoi_viz);
 
         // Reset the clock
         voronoi_viz.clock.update();
@@ -344,6 +345,58 @@ class VoronoiViz {
                 return "M" + d.join("L") + "Z"
             });
 
+
+        //add the *title* so that the name of the node appears when the cell is being hovered on
+        voronoi_viz.polygon_group.selectAll(".cell").append("title").text(function (d) {
+            return d.data.name;
+        });
+
+        //add nodes' locations on the map (they're also cell/polygon centers)
+        circle_group.selectAll(".point")
+            .data(filtered_points)
+            .enter()
+            .append("circle")
+            .attr("class", function (d) {
+                if (d.id !== undefined) {
+                    return "point"
+                } else {
+                    return "invisiblePoint"
+                }
+            })
+            .attr("transform", function (d) {
+                return "translate(" + d.x + "," + d.y + ")";
+            })
+            .attr("r", 2.5);
+
+        //----------D3.js interactivity--------//
+        voronoi_viz.make_interactive(voronoi_viz);
+
+        //change_modes adds the option of coloring in the cells based on:
+        // -current speed
+        // -historical(normal) speed
+        // -deviation in speed from the normal
+        voronoi_viz.change_modes(voronoi_viz);
+
+        //in case the selected node has been mislabeled:
+        try {
+            let node = voronoi_viz.site_db.get_selected_node(voronoi_viz).node_acp_id;
+            voronoi_viz.select_cell(voronoi_viz, node);
+        } catch (error) {
+            console.log('no node has been selected yet, error expected:\n', error);
+        }
+    }
+
+    screen_cleanup(voronoi_viz){
+        //remove all the previuosly drawn entities
+        d3.select('#cell_overlay').remove();
+        //wipe the svg variables clean
+        voronoi_viz.svg_canvas = null;
+        voronoi_viz.polygon_group = null;
+        voronoi_viz.dijkstra_group = null;
+        voronoi_viz.zone_outlines = null;
+    }
+
+    make_interactive(voronoi_viz) {
         //-------------------------------------//
         //----------D3.js interactivity--------//
         //---------------START-----------------//
@@ -507,45 +560,6 @@ class VoronoiViz {
         //-------------------------------------//
         //----------D3.js interactivity--------//
         //----------------END------------------//
-
-        //add the *title* so that the name of the node appears when the cell is being hovered on
-        voronoi_viz.polygon_group.selectAll(".cell").append("title").text(function (d) {
-            return d.data.name;
-        });
-
-        //add nodes' locations on the map (they're also cell/polygon centers)
-        circle_group.selectAll(".point")
-            .data(filtered_points)
-            .enter()
-            .append("circle")
-            .attr("class", function (d) {
-                if (d.id !== undefined) {
-                    return "point"
-                } else {
-                    return "invisiblePoint"
-                }
-            })
-            .attr("transform", function (d) {
-                return "translate(" + d.x + "," + d.y + ")";
-            })
-            .attr("r", 2.5);
-
-
-        //filtered_points = [];
-
-        //change_modes adds the option of coloring in the cells based on:
-        // -current speed
-        // -historical(normal) speed
-        // -deviation in speed from the normal
-        voronoi_viz.change_modes(voronoi_viz);
-
-        //in case the selected node has been mislabeled:
-        try {
-            let node = voronoi_viz.site_db.get_selected_node(voronoi_viz).node_acp_id;
-            voronoi_viz.select_cell(voronoi_viz, node);
-        } catch (error) {
-            console.log('no node has been selected yet, error expected:\n', error);
-        }
     }
 
     //creates a d3 color interpolator 
