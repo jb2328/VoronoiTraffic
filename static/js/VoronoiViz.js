@@ -152,10 +152,6 @@ class VoronoiViz {
         // Reset the clock
         voronoi_viz.clock.update();
 
-        //create a variable for the dbclick functionality
-        ///that finds the shortest path between two selected cites
-        let selected_sites = [];
-
         //create map bounds to know where to stop drawing
         //as well topLeft && bottomRight values  
         let bounds = voronoi_viz.map.getBounds(),
@@ -400,6 +396,10 @@ class VoronoiViz {
         //-------------------------------------//
         //----------D3.js interactivity--------//
         //---------------START-----------------//
+
+         //create a variable for the dbclick functionality
+        ///that finds the shortest path between two selected cites
+        let selected_sites = [];
 
         //add some visual properties to the drawn cells
         voronoi_viz.polygon_group.selectAll(".cell")
