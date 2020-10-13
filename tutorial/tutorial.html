@@ -12,14 +12,22 @@
 
 </head>
 
+<style>
+    .medium-img-wrapper img {
+        width: 800px;
+    }
+</style>
+
 <body>
     <h1>BlueTruth Zone Map Tutorial</h1>
 
     <h3>
-        Initial Screen
+        The Initial Screen
     </h3>
 
-    <img src='./png/main.png'></img>
+    <div class='medium-img-wrapper'>
+        <img src='./png/main.png'></img>
+    </div>
 
     <p>The visualisation displays Cambridge traffic data from a network of Bluetooth sensors deployed all around the
         city.</p>
@@ -27,44 +35,58 @@
         Cambridge. </p>
     <p>This visualisation shows the data in real-time and displays how the current traffic speed deviates from the
         historical average in each of the 38 locations.</p>
+
     <h2>
         The Vocabulary
     </h2>
+
     <p>In order to better understand the visualisation, it is important to understand what we refer to when describing
         specific terms.</p>
 
     <h4>Colour Scheme</h4>
-    <img src='./png/scale.png'></img>
+
+    <div class='small-img-wrapper'>
+        <img src='./png/scale.png'></img>
+    </div>
+
     <p>In general, the colours in the visualisation represent the traffic speed deviation from what is considered to be
         the "normal". Hence, to illustrate such deviations, the sensor-allocated areas and Roads (reffered to as Links
         below) between sensors are coloured using a Red-Yellow-Green gradient. </p>
     <p>Throughout the visualisation, the red colour means that the traffic speed is slower than what is usually
         recorded, whereas green means that the traffic is faster. Yellow represents little to no deviation from the
         normal.</p>
+
     <h4>
         Links
     </h4>
+
     <p>
         Links are a simplified representation of the Cambridge road network. Every Link represents a Road between two
         Bluetooth sensors.
     </p>
     <p>Links are directional and are used throughout the visualisation to provide high granularity readings on the
         current state of traffic between any two sensors.</p>
-
     <p>Links colours represent the current traffic speed deviation, hence following the Colour Scheme, red Links have a
         slower than usual traffic speed, whereas green ones are faster.</p>
+
     <h4>
         Cells
     </h4>
+
     <p>We refer to Cells as coloured polygons you see on the screen, every Cell (or a polygon) represents the area that
         is covered by each of the 38 sensors.</p>
 
     <p>Just as with the Links, the Cell's colour represents the traffic intensity in the Cells surrounding area. The
         Cell's colour is calculated as the average of all the traffic crossing the Cell's boundary.</p>
+
     <h4>
         Zones
     </h4>
-    <img src='./gif/zones.gif'></img>
+
+    <div class='medium-img-wrapper'>
+        <img src='./gif/zones.gif'></img>
+    </div>
+
     <p>We refer to Zones as a group of Cells. There are five Zones in total - North, South, East, West, and Center. </p>
     <p>Zone speeds are calculated by averaging Cell traffic speeds in a particular Zone. Zones speed comparison can be
         seen in bar chart on the right side of the screen. </p>
@@ -74,44 +96,121 @@
     <h2>
         User Interaction
     </h2>
+
     <p>The subsection below provides an overview of how the users can interact with the visualisation.</p>
 
     <h3>
         Clicking on a Zone
     </h3>
-    <img src='./png/zone.png'></img>
+
+    <div class='medium-img-wrapper'>
+        <img src='./png/zone.png'></img>
+    </div>
 
     <h3>
         Hovering over a Cell
     </h3>
-    <img src='./png/hover.png'></img>
+
+    <div class='medium-img-wrapper'>
+        <img src='./png/hover.png'></img>
+    </div>
+
     <p>By hovering the mouse cursor over a Cell, the user is shown all in and out going Links from the Cell.</p>
     <p> The traffic flow direction for every Link is shown by animating the line arc representing a single Link.</p>
     <p>Upon hovering over a Cell, Cell's name appears that is derived from the real-world sensor location in Cambridge.
     </p>
+
     <h3>
         Clicking on a Cell
     </h3>
-    <img src='./png/click.png'></img>
+
+    <div class='medium-img-wrapper'>
+        <img src='./png/click.png'></img>
+    </div>
+
     <p>By clicking on a Cell users are able to inspect more specific information on the area in question.</p>
     <p>More information is immediately displayed, such as the line graph on the bottom left corner showing the
         historical data for all Links coming in and out of the Cell, as well as the ability to select the date for which
         the information is displayed.</p>
 
     <h3>
-        Historical Data
-    </h3>
-    <h4>
-        Clicking on the line graph legend
-    </h4>
-    <p>INSERT GIF HERE</p>
-    <h4>
-        Specifying the date (or the date range) </h4>
+        Interacting with the Line Graph </h3>
 
-    <p>INSERT GIF HERE</p>
+    <p>User can inspect the Link of their choice by hovering over the Link's id on the line graph legend. Upon doing so,
+        the Link will be highlighted on the line graph and drawn
+        on the map.
+    </p>
+    <p>The Link's colour changes according to what it has been assigned to on the line graph and no longer represents
+        the speed deviation.</p>
+    <p>Instead, users are able to see the entire day's worth of traffic speed for a specific link, as shown in the line
+        graph.</p>
+
+    <div class='medium-img-wrapper'>
+        <img src='./gif/link_selection.gif'></img>
+    </div>
+
+    <p>The Link's colour is also used to guide the user to inspect the current traffic speed on the table above the line
+        graph. </p>
+    <p>An example is shown in the image below.</p>
+
+    <div class='medium-img-wrapper'>
+        <img src='./png/matching_link.png'></img>
+    </div>
 
     <h3>
+        Historical Data
+    </h3>
+
+    <p>The visualisation allows for ample historical readings on the city traffic data.</p>
+    <p>Based on what is selected, the users can inspect a past traffic data for a single or a range of dates.</p>
+
+    <h4>
+        Clicking on the Line Graph Legend
+    </h4>
+
+    <p>By clicking on a Link's legend entry on the graph, the user is shown a historical traffic reading from 7 days
+        ago.</p>
+    <p>This provides a historical context, allowing to estimate what the traffic might be in the upcoming hours.</p>
+
+    <div class='medium-img-wrapper'>
+        <img src='./gif/hist_link.gif'></img>
+    </div>
+
+    <h4>
+        Selecting a Single Date (navigation bar)</h4>
+
+    <p>Dates can also be specified. Primarily this can be achieved by clicking the date selection button on top of the
+        page. </p>
+    <p>This allows to move through historical date going one day, or seven days at a time.</p>
+
+    <div class='medium-img-wrapper'>
+        <img src='./gif/datepick_top.gif'></img>
+    </div>
+
+    <h4>
+        Selecting a Single Date (calendar tool)</h4>
+
+    <p>Dates can also be selected using the calendar tool on the bottom left of the page, right above the line graph.
+    </p>
+    <p>Upon clicking the date selection tool, users are able to either entry a single date, or a date range. </p>
+    <p>Double-clicking on a single date selects it.</p>
+
+    <div class='medium-img-wrapper'>
+        <img src='./gif/datepick_single.gif'></img>
+    </div>
+
+    <h4>
+        Selecting a Date Range </h4>
+
+    <p>To select a date range, the user first has to click on a start date, and then click on the end date. The user is
+        expected to click on a start and end date only once.</p>
+
+    <div class='medium-img-wrapper'>
+        <img src='./gif/datepick_range.gif'></img>
+    </div>
+    <h3>
         Double-clicking on a Cell </h3>
+
     <p>Users have the option to double click on two Cells of their choice to show the fastest route between them.</p>
     <p> This can be done by double clicking on one Cell, and then double-clicking on another. This type of selection is
         differentiated from the normal (single-click) Cell selection by the dashed line surrounding the Cell's
@@ -119,7 +218,11 @@
     <h4>
         Finding the Fastest Route
     </h4>
-    <img src='./gif/dijkstra.gif'></img>
+
+    <div class='medium-img-wrapper'>
+        <img src='./gif/dijkstra.gif'></img>
+    </div>
+
     <p>The fastest route feature calculates the lowest travel time between the selected cell, and hence is not a result
         of
         the shortest distance, but rather time. As a result, the sequence in which the Cells are selected matters, as
@@ -128,20 +231,28 @@
     <h3>
         Information Bar
     </h3>
+    
     <p>
         The Information bar permits users to select what the visualisation displays. </p>
 
     <h4>Speed Deviation, Current Speed, and historical Speed</h4>
+
     <p>
         By default, the visualisation displays the speed deviation from average in the area surrounding the sensor.
         Users can alternatively select to see the current and historical speeds in all cells.
     </p>
-    <img src='./gif/info.gif'></img>
+
+    <div class='medium-img-wrapper'>
+        <img src='./gif/info.gif'></img>
+    </div>
+
     <h4>Display all Links</h4>
     <p>Alternatively, users can select to hide all Cells and just display the Links instead with their colour
         representing the speed deviation from the regular.</p>
-    <img src='./gif/links.gif'></img>
 
+    <div class='medium-img-wrapper'>
+        <img src='./gif/links.gif'></img>
+    </div>
 
     <h3>
         Modifying the URL
@@ -150,7 +261,7 @@
         Upon clicking on a Cell, the website URL changes to represent the selection. Each of the 38 sensors has a unique
         id that is shown in the URL bar.
     </p>
-    <p>INSERT PNG HERE</p>
+
 
 </body>
 
