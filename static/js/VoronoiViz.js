@@ -587,7 +587,8 @@ class VoronoiViz {
 
         new_date.setDate(new_date.getDate() + n);
 
-        let new_year = new_date.getFullYear();
+        //keep Firefox happy and make sure the year is a non-negative integer
+        let new_year = Math.abs(parseInt(new_date.getFullYear()));
         let new_month = ("0" + (new_date.getMonth() + 1)).slice(-2);
         let new_month_long = new_date.toLocaleString('default', {
             month: 'long'
