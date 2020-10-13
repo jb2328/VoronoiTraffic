@@ -615,6 +615,11 @@ class VoronoiViz {
         let new_date = new Date()
         let today = ("0" + new_date.getDate()).slice(-2) + "-" + ("0" + (new_date.getMonth() + 1)).slice(-2) + "-" + new_date.getFullYear();
 
+        //if the passed date is undefined, we pretend that it is for today
+        if(date==undefined){
+            date=  ("0" + (new_date.getMonth() + 1)).slice(-2) + "-" +("0" + new_date.getDate()).slice(-2) + "-"  + new_date.getFullYear(); //requires American format
+        }
+
         //update the current date on the top of the screen (in case update_url() called not
         //from within the date_shift() function)
         let passed_date = new Date(date)

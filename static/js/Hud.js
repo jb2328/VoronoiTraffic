@@ -350,7 +350,9 @@ class Hud {
                 //select and highlight cell + show info
                 voronoi_viz.select_cell(voronoi_viz, highlighted_cell.node_acp_id)
                 voronoi_viz.hud.show_node_information(voronoi_viz, highlighted_cell.node_acp_id)
-
+                voronoi_viz.update_url(highlighted_cell.node_acp_id, undefined);
+                //make HUD elements visible
+                document.getElementById("selected_cell").innerHTML = voronoi_viz.tools.ICON_CLOSE_AND_DESELECT + "<br>" + "<h1>" + highlighted_cell.name + "</h1>";
 
             })
     }
